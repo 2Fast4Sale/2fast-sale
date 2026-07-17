@@ -83,6 +83,9 @@ export default function HomePage() {
             <Link href="/auth/register" className="nav-btn-primary">Kostenlos starten</Link>
           </div>
 
+          <Link href="/dashboard" className="nav-mobile-dash">
+            <BarChart3 size={13} /> Dashboard
+          </Link>
           <button className="nav-mobile-toggle" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -387,19 +390,19 @@ export default function HomePage() {
                 name: 'Basic', price: '99', sub: '49', period: '/ Monat',
                 desc: 'Für Einzelhändler mit regelmäßigem Volumen.',
                 features: ['30 Inserate / Monat', 'KI-Beschreibungen', 'Studio-Hintergründe', 'PDF + ZIP Export'],
-                cta: 'Basic starten', href: '/auth/register', primary: false,
+                cta: 'Basic starten', href: '/dashboard/pricing', primary: false,
               },
               {
                 name: 'Premium', price: '249', sub: '99', period: '/ Monat',
                 desc: 'Mehr Volumen, Wasserzeichen, Custom-Hintergründe.',
                 features: ['150 Inserate / Monat', 'Firmen-Wasserzeichen', 'Eigener Showroom-Upload', 'mobile.de &amp; AutoScout24', 'Prioritats-Support'],
-                cta: 'Premium starten', href: '/auth/register', primary: true, badge: 'Beliebteste Wahl',
+                cta: 'Premium starten', href: '/dashboard/pricing', primary: true, badge: 'Beliebteste Wahl',
               },
               {
                 name: 'Business', price: '699', sub: '99', period: '/ Monat',
                 desc: 'Für Autohäuser und Händlergruppen.',
                 features: ['550 Inserate / Monat', 'Alle Premium-Features', 'Team-Accounts (bis 5)', 'API-Zugang', 'Dedizierter Support'],
-                cta: 'Business starten', href: '/auth/register', primary: false,
+                cta: 'Business starten', href: '/dashboard/pricing', primary: false,
               },
             ].map((plan, i) => (
               <div key={i} className={`pricing-card ${plan.primary ? 'popular' : ''}`}>
