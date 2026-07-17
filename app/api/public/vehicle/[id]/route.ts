@@ -7,11 +7,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { data, error } = await supabaseAdmin
     .from('vehicles')
     .select('*, vehicle_images(*)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   if (error || !data) {
@@ -22,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   supabaseAdmin
     .from('vehicles')
     .update({ views: (data.views || 0) + 1 })
-    .eq('id', params.id)
+    .eq('id', id)
     .then(() => {});
 
   // Sensible Felder rausfiltern
