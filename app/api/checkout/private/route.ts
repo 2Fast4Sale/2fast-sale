@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../../lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     let customerId = profile?.stripe_customer_id;
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user.email,
         name: profile?.full_name || undefined,
         metadata: { supabase_uid: user.id },
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: 'payment',
       payment_method_types: ['card'],
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       invoice_creation: {
         enabled: true,
         invoice_data: {
-          description: `${quantity} × Inserat-Credit auf 2Fast4Sale`,
+          description: `${quantity} Ã— Inserat-Credit auf 2Fast4Sale`,
           metadata: { user_id: user.id, type: 'listing_credit' },
           rendering_options: { amount_tax_display: 'include_inclusive_tax' },
         },
@@ -78,3 +78,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

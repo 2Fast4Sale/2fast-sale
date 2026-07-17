@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import PDFDocument from 'pdfkit';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export async function GET() {
   const doc = new PDFDocument({ size: 'A4', margin: 60 });
@@ -99,7 +99,7 @@ export async function GET() {
   const pdfBuffer = Buffer.concat(chunks);
 
   // Auch per Mail schicken
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.RESEND_FROM || 'onboarding@resend.dev',
     to: '2fast4sale@gmail.com',
     subject: 'Test-Rechnung mit PDF-Anhang',
@@ -114,3 +114,4 @@ export async function GET() {
     },
   });
 }
+

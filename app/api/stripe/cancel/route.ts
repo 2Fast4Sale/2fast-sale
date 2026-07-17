@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../../lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 export async function POST() {
   try {
@@ -21,11 +21,11 @@ export async function POST() {
     }
 
     // Cancel at period end (not immediately)
-    await stripe.subscriptions.update(profile.stripe_subscription_id, {
+    await getStripe().subscriptions.update(profile.stripe_subscription_id, {
       cancel_at_period_end: true,
     });
 
-    return NextResponse.json({ success: true, message: 'Abo wird zum Periodenende gekündigt.' });
+    return NextResponse.json({ success: true, message: 'Abo wird zum Periodenende gekÃ¼ndigt.' });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Fehler';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -49,7 +49,7 @@ export async function DELETE() {
     }
 
     // Undo cancellation
-    await stripe.subscriptions.update(profile.stripe_subscription_id, {
+    await getStripe().subscriptions.update(profile.stripe_subscription_id, {
       cancel_at_period_end: false,
     });
 
@@ -59,3 +59,4 @@ export async function DELETE() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

@@ -1,21 +1,21 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 export async function POST() {
   try {
     // Produkt erstellen
-    const product = await stripe.products.create({
+    const product = await getStripe().products.create({
       name: '2Fast4Sale Inserat-Credit',
-      description: 'Einmaliges Inserat auf 2Fast4Sale — KI-Beschreibung, Studio-Fotos, mobile.de & AutoScout24 Export.',
+      description: 'Einmaliges Inserat auf 2Fast4Sale â€” KI-Beschreibung, Studio-Fotos, mobile.de & AutoScout24 Export.',
       metadata: { type: 'listing_credit' },
     });
 
-    // Einmalzahlung €4,99
-    const price = await stripe.prices.create({
+    // Einmalzahlung â‚¬4,99
+    const price = await getStripe().prices.create({
       product: product.id,
       unit_amount: 499,
       currency: 'eur',
@@ -36,10 +36,11 @@ export async function POST() {
       success: true,
       priceId: price.id,
       productId: product.id,
-      note: '.env.local wurde automatisch aktualisiert — bitte Server neu starten!',
+      note: '.env.local wurde automatisch aktualisiert â€” bitte Server neu starten!',
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Fehler';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

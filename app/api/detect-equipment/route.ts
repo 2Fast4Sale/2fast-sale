@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function extractJson(text: string): string {
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
     const imageBlocks = images.slice(0, 3).map(toImageBlock);
 
-    const response = await client.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 300,
       messages: [{
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
           {
             type: 'text',
             text: `Analysiere diese Fahrzeugfotos und erkenne sichtbare Ausstattungsmerkmale.
-Schaue genau auf: Innenraum, Sitze, Lenkrad, Armaturenbrett, Felgen, Dach, Scheinwerfer, Stoßstangen.
+Schaue genau auf: Innenraum, Sitze, Lenkrad, Armaturenbrett, Felgen, Dach, Scheinwerfer, StoÃŸstangen.
 
 Erkenne nur was wirklich sichtbar ist, z.B.:
 - Ledersitze, Stoff-Sitze, Sportsitze
@@ -45,11 +45,11 @@ Erkenne nur was wirklich sichtbar ist, z.B.:
 - LED-Scheinwerfer, Xenon-Scheinwerfer
 - Navigationssystem, Touchscreen
 - Klimaanlage, Klimaautomatik
-- Sitzheizung (wenn Knöpfe sichtbar)
-- Rückfahrkamera
+- Sitzheizung (wenn KnÃ¶pfe sichtbar)
+- RÃ¼ckfahrkamera
 - Sportauspuff
 - Dachreling
-- Anhängerkupplung
+- AnhÃ¤ngerkupplung
 
 Antworte NUR als pures JSON ohne Markdown:
 {"equipment": ["Merkmal 1", "Merkmal 2"]}
@@ -69,3 +69,4 @@ Maximal 12 Merkmale. Nur wirklich sichtbare Dinge.`,
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

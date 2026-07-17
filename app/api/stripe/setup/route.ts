@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../../lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
-// Plan definitions — prices in Euro cents
+// Plan definitions â€” prices in Euro cents
 const PLANS = [
   {
     id: 'basic',
     name: 'Basic',
-    description: '30 Inserate pro Monat, KI-Beschreibungen, Studio-Hintergründe',
-    monthly_price: 2900,   // €29/Monat
-    yearly_price:  29000,  // €290/Jahr (2 Monate gratis)
+    description: '30 Inserate pro Monat, KI-Beschreibungen, Studio-HintergrÃ¼nde',
+    monthly_price: 2900,   // â‚¬29/Monat
+    yearly_price:  29000,  // â‚¬290/Jahr (2 Monate gratis)
   },
   {
     id: 'premium',
@@ -46,14 +46,14 @@ export async function POST() {
 
     for (const plan of PLANS) {
       // Create product
-      const product = await stripe.products.create({
+      const product = await getStripe().products.create({
         name: `2Fast4Sale ${plan.name}`,
         description: plan.description,
         metadata: { plan_id: plan.id },
       });
 
       // Create monthly price
-      const monthlyPrice = await stripe.prices.create({
+      const monthlyPrice = await getStripe().prices.create({
         product: product.id,
         unit_amount: plan.monthly_price,
         currency: 'eur',
@@ -63,7 +63,7 @@ export async function POST() {
       });
 
       // Create yearly price
-      const yearlyPrice = await stripe.prices.create({
+      const yearlyPrice = await getStripe().prices.create({
         product: product.id,
         unit_amount: plan.yearly_price,
         currency: 'eur',
@@ -87,3 +87,4 @@ export async function POST() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

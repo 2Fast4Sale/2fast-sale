@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import PDFDocument from 'pdfkit';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   const { sessionId } = await req.json().catch(() => ({}));
@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, alreadyFulfilled: true });
   }
 
-  let session: Stripe.Checkout.Session;
+  let session: getStripe().Checkout.Session;
   try {
-    session = await stripe.checkout.sessions.retrieve(sessionId, {
+    session = await getStripe().checkout.sessions.retrieve(sessionId, {
       expand: ['invoice', 'customer'],
     });
   } catch {
@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
 
   // E-Mail versenden
   const customerEmail =
-    (session.customer as Stripe.Customer)?.email ||
+    (session.customer as getStripe().Customer)?.email ||
     session.customer_details?.email || '';
 
-  const invoice        = session.invoice as Stripe.Invoice | null;
+  const invoice        = session.invoice as getStripe().Invoice | null;
   const invoiceNumber  = invoice?.number || sessionId.slice(-8).toUpperCase();
   const invoicePdfUrl  = invoice?.invoice_pdf || null;
   const invoiceDate    = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
     // PDF generieren
     const pdfBuffer = await buildInvoicePdf(emailParams);
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: fromEmail,
       to: toEmail,
       subject: `Rechnung ${invoiceNumber} - 2Fast4Sale`,
@@ -295,12 +295,12 @@ async function buildInvoicePdf(p: {
     const PURPLE = '#6366f1';
     const BORDER = '#e2e8f0';
 
-    // ── Header-Block ──
+    // â”€â”€ Header-Block â”€â”€
     doc.rect(0, 0, 595, 90).fill('#0f172a');
     doc.fontSize(20).font('Helvetica-Bold').fillColor('#ffffff').text('2Fast4Sale', 60, 32);
     doc.fontSize(9).font('Helvetica').fillColor('#64748b').text('RECHNUNG', 60, 60, { align: 'right', width: W });
 
-    // ── Rechnungstitel ──
+    // â”€â”€ Rechnungstitel â”€â”€
     doc.moveDown(3);
     doc.fontSize(18).font('Helvetica-Bold').fillColor(DARK).text(`Rechnung ${p.invoiceNumber}`, 60);
     doc.fontSize(10).font('Helvetica').fillColor(GRAY).text(`Rechnungsdatum: ${p.invoiceDate}`, 60);
@@ -309,12 +309,12 @@ async function buildInvoicePdf(p: {
     doc.roundedRect(595 - 60 - 80, 100, 80, 22, 4).fill('#dcfce7');
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#166534').text('Bezahlt', 595 - 60 - 80, 107, { width: 80, align: 'center' });
 
-    // ── Trennlinie ──
+    // â”€â”€ Trennlinie â”€â”€
     doc.moveDown(1.2);
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
     doc.moveDown(1);
 
-    // ── Adressen ──
+    // â”€â”€ Adressen â”€â”€
     const addrY = doc.y;
     doc.fontSize(8).font('Helvetica-Bold').fillColor(LGRAY).text('VON', 60, addrY);
     doc.fontSize(10).font('Helvetica-Bold').fillColor(DARK).text('2Fast4Sale', 60, addrY + 14);
@@ -330,7 +330,7 @@ async function buildInvoicePdf(p: {
     if (p.buyerCountry) doc.text(p.buyerCountry, 300);
     if (p.buyerVat) doc.text(`USt-IdNr.: ${p.buyerVat}`, 300);
 
-    // ── Positions-Tabelle ──
+    // â”€â”€ Positions-Tabelle â”€â”€
     doc.y = addrY + 120;
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
 
@@ -356,7 +356,7 @@ async function buildInvoicePdf(p: {
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
     doc.moveDown(1);
 
-    // ── Summen ──
+    // â”€â”€ Summen â”€â”€
     const sumX = 360;
     const sumW = 163;
     doc.fontSize(9).font('Helvetica').fillColor(GRAY);
@@ -372,16 +372,18 @@ async function buildInvoicePdf(p: {
     doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Gesamtbetrag', sumX, doc.y, { width: 100 });
     doc.fillColor(PURPLE).text(`${p.totalPrice} EUR`, sumX, doc.y - 16, { width: sumW, align: 'right' });
 
-    // ── Hinweis ──
+    // â”€â”€ Hinweis â”€â”€
     doc.moveDown(3);
     doc.rect(60, doc.y, W, 50).fill('#f8fafc').stroke(BORDER);
     doc.fontSize(9).font('Helvetica').fillColor(GRAY)
       .text('Vielen Dank fuer Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben.', 72, doc.y + 10, { width: W - 24 });
 
-    // ── Footer ──
+    // â”€â”€ Footer â”€â”€
     doc.fontSize(8).font('Helvetica').fillColor(LGRAY)
       .text(`2Fast4Sale  |  ${p.companyAddr}  |  support@2fast4sale.com`, 60, 750, { width: W, align: 'center' });
 
     doc.end();
   });
 }
+
+

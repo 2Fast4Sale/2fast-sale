@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '../../../lib/supabase/server';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function extractJson(text: string): string {
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -27,22 +27,22 @@ export async function POST(req: Request) {
     if (!titleTemplate) {
       // Fallback: einfacher Titel ohne KI
       const parts = [brand, model, year, power ? `${power} PS` : '', fuel].filter(Boolean);
-      return NextResponse.json({ title: parts.join(' · ') });
+      return NextResponse.json({ title: parts.join(' Â· ') });
     }
 
     const topEquip = Array.isArray(equipment) ? equipment.slice(0, 5).join(', ') : '';
 
-    const response = await client.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 100,
       messages: [{
         role: 'user',
-        content: `Du bist ein Experte für mobile.de Inserate.
+        content: `Du bist ein Experte fÃ¼r mobile.de Inserate.
 
-Der Händler möchte Titel IMMER in diesem Format/Stil:
+Der HÃ¤ndler mÃ¶chte Titel IMMER in diesem Format/Stil:
 "${titleTemplate}"
 
-Erstelle jetzt einen Titel für dieses Fahrzeug im EXAKT gleichen Stil (gleiche Sonderzeichen, gleiche Schreibweise, gleiche Struktur):
+Erstelle jetzt einen Titel fÃ¼r dieses Fahrzeug im EXAKT gleichen Stil (gleiche Sonderzeichen, gleiche Schreibweise, gleiche Struktur):
 
 Marke: ${brand || ''}
 Modell: ${model || ''}
@@ -54,7 +54,7 @@ Leistung: ${power ? `${power} PS` : ''}
 Top-Ausstattung: ${topEquip}
 
 Antworte NUR mit dem Titel als reinem JSON: {"title": "..."}
-Kein Markdown, keine Erklärung, nur JSON.`,
+Kein Markdown, keine ErklÃ¤rung, nur JSON.`,
       }],
     });
 
@@ -66,3 +66,4 @@ Kein Markdown, keine Erklärung, nur JSON.`,
     return NextResponse.json({ error: 'Titel konnte nicht generiert werden', details: msg }, { status: 500 });
   }
 }
+

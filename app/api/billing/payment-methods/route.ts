@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../../lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 export async function GET() {
   try {
@@ -21,17 +21,17 @@ export async function GET() {
     }
 
     const [pmList, invoiceList, customer, chargeList] = await Promise.all([
-      stripe.paymentMethods.list({ customer: profile.stripe_customer_id, type: 'card' }),
-      stripe.invoices.list({ customer: profile.stripe_customer_id, limit: 12 }),
-      stripe.customers.retrieve(profile.stripe_customer_id),
-      // Einmalzahlungen (z.B. Inserat-Credits) — haben keine Invoice
-      stripe.charges.list({ customer: profile.stripe_customer_id, limit: 20 }),
+      getStripe().paymentMethods.list({ customer: profile.stripe_customer_id, type: 'card' }),
+      getStripe().invoices.list({ customer: profile.stripe_customer_id, limit: 12 }),
+      getStripe().customers.retrieve(profile.stripe_customer_id),
+      // Einmalzahlungen (z.B. Inserat-Credits) â€” haben keine Invoice
+      getStripe().charges.list({ customer: profile.stripe_customer_id, limit: 20 }),
     ]);
 
     /* SEPA dazu */
-    const sepaList = await stripe.paymentMethods.list({ customer: profile.stripe_customer_id, type: 'sepa_debit' });
+    const sepaList = await getStripe().paymentMethods.list({ customer: profile.stripe_customer_id, type: 'sepa_debit' });
 
-    const defaultPmId = (customer as Stripe.Customer).invoice_settings?.default_payment_method as string | undefined;
+    const defaultPmId = (customer as getStripe().Customer).invoice_settings?.default_payment_method as string | undefined;
 
     const paymentMethods = [
       ...pmList.data.map(pm => ({
@@ -71,7 +71,7 @@ export async function GET() {
       invoiceList.data.map(inv => inv.charge as string | null).filter(Boolean)
     );
 
-    // Einmalzahlungen (ohne zugehörige Invoice)
+    // Einmalzahlungen (ohne zugehÃ¶rige Invoice)
     const chargeItems = chargeList.data
       .filter(ch => ch.status === 'succeeded' && !invoiceChargeIds.has(ch.id))
       .map(ch => ({
@@ -86,7 +86,7 @@ export async function GET() {
         type: 'charge' as const,
       }));
 
-    // Zusammenführen und nach Datum sortieren (neueste zuerst)
+    // ZusammenfÃ¼hren und nach Datum sortieren (neueste zuerst)
     const invoices = [...invoiceItems, ...chargeItems]
       .sort((a, b) => b.date - a.date);
 
@@ -97,3 +97,4 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

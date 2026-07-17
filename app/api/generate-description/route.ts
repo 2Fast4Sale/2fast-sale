@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '../../../lib/supabase/server';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: Request) {
   try {
@@ -24,10 +24,10 @@ export async function POST(req: Request) {
       : '';
 
     const styleInstruction = aiStyleTemplate
-      ? `\n\nWICHTIG — Orientiere dich am Schreibstil dieses Händlers:\n"${aiStyleTemplate}"\nÜbernimm den Ton und Stil, aber schreib eine neue Beschreibung für das aktuelle Fahrzeug.`
+      ? `\n\nWICHTIG â€” Orientiere dich am Schreibstil dieses HÃ¤ndlers:\n"${aiStyleTemplate}"\nÃœbernimm den Ton und Stil, aber schreib eine neue Beschreibung fÃ¼r das aktuelle Fahrzeug.`
       : '';
 
-    const prompt = `Erstelle eine professionelle Verkaufsbeschreibung für folgendes Fahrzeug:
+    const prompt = `Erstelle eine professionelle Verkaufsbeschreibung fÃ¼r folgendes Fahrzeug:
 
 Fahrzeug: ${brand || 'Unbekannt'}
 Erstzulassung: ${year || 'k.A.'}
@@ -36,17 +36,17 @@ Leistung: ${power ? `${power} PS` : 'k.A.'}
 Kraftstoff: ${fuel || 'k.A.'}
 Getriebe: ${gearbox || 'k.A.'}
 Farbe: ${color || 'k.A.'}
-Sitzplätze: ${seats || 'k.A.'}
+SitzplÃ¤tze: ${seats || 'k.A.'}
 Hubraum: ${displacement ? `${Number(displacement).toLocaleString('de-DE')} ccm` : 'k.A.'}
 ${equipmentList}
-${dealerNotes ? `\nHändler-Notizen: ${dealerNotes}` : ''}${styleInstruction}
+${dealerNotes ? `\nHÃ¤ndler-Notizen: ${dealerNotes}` : ''}${styleInstruction}
 
-Schreibe 3–4 Sätze auf Deutsch. Überzeugend, kaufmotivierend, kein Marketing-Blabla. Nur Fließtext, keine Aufzählungen. Max. 80 Wörter.`;
+Schreibe 3â€“4 SÃ¤tze auf Deutsch. Ãœberzeugend, kaufmotivierend, kein Marketing-Blabla. Nur FlieÃŸtext, keine AufzÃ¤hlungen. Max. 80 WÃ¶rter.`;
 
-    const response = await client.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 200,
-      system: 'Du bist ein erfahrener Fahrzeughändler der ehrliche, überzeugende Inserate schreibt.',
+      system: 'Du bist ein erfahrener FahrzeughÃ¤ndler der ehrliche, Ã¼berzeugende Inserate schreibt.',
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -57,3 +57,4 @@ Schreibe 3–4 Sätze auf Deutsch. Überzeugend, kaufmotivierend, kein Marketing
     return NextResponse.json({ error: 'Beschreibung konnte nicht generiert werden', details: msg }, { status: 500 });
   }
 }
+

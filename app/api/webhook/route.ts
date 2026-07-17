@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 function getPlanFromPriceId(priceId: string): string {
   const map: Record<string, string> = {
@@ -28,9 +28,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Webhook-Secret fehlt' }, { status: 400 });
   }
 
-  let event: Stripe.Event;
+  let event: getStripe().Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Fehler';
     return NextResponse.json({ error: `Webhook: ${msg}` }, { status: 400 });
@@ -40,9 +40,9 @@ export async function POST(req: Request) {
 
   switch (event.type) {
     case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = event.data.object as getStripe().Checkout.Session;
       if (!session.subscription) break;
-      const sub    = await stripe.subscriptions.retrieve(session.subscription as string);
+      const sub    = await getStripe().subscriptions.retrieve(session.subscription as string);
       const userId = sub.metadata?.user_id;
       if (!userId) break;
       const priceId = sub.items.data[0]?.price?.id || '';
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     case 'customer.subscription.updated': {
-      const sub    = event.data.object as Stripe.Subscription;
+      const sub    = event.data.object as getStripe().Subscription;
       const userId = sub.metadata?.user_id;
       if (!userId) break;
       const isActive = sub.status === 'active' || sub.status === 'trialing';
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     case 'customer.subscription.deleted': {
-      const sub    = event.data.object as Stripe.Subscription;
+      const sub    = event.data.object as getStripe().Subscription;
       const userId = sub.metadata?.user_id;
       if (userId) {
         await supabase.from('profiles').update({
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     }
 
     case 'payment_intent.succeeded': {
-      const pi = event.data.object as Stripe.PaymentIntent;
+      const pi = event.data.object as getStripe().PaymentIntent;
       if (pi.metadata?.type === 'listing_credit') {
         const userId  = pi.metadata.user_id;
         const qty     = parseInt(pi.metadata.quantity || '1', 10);
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     case 'invoice.payment_failed': {
-      const invoice    = event.data.object as Stripe.Invoice;
+      const invoice    = event.data.object as getStripe().Invoice;
       const customerId = invoice.customer as string;
       console.error('[webhook] Payment failed for customer', customerId);
       break;
@@ -107,3 +107,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ received: true });
 }
+

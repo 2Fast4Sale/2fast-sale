@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function extractJson(text: string): string {
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   try {
     const { image } = await req.json();
 
-    const response = await client.messages.create({
+    const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 1500,
       messages: [{
@@ -30,11 +30,11 @@ export async function POST(req: Request) {
         content: [
           {
             type: 'text',
-            text: `Du bist ein Experte für Kfz-Ausstattung und mobile.de-Inserate.
+            text: `Du bist ein Experte fÃ¼r Kfz-Ausstattung und mobile.de-Inserate.
 
-Analysiere dieses Dokument (kann sein: Bestellbestätigung, Ausstattungsliste, altes Inserat, Übergabeprotokoll, Herstellerbrief, Screenshot einer Anzeige, oder beliebiges anderes Dokument mit Fahrzeuginformationen).
+Analysiere dieses Dokument (kann sein: BestellbestÃ¤tigung, Ausstattungsliste, altes Inserat, Ãœbergabeprotokoll, Herstellerbrief, Screenshot einer Anzeige, oder beliebiges anderes Dokument mit Fahrzeuginformationen).
 
-Extrahiere ALLE Ausstattungsmerkmale die du findest. Übersetze alles ins Deutsche.
+Extrahiere ALLE Ausstattungsmerkmale die du findest. Ãœbersetze alles ins Deutsche.
 
 Beispiele was zu suchen ist:
 - Navigationssystem, Navi, GPS, MMI, iDrive, COMAND, Sync
@@ -43,13 +43,13 @@ Beispiele was zu suchen ist:
 - Sitzheizung, Lenkradheizung, Standheizung
 - Panoramadach, Schiebedach, Glasdach
 - LED, Xenon, Matrix, Laser (Scheinwerfer)
-- Einparkhilfe, PDC, Parkpilot, Rückfahrkamera, 360° Kamera
+- Einparkhilfe, PDC, Parkpilot, RÃ¼ckfahrkamera, 360Â° Kamera
 - Apple CarPlay, Android Auto, Bluetooth, USB, DAB+
 - Tempomat, ACC, adaptiver Tempomat, Abstandsregeltempomat
-- Spurhalteassistent, Totwinkel, Notbremssystem, Spurführung
+- Spurhalteassistent, Totwinkel, Notbremssystem, SpurfÃ¼hrung
 - Head-up Display, digitales Cockpit, Virtual Cockpit
-- Anhängerkupplung, Dachreling, Sportfahrwerk, Luftfederung
-- Alufelgen (mit Zollgröße wenn angegeben), Winterräder
+- AnhÃ¤ngerkupplung, Dachreling, Sportfahrwerk, Luftfederung
+- Alufelgen (mit ZollgrÃ¶ÃŸe wenn angegeben), WinterrÃ¤der
 - Allradantrieb, 4WD, AWD, xDrive, quattro, 4Motion
 - Premium-Soundsystem (Bose, Harman Kardon, B&O, Burmester, JBL)
 - Ambientebeleuchtung, elektrische Sitze, Memory-Sitze
@@ -59,7 +59,7 @@ Beispiele was zu suchen ist:
 Antworte NUR als pures JSON ohne Markdown:
 {"equipment": ["Merkmal 1", "Merkmal 2", ...]}
 
-Gib so viele Merkmale wie möglich zurück. Lieber zu viel als zu wenig.`,
+Gib so viele Merkmale wie mÃ¶glich zurÃ¼ck. Lieber zu viel als zu wenig.`,
           },
           toImageBlock(image),
         ],
@@ -76,3 +76,4 @@ Gib so viele Merkmale wie möglich zurück. Lieber zu viel als zu wenig.`,
     return NextResponse.json({ error: 'Scan fehlgeschlagen', details: error.message }, { status: 500 });
   }
 }
+

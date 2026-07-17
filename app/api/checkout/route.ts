@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 // Stripe Price IDs aus .env.local
 const PRICE_IDS: Record<string, Record<string, string>> = {
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     const priceId = PRICE_IDS[plan]?.[billing];
     if (!priceId) {
       return NextResponse.json({
-        error: `Kein Stripe Price-ID für Plan "${plan}" / "${billing}".\nBitte in .env.local eintragen: STRIPE_${plan.toUpperCase()}_${billing.toUpperCase()}_PRICE_ID=price_xxx`,
+        error: `Kein Stripe Price-ID fÃ¼r Plan "${plan}" / "${billing}".\nBitte in .env.local eintragen: STRIPE_${plan.toUpperCase()}_${billing.toUpperCase()}_PRICE_ID=price_xxx`,
       }, { status: 400 });
     }
 
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     let customerId = profile?.stripe_customer_id;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: user.email,
         name: profile?.company || profile?.full_name || undefined,
         metadata: { supabase_uid: user.id },
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -90,3 +90,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

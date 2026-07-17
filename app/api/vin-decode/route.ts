@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ── Kraftstoff normalisieren ──────────────────────────────────────────────────
+// â”€â”€ Kraftstoff normalisieren â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function mapFuel(raw: string): string | null {
   if (!raw) return null;
   const r = raw.toLowerCase();
@@ -19,7 +19,7 @@ function mapFuel(raw: string): string | null {
   return null;
 }
 
-// ── Schritt 1: Vincario — Basisdaten aus Herstellerdatenbank ──────────────────
+// â”€â”€ Schritt 1: Vincario â€” Basisdaten aus Herstellerdatenbank â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface VincarioResult {
   brand: string | null;
   model: string | null;
@@ -111,7 +111,7 @@ async function fetchVincario(vin: string): Promise<VincarioResult | null> {
   return result;
 }
 
-// ── Schritt 2: Claude — präzise Ausstattung für bekanntes Fahrzeug ────────────
+// â”€â”€ Schritt 2: Claude â€” prÃ¤zise Ausstattung fÃ¼r bekanntes Fahrzeug â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function fetchEquipment(vin: string, vincario: VincarioResult | null): Promise<{
   fuelType: string | null;
   powerPs: string | null;
@@ -120,9 +120,9 @@ async function fetchEquipment(vin: string, vincario: VincarioResult | null): Pro
   equipment: string[];
   confidence: string;
 }> {
-  // Kontext aus Vincario für Claude aufbereiten
+  // Kontext aus Vincario fÃ¼r Claude aufbereiten
   const vehicleContext = vincario
-    ? `Bestätigte Fahrzeugdaten aus Herstellerdatenbank:
+    ? `BestÃ¤tigte Fahrzeugdaten aus Herstellerdatenbank:
 - Marke: ${vincario.brand || '?'}
 - Modell: ${vincario.model || '?'}
 - Baujahr: ${vincario.year || '?'}
@@ -131,55 +131,55 @@ async function fetchEquipment(vin: string, vincario: VincarioResult | null): Pro
 - Hubraum: ${vincario.displacementCcm ? vincario.displacementCcm + ' ccm' : 'unbekannt'}
 - Getriebe: ${vincario.gearbox || 'unbekannt'}
 - Karosserie: ${vincario.bodyType || 'unbekannt'}
-- Türen: ${vincario.doors || 'unbekannt'}
+- TÃ¼ren: ${vincario.doors || 'unbekannt'}
 - Antrieb: ${vincario.drive || 'unbekannt'}
 
-Generiere die VOLLSTÄNDIGE Serienausstattung für dieses Fahrzeug.`
+Generiere die VOLLSTÃ„NDIGE Serienausstattung fÃ¼r dieses Fahrzeug.`
     : `VIN: ${vin}
-WMI (1-3): WVW/WV2=VW, WAU=Audi, WBA/WBS=BMW, WDB/WDD/WDC=Mercedes, W0L=Opel, SAL=Land Rover, VF1=Renault, VF7=Citroën
+WMI (1-3): WVW/WV2=VW, WAU=Audi, WBA/WBS=BMW, WDB/WDD/WDC=Mercedes, W0L=Opel, SAL=Land Rover, VF1=Renault, VF7=CitroÃ«n
 BAUJAHR (Pos 10): G=2016 H=2017 J=2018 K=2019 L=2020 M=2021 N=2022 P=2023 R=2024 S=2025
 ZZZ in Pos 4-6 = EU-Standard-Platzhalter, kein Fehler. Dekodiere Modell aus Pos 7-9.
 
-Dekodiere das Fahrzeug und generiere die vollständige Serienausstattung.`;
+Dekodiere das Fahrzeug und generiere die vollstÃ¤ndige Serienausstattung.`;
 
   const vehicle = vincario
     ? `${vincario.brand || ''} ${vincario.model || ''} ${vincario.year || ''} ${vincario.bodyType || ''} ${vincario.drive || ''}`.trim()
-    : `VIN ${vin} — WVW=VW, WAU=Audi, WBA=BMW, WDB=Mercedes. Pos10: G=2016 H=2017 J=2018 K=2019 L=2020 M=2021 N=2022 P=2023 R=2024. ZZZ in Pos4-6 = EU-Platzhalter.`;
+    : `VIN ${vin} â€” WVW=VW, WAU=Audi, WBA=BMW, WDB=Mercedes. Pos10: G=2016 H=2017 J=2018 K=2019 L=2020 M=2021 N=2022 P=2023 R=2024. ZZZ in Pos4-6 = EU-Platzhalter.`;
 
-  // Alle Labels aus der Datenbank — Claude soll nur diese verwenden
+  // Alle Labels aus der Datenbank â€” Claude soll nur diese verwenden
   const ALL_LABELS = [
     // Sicherheit
     'ABS','ESP','Fahrerairbag','Beifahrerairbag','Seitenairbags','Kopfairbags','Knieairbags','ISOFIX','Reifendruckkontrolle',
-    'Einparkhilfe hinten','Einparkhilfe vorne','Einparkhilfe vorne & hinten','Rückfahrkamera','360°-Kamera',
-    'Notbremsassistent','Spurhalteassistent','Totwinkel-Assistent','Müdigkeitswarner','Kollisionswarner','Bergabfahrhilfe','Berganfahrhilfe',
+    'Einparkhilfe hinten','Einparkhilfe vorne','Einparkhilfe vorne & hinten','RÃ¼ckfahrkamera','360Â°-Kamera',
+    'Notbremsassistent','Spurhalteassistent','Totwinkel-Assistent','MÃ¼digkeitswarner','Kollisionswarner','Bergabfahrhilfe','Berganfahrhilfe',
     // Fahrerassistenz
-    'Tempomat','Adaptiver Tempomat (ACC)','Verkehrszeichenerkennung','Einparkassistent','Spurführungsassistent',
+    'Tempomat','Adaptiver Tempomat (ACC)','Verkehrszeichenerkennung','Einparkassistent','SpurfÃ¼hrungsassistent',
     'Fernlichtassistent','Nachtsichtkamera','Head-up Display',
     // Komfort
-    'Klimaanlage','Klimaautomatik','Vierzonen-Klimaautomatik','Sitzheizung','Sitzbelüftung','Lenkradheizung',
+    'Klimaanlage','Klimaautomatik','Vierzonen-Klimaautomatik','Sitzheizung','SitzbelÃ¼ftung','Lenkradheizung',
     'Sitz-Massage','Elektrisch verstellbare Sitze','Sitz-Memory','Panoramadach','Schiebedach',
     'Standheizung','Standklimatisierung','Elektrische Heckklappe','Keyless Entry','Start-Stopp-Automatik',
-    'Multifunktionslenkrad','Sprachsteuerung','Elektrisch einstell- und klappbare Außenspiegel','Automatisch abblendende Spiegel','Ambientebeleuchtung',
+    'Multifunktionslenkrad','Sprachsteuerung','Elektrisch einstell- und klappbare AuÃŸenspiegel','Automatisch abblendende Spiegel','Ambientebeleuchtung',
     // Infotainment
     'Navigationssystem','Online-Navigation','Apple CarPlay','Android Auto','Bluetooth','DAB+ Digitalradio',
     'USB-Anschluss','WLAN / WiFi Hotspot','Kabelloses Laden','Premium-Soundsystem','Touchscreen',
     'Digitales Cockpit','Connected Services / App Connect','Fond-Entertainment-System',
     // Licht
     'LED-Scheinwerfer','Xenon-Scheinwerfer','Matrix-LED / Laser-Scheinwerfer','LED-Tagfahrlicht',
-    'Kurvenlicht / adaptives Licht','LED-Rückleuchten','Lichtsensor','Nebelscheinwerfer',
+    'Kurvenlicht / adaptives Licht','LED-RÃ¼ckleuchten','Lichtsensor','Nebelscheinwerfer',
     // Innenausstattung
     'Lederausstattung','Kunstleder / Alcantara','Stoffausstattung','Sportsitze','7 Sitze','6 Sitze','5 Sitze',
-    'Holzdekor','Aluminiumdekor','Dachhimmel schwarz','Veloursfußmatten',
+    'Holzdekor','Aluminiumdekor','Dachhimmel schwarz','VeloursfuÃŸmatten',
     // Exterieur
     '17-Zoll-Leichtmetallfelgen','18-Zoll-Leichtmetallfelgen','19-Zoll-Leichtmetallfelgen','20-Zoll-Leichtmetallfelgen','21-Zoll-Leichtmetallfelgen',
-    'Winterräder inklusive','Sportfahrwerk','Luftfederung','Anhängerkupplung','Dachreling','Spoiler','Metallic-Lackierung',
+    'WinterrÃ¤der inklusive','Sportfahrwerk','Luftfederung','AnhÃ¤ngerkupplung','Dachreling','Spoiler','Metallic-Lackierung',
     // Antrieb
     'Allradantrieb','Hinterradantrieb','Frontantrieb','Automatikgetriebe','Schaltgetriebe',
     'Mild-Hybrid','Vollhybrid (HEV)','Plug-in-Hybrid (PHEV)','Elektroantrieb (BEV)',
     'Scheckheftgepflegt','Neuwertig / 1. Hand','Herstellergarantie',
   ];
 
-  const response = await client.messages.create({
+  const response = await getAnthropic().messages.create({
     model:      'claude-haiku-4-5-20251001',
     max_tokens: 1500,
     system:     'Du bist eine Fahrzeugausstattungs-API. Antworte NUR mit einem JSON-Objekt. Kein Text, kein Markdown, kein Code-Block. Direkt mit { beginnen.',
@@ -187,16 +187,16 @@ Dekodiere das Fahrzeug und generiere die vollständige Serienausstattung.`;
       role:    'user',
       content: `${vehicleContext}
 
-Wähle aus dieser Liste NUR die Merkmale, die für dieses KONKRETE Fahrzeug (Marke, Modell, Baujahr, Motorisierung) als Serienausstattung oder sehr häufige Option bekannt sind:
+WÃ¤hle aus dieser Liste NUR die Merkmale, die fÃ¼r dieses KONKRETE Fahrzeug (Marke, Modell, Baujahr, Motorisierung) als Serienausstattung oder sehr hÃ¤ufige Option bekannt sind:
 ${ALL_LABELS.join(' | ')}
 
 WICHTIGE REGELN:
 - Nur Labels aus der obigen Liste, exakt so geschrieben
 - Basis-Sicherheit: ABS, ESP, Fahrerairbag, Beifahrerairbag, Seitenairbags, Kopfairbags, ISOFIX, Reifendruckkontrolle
-- powerPs EXAKT aus den Fahrzeugdaten übernehmen (${vincario?.powerPs ? vincario.powerPs + ' PS laut Herstellerdaten' : 'aus VIN schätzen'})
-- Nur Ausstattungen hinzufügen die für DIESEN genauen Motor/Ausbaustufe bekannt sind
-- NICHT hinzufügen: Lenkradheizung, Sitzbelüftung, Panoramadach, Anhängerkupplung — es sei denn, für dieses Modell typisch
-- Keine Extras erfinden — lieber 5 weniger als 1 falsch
+- powerPs EXAKT aus den Fahrzeugdaten Ã¼bernehmen (${vincario?.powerPs ? vincario.powerPs + ' PS laut Herstellerdaten' : 'aus VIN schÃ¤tzen'})
+- Nur Ausstattungen hinzufÃ¼gen die fÃ¼r DIESEN genauen Motor/Ausbaustufe bekannt sind
+- NICHT hinzufÃ¼gen: Lenkradheizung, SitzbelÃ¼ftung, Panoramadach, AnhÃ¤ngerkupplung â€” es sei denn, fÃ¼r dieses Modell typisch
+- Keine Extras erfinden â€” lieber 5 weniger als 1 falsch
 - fuelType auf Deutsch (Benzin/Diesel/Elektro/Hybrid)
 
 Antworte mit diesem JSON:`,
@@ -206,7 +206,7 @@ Antworte mit diesem JSON:`,
   const text = (response.content[0] as Anthropic.TextBlock).text.trim();
   console.log('[claude raw]', text.substring(0, 600));
 
-  // JSON extrahieren — unterstützt reines JSON, Code-Fence, eingebettetes JSON
+  // JSON extrahieren â€” unterstÃ¼tzt reines JSON, Code-Fence, eingebettetes JSON
   let jsonStr = text;
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fence) jsonStr = fence[1].trim();
@@ -227,7 +227,7 @@ Antworte mit diesem JSON:`,
   };
 }
 
-// ── Handler ───────────────────────────────────────────────────────────────────
+// â”€â”€ Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function POST(req: NextRequest) {
   try {
     const { vin } = await req.json();
@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
       console.error('[vincario error]', e);
     }
 
-    // Schritt 2: Claude mit Vincario-Kontext (präzise Ausstattung)
+    // Schritt 2: Claude mit Vincario-Kontext (prÃ¤zise Ausstattung)
     // Bis zu 2 Versuche falls JSON-Parsing scheitert
     let claudeResult: Awaited<ReturnType<typeof fetchEquipment>> | null = null;
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -256,10 +256,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (!vincario && !claudeResult) {
-      return NextResponse.json({ error: 'FIN nicht erkannt — bitte manuell eingeben.' }, { status: 404 });
+      return NextResponse.json({ error: 'FIN nicht erkannt â€” bitte manuell eingeben.' }, { status: 404 });
     }
 
-    // Ergebnis zusammenführen: Vincario hat Vorrang bei Basisdaten
+    // Ergebnis zusammenfÃ¼hren: Vincario hat Vorrang bei Basisdaten
     const brand = vincario?.brand
       ? [vincario.brand, vincario.model].filter(Boolean).join(' ')
       : null;
@@ -286,3 +286,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
