@@ -1,0 +1,287 @@
+/* =============================================
+   2Fast4Sale — Global Styles
+   Font: Inter via Next.js font optimization
+   ============================================= */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Backgrounds */
+  --bg-base:     #050d1a;
+  --bg-surface:  #0c1829;
+  --bg-elevated: #122030;
+  --bg-card:     #0a1525;
+
+  /* Borders */
+  --border:       rgba(255,255,255,0.14);
+  --border-hover: rgba(255,255,255,0.26);
+
+  /* Text */
+  --text-h:     #ffffff;
+  --text-body:  #e8f1fa;
+  --text-sec:   #a8c4dc;
+  --text-muted: #7aaac8;
+  --text-faint: #4a7090;
+
+  /* Accent */
+  --accent:      #3b82f6;
+  --accent-glow: rgba(59,130,246,0.4);
+
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* ── Typography scale — alle Größen lesbar ── */
+  --text-2xs:  11px;   /* nur für Badges/Tags, nie für Fließtext */
+  --text-xs:   12px;   /* Labels, Captions */
+  --text-sm:   13px;   /* Body small, Buttons */
+  --text-base: 14px;   /* Standard Body */
+  --text-md:   15px;   /* Etwas größer Body */
+  --text-lg:   16px;   /* Subheadings */
+  --text-xl:   18px;   /* Section Titles */
+  --text-2xl:  22px;   /* Page Titles */
+  --text-3xl:  28px;   /* Hero */
+}
+
+html {
+  scroll-behavior: smooth;
+  /* Inter Opentype Features für bestmögliche Lesbarkeit */
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "ss01" 1;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background-color: var(--bg-base);
+  color: var(--text-body);
+  font-size: var(--text-base);   /* 14px base — nie kleiner für Fließtext */
+  line-height: 1.6;
+  min-height: 100vh;
+  font-weight: 400;
+
+  /* Beste Font-Rendering für Inter */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Globale Typografie-Regeln ─────────────────────────────────────────────
+   Diese Regeln greifen für ALLE inline-Styles und Klassen.
+   Ziel: Inter bei kleinen Größen lesbar halten.
+──────────────────────────────────────────────────────────────────────────── */
+
+/* Kein font-weight über 700 unter 13px — verhindert matschige Labels */
+span, div, p, button, label, td, th {
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+}
+
+/* Alle Inputs, Textareas: immer mindestens 14px, lesefreundlich */
+input, textarea, select {
+  font-family: var(--font);
+  font-size: var(--text-base) !important;  /* 14px — verhindert Mini-Text in iOS/Chrome */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Buttons: konsistente Schrift */
+button {
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Utility: Lesefreundliche Label-Klassen ── */
+.label-xs {
+  font-size: 11px;
+  font-weight: 600;       /* nie 700+ bei 11px */
+  letter-spacing: 0.06em; /* reduziert — weniger Spread = sauberer */
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.label-sm {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.body-sm {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.body-base {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+::selection { background: rgba(59,130,246,0.35); color: #fff; }
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Components ────────────────────────────────────────────────────────── */
+.spinner {
+  width: 48px; height: 48px;
+  border: 4px solid rgba(59,130,246,0.2);
+  border-left-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto 18px;
+}
+
+.form-input {
+  width: 100%; padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text-h);
+  font-size: var(--text-base);   /* 14px */
+  font-family: var(--font);
+  outline: none; transition: border-color 0.2s;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.form-input:focus { border-color: #3b82f6; }
+.form-input::placeholder { color: var(--text-faint); }
+
+.btn-next {
+  background: #2563eb; color: #fff;
+  padding: 12px 28px; border-radius: 8px; border: none;
+  font-size: var(--text-sm);   /* 13px */
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer; transition: 0.2s;
+  letter-spacing: 0.01em;
+}
+.btn-next:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+.platform-bar {
+  width: 100%; padding: 14px; border-radius: 8px; border: none;
+  font-weight: 600; font-size: var(--text-sm); font-family: var(--font);
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  cursor: pointer; transition: 0.2s;
+}
+.platform-bar:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.mobile-de-bar  { background: #ff7d00; color: #fff; box-shadow: 0 4px 14px rgba(255,125,0,0.25); }
+.autoscout-bar  { background: #ffde00; color: #1a1a1a; box-shadow: 0 4px 14px rgba(255,222,0,0.2); }
+.draft-bar      { background: #16a34a; color: #fff; box-shadow: 0 4px 14px rgba(22,163,74,0.25); }
+
+.upload-box {
+  border: 1px dashed rgba(59,130,246,0.45); border-radius: 10px; padding: 28px;
+  text-align: center; cursor: pointer; transition: 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  color: var(--text-sec);
+}
+.upload-box:hover { background: rgba(59,130,246,0.08); border-color: #3b82f6; }
+.file-input-hidden { display: none; }
+.hidden { visibility: hidden; }
+
+/* ── Headings ──────────────────────────────────────────────────────────── */
+.page-title {
+  font-family: var(--font);
+  font-size: 32px;
+  font-weight: 700;          /* 700 reicht für Inter — sieht sauberer aus als 800+ */
+  letter-spacing: -0.8px;
+  line-height: 1.2;
+  background: linear-gradient(110deg, #ffffff 0%, #93c5fd 50%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 8px;
+}
+
+.section-title {
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 600;
+  color: #93c5fd;
+  letter-spacing: -0.1px;
+  line-height: 1.4;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-title::before {
+  content: '';
+  display: inline-block;
+  width: 3px; height: 16px;
+  background: linear-gradient(to bottom, #3b82f6, #a78bfa);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.card-label {
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;           /* 600 nicht 700 bei 11px */
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;     /* reduziert von 0.12em */
+  margin: 0 0 14px;
+}
+
+.card-title {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0f0ff;
+  letter-spacing: -0.1px;
+  margin: 0;
+}
+
+/* ── Dashboard-spezifisch: helle Seiten ────────────────────────────────── */
+
+/* Verhindert dass das dunkle body-bg auf helle Dashboard-Seiten durchscheint */
+.dashboard-page {
+  background: #f0f2f5;
+  min-height: 100vh;
+  color: #0f172a;
+}
+
+/* Karten in hellen Seiten */
+.light-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+/* ── Tag / Badge ───────────────────────────────────────────────────────── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;        /* mindestens 12px für Tags */
+  font-weight: 500;       /* 500 ist lesbar, nicht matschig */
+  padding: 3px 10px;
+  border-radius: 20px;
+  line-height: 1.4;
+}
+
+/* ── Fieldlabel: in hellen Formularen ─────────────────────────────────── */
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Blue accent ───────────────────────────────────────────────────────── */
+.blue-accent { color: #60a5fa; }

@@ -1,0 +1,298 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Plus, Clock, ExternalLink, Settings, Image, Layers, ChevronRight, Sparkles, ArrowRight, Zap, Car, Target } from 'lucide-react';
+
+interface Vehicle {
+  id: string; brand: string; price: string; date: string;
+  image: string; status: string; km?: string;
+}
+
+const F = '"Inter",-apple-system,BlinkMacSystemFont,sans-serif';
+
+const STATUS: Record<string, { label: string; color: string; bg: string; border: string; dot: string }> = {
+  'Aktiv':      { label: 'Live',        color: '#10b981', bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.35)',  dot: '#10b981' },
+  'Reserviert': { label: 'Reserviert',  color: '#60a5fa', bg: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.35)',  dot: '#3b82f6' },
+  'Entwurf':    { label: 'Entwurf',     color: '#fbbf24', bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.35)',  dot: '#f59e0b' },
+  'Verkauft':   { label: 'Verkauft',    color: '#a78bfa', bg: 'rgba(139,92,246,0.15)',  border: 'rgba(139,92,246,0.35)',  dot: '#8b5cf6' },
+};
+
+function PulseDot({ color }: { color: string }) {
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', width: '8px', height: '8px', flexShrink: 0 }}>
+      <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', backgroundColor: color, opacity: 0.5, animation: 'ping 1.5s ease-out infinite' }} />
+      <span style={{ borderRadius: '50%', width: '8px', height: '8px', backgroundColor: color, display: 'block' }} />
+    </span>
+  );
+}
+
+export default function DashboardPage() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [hour] = useState(() => new Date().getHours());
+
+  const greet = hour < 5 ? ['Noch wach? 🌙', 'Der frühe Händler fängt den Käufer.']
+    : hour < 11 ? ['Guten Morgen ☀️', 'Starte den Tag mit einem neuen Inserat.']
+    : hour < 14 ? ['Mittag 🍔', 'Kurze Pause — oder schnell ein Inserat live?']
+    : hour < 18 ? ['Nachmittag ⚡', 'Jetzt Inserate online — Abends suchen die Käufer.']
+    :             ['Guten Abend 🌆', 'Abendstunden = beste Klickzeiten auf mobile.de.'];
+
+  useEffect(() => {
+    fetch('/api/vehicles').then(r => r.json()).then(d => {
+      if (d.vehicles?.length) setVehicles(d.vehicles.map((v: Record<string,unknown>) => ({
+        id: v.id, brand: v.brand || 'Unbekannt',
+        price: v.price ? `${Number(v.price).toLocaleString('de-DE')} €` : '—',
+        km: v.km || '', date: new Date(v.created_at as string).toLocaleDateString('de-DE'),
+        image: (v.vehicle_images as {processed_url?:string;original_url?:string}[])?.[0]?.processed_url
+          || (v.vehicle_images as {processed_url?:string;original_url?:string}[])?.[0]?.original_url || '',
+        status: v.status || 'Entwurf',
+      })));
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const live   = vehicles.filter(v => v.status === 'Aktiv').length;
+  const drafts = vehicles.filter(v => v.status === 'Entwurf').length;
+  const total  = vehicles.length;
+
+  return (
+    <div style={{ fontFamily: F, minHeight: '100vh', background: '#0f1923' }}>
+
+      {/* ═══ HERO ═══ */}
+      <div style={{ position: 'relative', overflow: 'hidden', padding: '28px 32px 0' }}>
+
+        {/* Farbige Hintergrund-Orbs */}
+        <div style={{ position: 'absolute', top: '-80px', left: '-40px',  width: '340px', height: '340px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.22) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '-20px', right: '15%',   width: '260px', height: '260px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.14) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '0',  right: '-20px', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,158,11,0.10) 0%, transparent 65%)', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+          <div>
+            <h1 style={{ margin: '0 0 4px', fontSize: '28px', fontWeight: '900', color: '#fff', letterSpacing: '-0.8px', lineHeight: 1.1 }}>
+              {greet[0]}
+            </h1>
+            <p style={{ margin: '0 0 18px', color: '#6b8fa8', fontSize: '15px' }}>{greet[1]}</p>
+
+            {/* Live-Pills */}
+            {loaded && total > 0 && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {live > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: '20px', padding: '5px 14px 5px 10px' }}>
+                    <PulseDot color="#10b981" />
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#34d399' }}>{live} {live === 1 ? 'Inserat' : 'Inserate'} live</span>
+                  </div>
+                )}
+                {drafts > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '20px', padding: '5px 14px 5px 10px' }}>
+                    <Clock size={12} color="#f59e0b" />
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#fbbf24' }}>{drafts} Entwurf{drafts > 1 ? 'e' : ''}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none', flexShrink: 0 }}>
+            <button
+              style={{ display: 'flex', alignItems: 'center', gap: '9px', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff', padding: '13px 24px', borderRadius: '12px', fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '15px', fontFamily: F, boxShadow: '0 6px 28px rgba(37,99,235,0.5)', letterSpacing: '-0.2px', transition: 'transform 0.15s,box-shadow 0.15s' }}
+              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 10px 36px rgba(37,99,235,0.65)'; }}
+              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = ''; el.style.boxShadow = '0 6px 28px rgba(37,99,235,0.5)'; }}
+            >
+              <Plus size={17} /> Neues Inserat
+            </button>
+          </Link>
+        </div>
+
+        {/* Stats-Streifen */}
+        <div style={{ position: 'relative', display: 'flex', gap: '0', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '20px', paddingBottom: '20px' }}>
+          {[
+            { v: total,  label: 'Inserate',  color: '#60a5fa', glow: 'rgba(96,165,250,0.4)',  bg: 'rgba(59,130,246,0.1)',  icon: <Car size={15} /> },
+            { v: live,   label: 'Live',       color: '#10b981', glow: 'rgba(16,185,129,0.4)',  bg: 'rgba(16,185,129,0.1)', icon: <Target size={15} /> },
+            { v: drafts, label: 'Entwürfe',   color: '#f59e0b', glow: 'rgba(245,158,11,0.4)',  bg: 'rgba(245,158,11,0.1)', icon: <Clock size={15} /> },
+          ].map((s, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '32px', marginRight: '32px', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: s.bg, border: `1px solid ${s.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, boxShadow: `0 0 14px ${s.glow}` }}>
+                {s.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: '26px', fontWeight: '900', color: '#fff', lineHeight: 1, letterSpacing: '-1px' }}>{s.v}</div>
+                <div style={{ fontSize: '12px', color: '#4a7090', fontWeight: '600', marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══ HAUPTINHALT ═══ */}
+      <div style={{ padding: '0 32px 32px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '16px', alignItems: 'start' }}>
+
+        {/* Linke Spalte */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+          {/* Workflow-Banner */}
+          <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(37,99,235,0.18) 0%, rgba(124,58,237,0.14) 100%)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: '14px', padding: '18px 22px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+            <div style={{ position: 'absolute', right: '-30px', bottom: '-30px', width: '160px', height: '160px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 65%)', pointerEvents: 'none' }} />
+            <div style={{ width: '44px', height: '44px', flexShrink: 0, background: 'linear-gradient(135deg,#2563eb,#7c3aed)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(37,99,235,0.45)' }}>
+              <Zap size={20} color="#fff" />
+            </div>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <div style={{ fontSize: '16px', fontWeight: '800', color: '#fff', marginBottom: '5px', letterSpacing: '-0.3px' }}>In 2 Minuten live auf mobile.de & AutoScout24</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { step: 'FIN scannen',          color: '#60a5fa' },
+                  { step: 'Fotos hochladen',       color: '#34d399' },
+                  { step: 'KI-Text generieren',    color: '#c4b5fd' },
+                  { step: 'Direkt veröffentlichen', color: '#fbbf24' },
+                ].map(({ step, color }, i, arr) => (
+                  <React.Fragment key={i}>
+                    <span style={{ fontSize: '13px', color, fontWeight: '600' }}>{step}</span>
+                    {i < arr.length - 1 && <span style={{ color: '#2a4a6a', fontSize: '12px' }}>→</span>}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+            <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none', flexShrink: 0, position: 'relative' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '10px 18px', borderRadius: '9px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', fontFamily: F, backdropFilter: 'blur(8px)' }}>
+                Start <ArrowRight size={14} />
+              </button>
+            </Link>
+          </div>
+
+          {/* Inserate-Liste */}
+          <div style={{ background: '#151f2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+              <h2 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#fff', letterSpacing: '-0.3px' }}>Deine Inserate</h2>
+              <Link href="/dashboard/gallery" style={{ textDecoration: 'none', fontSize: '13px', fontWeight: '600', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Alle anzeigen <ChevronRight size={13} />
+              </Link>
+            </div>
+
+            {!loaded ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#3a5a78', fontSize: '14px' }}>Lädt…</div>
+            ) : vehicles.length === 0 ? (
+              <div style={{ padding: '52px 32px', textAlign: 'center' }}>
+                <div style={{ width: '80px', height: '80px', margin: '0 auto 20px', background: 'linear-gradient(135deg,rgba(37,99,235,0.2),rgba(124,58,237,0.15))', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(96,165,250,0.2)', boxShadow: '0 0 40px rgba(37,99,235,0.15)' }}>
+                  <Sparkles size={32} color="#60a5fa" />
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '900', color: '#fff', marginBottom: '8px', letterSpacing: '-0.5px' }}>Dein erstes Inserat wartet!</div>
+                <p style={{ color: '#4a7090', fontSize: '14px', margin: '0 0 28px', lineHeight: 1.7 }}>
+                  FIN eingeben → KI erkennt alles → Fotos → Live.<br />Schneller als jede andere Plattform.
+                </p>
+                <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none' }}>
+                  <button style={{ background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff', padding: '13px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '16px', fontFamily: F, boxShadow: '0 6px 28px rgba(37,99,235,0.45)', letterSpacing: '-0.3px' }}>
+                    Jetzt loslegen ⚡
+                  </button>
+                </Link>
+              </div>
+            ) : vehicles.slice(0, 8).map((car, i) => {
+              const sc = STATUS[car.status] || STATUS['Entwurf'];
+              return (
+                <Link key={car.id} href={`/dashboard/listing/${car.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '11px 20px', borderBottom: i < Math.min(vehicles.length,8) - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', cursor: 'pointer', transition: 'background 0.12s', borderLeft: `3px solid ${sc.color}` }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                  >
+                    {car.image ? (
+                      <div style={{ width: '64px', height: '42px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <img src={car.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={car.brand} />
+                      </div>
+                    ) : (
+                      <div style={{ width: '64px', height: '42px', borderRadius: '8px', flexShrink: 0, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Car size={18} color="#2a4a6a" />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.2px' }}>{car.brand}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '3px' }}>
+                        {car.status === 'Aktiv' ? <PulseDot color={sc.dot} /> : <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: sc.dot, display: 'block' }} />}
+                        <span style={{ fontSize: '12px', color: sc.color, fontWeight: '700' }}>{sc.label}</span>
+                        {car.km && <span style={{ fontSize: '12px', color: '#3a5a78' }}>· {Number(car.km).toLocaleString('de-DE')} km</span>}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '15px', fontWeight: '800', color: '#93c5fd', letterSpacing: '-0.3px' }}>{car.price}</div>
+                      <div style={{ fontSize: '11px', color: '#2a4a6a', marginTop: '2px' }}>{car.date}</div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Rechte Spalte */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '0' }}>
+
+          {/* Schnellzugriff */}
+          <div style={{ background: '#151f2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#2a5070', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Navigation</span>
+            </div>
+            <div style={{ padding: '8px' }}>
+              {[
+                { href: '/dashboard/listing/step1', icon: <Plus size={15}/>,     label: 'Neues Inserat',   color: '#3b82f6', gradient: 'linear-gradient(135deg,rgba(37,99,235,0.2),rgba(37,99,235,0.08))' },
+                { href: '/dashboard/gallery',        icon: <Image size={15}/>,    label: 'Alle Inserate',   color: '#8b5cf6', gradient: 'linear-gradient(135deg,rgba(139,92,246,0.2),rgba(139,92,246,0.08))' },
+                { href: '/dashboard/backgrounds',    icon: <Layers size={15}/>,   label: 'Studio',          color: '#f59e0b', gradient: 'linear-gradient(135deg,rgba(245,158,11,0.2),rgba(245,158,11,0.08))' },
+                { href: '/dashboard/export',         icon: <ExternalLink size={15}/>, label: 'Export',      color: '#10b981', gradient: 'linear-gradient(135deg,rgba(16,185,129,0.2),rgba(16,185,129,0.08))' },
+                { href: '/dashboard/settings',       icon: <Settings size={15}/>, label: 'Einstellungen',   color: '#64748b', gradient: 'linear-gradient(135deg,rgba(100,116,139,0.15),transparent)' },
+              ].map(a => (
+                <Link key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', borderRadius: '9px', cursor: 'pointer', marginBottom: '3px', transition: 'background 0.12s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = a.gradient; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
+                  >
+                    <div style={{ width: '30px', height: '30px', background: `${a.color}20`, border: `1px solid ${a.color}35`, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: a.color, flexShrink: 0, boxShadow: `0 0 10px ${a.color}25` }}>
+                      {a.icon}
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#c0d8f0' }}>{a.label}</span>
+                    <ChevronRight size={12} style={{ color: '#1e3a52', marginLeft: 'auto' }} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Plattformen */}
+          <div style={{ background: '#151f2e', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: '#2a5070', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Publish-Ziele</span>
+            </div>
+            <div style={{ padding: '10px' }}>
+              {[
+                { name: 'mobile.de',    color: '#f97316', desc: 'XML-Export' },
+                { name: 'AutoScout24',  color: '#3b82f6', desc: 'XML-Export' },
+                { name: 'PDF Export',   color: '#10b981', desc: 'Druckfertig' },
+              ].map(p => (
+                <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 8px', borderRadius: '9px', marginBottom: '3px', background: `${p.color}08`, border: `1px solid ${p.color}18` }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${p.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `1px solid ${p.color}35`, boxShadow: `0 0 12px ${p.color}30` }}>
+                    <ExternalLink size={13} color={p.color} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>{p.name}</div>
+                    <div style={{ fontSize: '11px', color: '#2a5070' }}>{p.desc}</div>
+                  </div>
+                  <PulseDot color={p.color} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tipp-Card */}
+          <div style={{ background: 'linear-gradient(135deg,rgba(16,185,129,0.1),rgba(37,99,235,0.08))', border: '1px solid rgba(16,185,129,0.18)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: '#34d399', marginBottom: '6px' }}>💡 Pro-Tipp</div>
+            <p style={{ fontSize: '13px', color: '#4a8070', margin: 0, lineHeight: 1.65 }}>
+              Studio-Fotos erzielen im Schnitt <strong style={{ color: '#6ee7b7' }}>+12 % mehr Preis</strong> als normale Handy-Fotos.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes ping { 75%,100% { transform:scale(2.2); opacity:0; } }
+      `}</style>
+    </div>
+  );
+}

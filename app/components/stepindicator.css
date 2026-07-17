@@ -1,0 +1,73 @@
+.step-indicator {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 3rem;
+}
+
+.step-line {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  transition: width 0.3s ease;
+  z-index: -1;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(30, 41, 59, 0.5);
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.step-number.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #fbbf24;
+  color: #0f172a;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+}
+
+.step-number.completed {
+  background: #6ba547;
+  border-color: #6ba547;
+  color: white;
+}
+
+.step-label {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .step-indicator {
+    margin-bottom: 2rem;
+  }
+
+  .step-number {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+  }
+
+  .step-label {
+    font-size: 0.8rem;
+  }
+}

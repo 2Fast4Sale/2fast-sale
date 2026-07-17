@@ -1,0 +1,237 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Plus, Clock, ChevronRight, Sparkles, ArrowRight, Car, Zap, ExternalLink, Settings, Image, Layers, BarChart2 } from 'lucide-react';
+
+interface Vehicle {
+  id: string; brand: string; price: string; date: string;
+  image: string; status: string; km?: string;
+}
+
+const F = '"Inter",-apple-system,BlinkMacSystemFont,sans-serif';
+
+const S: Record<string, { label: string; color: string; bg: string }> = {
+  'Aktiv':      { label: 'LIVE',       color: '#22c55e', bg: 'rgba(34,197,94,0.1)'   },
+  'Reserviert': { label: 'RESERVIERT', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
+  'Entwurf':    { label: 'ENTWURF',    color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+  'Verkauft':   { label: 'VERKAUFT',   color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)'  },
+};
+
+export default function DashboardPage() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [h] = useState(() => new Date().getHours());
+  const time = h < 12 ? 'Morgen' : h < 18 ? 'Tag' : 'Abend';
+
+  useEffect(() => {
+    fetch('/api/vehicles').then(r => r.json()).then(d => {
+      if (d.vehicles?.length) setVehicles(d.vehicles.map((v: Record<string,unknown>) => ({
+        id: v.id, brand: v.brand || 'Unbekannt',
+        price: v.price ? `${Number(v.price).toLocaleString('de-DE')} €` : '—',
+        km: v.km || '', date: new Date(v.created_at as string).toLocaleDateString('de-DE'),
+        image: (v.vehicle_images as {processed_url?:string;original_url?:string}[])?.[0]?.processed_url || (v.vehicle_images as {processed_url?:string;original_url?:string}[])?.[0]?.original_url || '',
+        status: v.status || 'Entwurf',
+      })));
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  const live   = vehicles.filter(v => v.status === 'Aktiv').length;
+  const drafts = vehicles.filter(v => v.status === 'Entwurf').length;
+  const total  = vehicles.length;
+
+  return (
+    <div style={{ fontFamily: F, minHeight: '100vh', background: '#06090f', color: '#fff' }}>
+
+      {/* ── TOP BAR ── */}
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+          <span style={{ fontSize: '12px', color: '#374151', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Guten {time}</span>
+          {live > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'block', animation: 'blink 2s ease-in-out infinite' }} />
+              <span style={{ fontSize: '12px', color: '#22c55e', fontWeight: '700', letterSpacing: '0.05em' }}>{live} LIVE</span>
+            </div>
+          )}
+        </div>
+        <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#d97706', color: '#000', padding: '8px 18px', borderRadius: '6px', fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '13px', fontFamily: F, letterSpacing: '0.03em' }}>
+            <Plus size={14} /> NEUES INSERAT
+          </button>
+        </Link>
+      </div>
+
+      {/* ── HERO ── */}
+      <div style={{ padding: '56px 40px 48px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ maxWidth: '700px' }}>
+          <div style={{ fontSize: '11px', color: '#d97706', fontWeight: '800', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
+            ● 2Fast4Sale — Fahrzeuginserate
+          </div>
+          <h1 style={{ margin: '0 0 20px', fontSize: '52px', fontWeight: '900', lineHeight: 1.0, letterSpacing: '-2.5px', color: '#fff' }}>
+            Inserate.<br />
+            <span style={{ color: '#d97706' }}>Sofort live.</span>
+          </h1>
+          <p style={{ margin: '0 0 32px', fontSize: '16px', color: '#374151', lineHeight: 1.7, maxWidth: '480px' }}>
+            FIN scannen → KI befüllt alles → Fotos → direkt auf mobile.de & AutoScout24. In unter 2 Minuten.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: '9px', background: '#d97706', color: '#000', padding: '14px 28px', borderRadius: '8px', fontWeight: '900', border: 'none', cursor: 'pointer', fontSize: '15px', fontFamily: F, letterSpacing: '-0.2px', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f59e0b')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#d97706')}
+              >
+                Inserat erstellen <ArrowRight size={16} />
+              </button>
+            </Link>
+            <Link href="/dashboard/gallery" style={{ textDecoration: 'none' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: '9px', background: 'transparent', color: '#6b7280', padding: '14px 24px', borderRadius: '8px', fontWeight: '700', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontSize: '15px', fontFamily: F, transition: 'all 0.15s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.25)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#6b7280'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}
+              >
+                Alle Inserate
+              </button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats rechts oben */}
+        <div style={{ position: 'absolute', top: '72px', right: '40px', display: 'flex', gap: '1px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', overflow: 'hidden' }}>
+          {[
+            { n: total,  l: 'Gesamt',    c: '#fff'     },
+            { n: live,   l: 'Live',      c: '#22c55e'  },
+            { n: drafts, l: 'Entwürfe',  c: '#f59e0b'  },
+          ].map((s, i) => (
+            <div key={i} style={{ padding: '16px 24px', background: '#0d1117', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none', minWidth: '90px' }}>
+              <div style={{ fontSize: '28px', fontWeight: '900', color: s.c, letterSpacing: '-1px', lineHeight: 1 }}>{s.n}</div>
+              <div style={{ fontSize: '11px', color: '#374151', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '4px' }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── INSERATE-LISTE ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', minHeight: 'calc(100vh - 400px)' }}>
+
+        {/* Liste */}
+        <div style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: '20px 40px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', color: '#374151', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.15em' }}>Zuletzt bearbeitet</span>
+            <Link href="/dashboard/gallery" style={{ textDecoration: 'none', fontSize: '12px', color: '#d97706', fontWeight: '700', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              ALLE <ChevronRight size={12} />
+            </Link>
+          </div>
+
+          {!loaded ? (
+            <div style={{ padding: '60px 40px', color: '#1f2937', fontSize: '14px' }}>Lädt…</div>
+          ) : vehicles.length === 0 ? (
+            <div style={{ padding: '80px 40px' }}>
+              <div style={{ fontSize: '13px', color: '#374151', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>Noch keine Inserate</div>
+              <div style={{ fontSize: '32px', fontWeight: '900', color: '#fff', marginBottom: '8px', letterSpacing: '-1px' }}>Starte jetzt.</div>
+              <p style={{ color: '#374151', fontSize: '14px', marginBottom: '28px', lineHeight: 1.7 }}>Dein erstes Inserat in 2 Minuten live.</p>
+              <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none' }}>
+                <button style={{ background: '#d97706', color: '#000', padding: '12px 24px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '14px', fontFamily: F }}>
+                  LOSLEGEN <ArrowRight size={14} style={{ display: 'inline', verticalAlign: 'middle' }} />
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div>
+              {vehicles.slice(0, 8).map((car, i) => {
+                const sc = S[car.status] || S['Entwurf'];
+                return (
+                  <Link key={car.id} href={`/dashboard/listing/${car.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '18px 40px', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.12s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '')}
+                    >
+                      {/* Bild */}
+                      {car.image ? (
+                        <div style={{ width: '80px', height: '52px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <img src={car.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        </div>
+                      ) : (
+                        <div style={{ width: '80px', height: '52px', borderRadius: '6px', flexShrink: 0, background: '#0d1117', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Car size={20} color="#1f2937" />
+                        </div>
+                      )}
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '16px', fontWeight: '800', color: '#fff', letterSpacing: '-0.4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '4px' }}>{car.brand}</div>
+                        <div style={{ fontSize: '12px', color: '#374151' }}>{car.km ? `${Number(car.km).toLocaleString('de-DE')} km` : ''}{car.km && ' · '}{car.date}</div>
+                      </div>
+                      {/* Status */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: sc.color, background: sc.bg, padding: '4px 10px', borderRadius: '4px', letterSpacing: '0.08em' }}>{sc.label}</span>
+                        <div style={{ fontSize: '16px', fontWeight: '900', color: '#d97706', letterSpacing: '-0.5px' }}>{car.price}</div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Rechte Sidebar */}
+        <div>
+          {/* Publish */}
+          <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '11px', color: '#374151', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '14px' }}>Publish-Ziele</div>
+            {[
+              { name: 'mobile.de',   color: '#f97316' },
+              { name: 'AutoScout24', color: '#3b82f6' },
+              { name: 'PDF Export',  color: '#22c55e' },
+            ].map(p => (
+              <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.color, flexShrink: 0, boxShadow: `0 0 8px ${p.color}` }} />
+                <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: '600', flex: 1 }}>{p.name}</span>
+                <span style={{ fontSize: '10px', color: p.color, fontWeight: '700', letterSpacing: '0.06em' }}>BEREIT</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Navigation */}
+          <div style={{ padding: '20px' }}>
+            <div style={{ fontSize: '11px', color: '#374151', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '14px' }}>Navigation</div>
+            {[
+              { href: '/dashboard/listing/step1', icon: <Plus size={14}/>,         label: 'Neues Inserat'   },
+              { href: '/dashboard/gallery',        icon: <Image size={14}/>,        label: 'Alle Inserate'   },
+              { href: '/dashboard/backgrounds',    icon: <Layers size={14}/>,       label: 'Studio'          },
+              { href: '/dashboard/export',         icon: <ExternalLink size={14}/>, label: 'Export'          },
+              { href: '/dashboard/settings',       icon: <Settings size={14}/>,     label: 'Einstellungen'   },
+            ].map(a => (
+              <Link key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', color: '#6b7280', transition: 'color 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}
+                >
+                  {a.icon}
+                  <span style={{ fontSize: '13px', fontWeight: '600' }}>{a.label}</span>
+                  <ChevronRight size={12} style={{ marginLeft: 'auto', opacity: 0.3 }} />
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div style={{ margin: '0 20px 20px', padding: '16px', background: '#0d1117', border: '1px solid rgba(217,119,6,0.2)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '900', color: '#fff', marginBottom: '6px', letterSpacing: '-0.3px' }}>Bereit für heute?</div>
+            <p style={{ fontSize: '12px', color: '#374151', margin: '0 0 14px', lineHeight: 1.6 }}>Abendstunden sind die beste Zeit — Käufer surfen nach Feierabend.</p>
+            <Link href="/dashboard/listing/step1" style={{ textDecoration: 'none' }}>
+              <button style={{ width: '100%', background: '#d97706', color: '#000', padding: '10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '800', fontSize: '13px', fontFamily: F }}>
+                INSERAT STARTEN
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
+    </div>
+  );
+}

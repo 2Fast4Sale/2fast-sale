@@ -1,0 +1,55 @@
+﻿.settings-sidebar {
+  position: fixed;
+  right: -400px; /* Startet au�erhalb des Bildschirms */
+  top: 0;
+  width: 380px;
+  height: 100vh;
+  background: rgba(19, 47, 76, 0.95); /* Dein Blau, aber leicht transparent */
+  backdrop-filter: blur(15px); /* Der edle Glas-Effekt */
+  border-left: 1px solid rgba(234, 140, 85, 0.3);
+  padding: 2.5rem;
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); /* Sanftes Gleiten */
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-sidebar.active {
+  right: 0; /* Gleitet rein */
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #b0b0b0;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: var(--highlight);
+}
+
+.setting-item input[type='text'] {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(10, 25, 41, 0.5); /* Tieferes Blau */
+  border: 1px solid var(--accent);
+  border-radius: 12px; /* Rundere Ecken */
+  color: var(--text);
+  transition: border-color 0.3s;
+  outline: none;
+}
+
+.setting-item input[type='text']:focus {
+  border-color: var(--highlight);
+}
