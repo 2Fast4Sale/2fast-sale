@@ -583,11 +583,34 @@
   .section-header p { font-size: 15px; }
 
   .forwho-grid,.testimonials-grid { grid-template-columns: 1fr; gap: 14px; }
-  .pricing-grid { grid-template-columns: 1fr; gap: 10px; }
   .features-grid { grid-template-columns: 1fr; }
-  .pricing-card { padding: 22px 18px; }
-  .pricing-card.popular { transform: none; }
-  .amount { font-size: 36px; }
+
+  /* Pricing: horizontal scroll snapping */
+  .pricing-grid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    padding: 16px 4px 24px;
+    margin: 0 -4px;
+    scrollbar-width: none;
+  }
+  .pricing-grid::-webkit-scrollbar { display: none; }
+  .pricing-card {
+    flex: 0 0 78vw;
+    max-width: 300px;
+    scroll-snap-align: center;
+    padding: 24px 20px;
+  }
+  .pricing-card.popular {
+    transform: none;
+    border-color: rgba(124,58,237,0.45);
+    box-shadow: 0 0 0 2px rgba(124,58,237,0.2), 0 16px 40px rgba(0,0,0,0.4);
+  }
+  .amount { font-size: 40px; }
+  .plan-features li { font-size: 13px; }
   .step-card { padding: 22px 18px; }
   .faq-question { font-size: 15px; padding: 16px 18px; }
 
