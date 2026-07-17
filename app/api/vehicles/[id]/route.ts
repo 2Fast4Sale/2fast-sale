@@ -1,6 +1,8 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '../../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 // PATCH � Fahrzeug aktualisieren
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {

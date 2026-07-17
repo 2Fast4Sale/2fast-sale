@@ -1,10 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '../../../../lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
-// Admin-Endpunkt: Credits manuell zu einem User hinzufügen
+export const dynamic = 'force-dynamic';
+
+// Admin-Endpunkt: Credits manuell zu einem User hinzufÃ¼gen
 // POST /api/credits/add  Body: { userId?: string, amount?: number }
-// Wenn userId fehlt → eigener Account
+// Wenn userId fehlt â†’ eigener Account
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -15,10 +17,10 @@ export async function POST(req: NextRequest) {
   const amount   = parseInt(body.amount ?? '1', 10);
 
   if (isNaN(amount) || amount < 1 || amount > 100) {
-    return NextResponse.json({ error: 'Ungültige Menge (1-100)' }, { status: 400 });
+    return NextResponse.json({ error: 'UngÃ¼ltige Menge (1-100)' }, { status: 400 });
   }
 
-  // Service-Role-Client für direkte DB-Operationen
+  // Service-Role-Client fÃ¼r direkte DB-Operationen
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,

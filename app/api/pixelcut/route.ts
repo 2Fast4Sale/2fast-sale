@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-// Studio-Hintergründe: Backdrop-Farbe, Boden-Farbe, Glanz-Farbe
+export const dynamic = 'force-dynamic';
+
+// Studio-HintergrÃ¼nde: Backdrop-Farbe, Boden-Farbe, Glanz-Farbe
 const STUDIO_PRESETS: Record<string, { backdrop: string; floor: string; glow: string; vignette: string }> = {
   studio_white:  { backdrop: '#d0d0d0', floor: '#e8e8e8', glow: '#ffffff', vignette: 'rgba(0,0,0,0.22)' },
   studio_grey:   { backdrop: '#707070', floor: '#909090', glow: '#c0c0c0', vignette: 'rgba(0,0,0,0.30)' },
@@ -14,9 +16,9 @@ const STUDIO_PRESETS: Record<string, { backdrop: string; floor: string; glow: st
   studio_sunset: { backdrop: '#c0503a', floor: '#d47050', glow: '#ff9966', vignette: 'rgba(60,0,0,0.35)' },
 };
 
-// Stabile Bild-Hintergründe (Unsplash CDN, kostenlos, stabil)
+// Stabile Bild-HintergrÃ¼nde (Unsplash CDN, kostenlos, stabil)
 const IMAGE_BACKGROUNDS: Record<string, string> = {
-  // Showroom-Innenräume (leer oder Auto im Hintergrund verschwommen)
+  // Showroom-InnenrÃ¤ume (leer oder Auto im Hintergrund verschwommen)
   showroom_modern:  'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=2000&q=90',
   showroom_dark:    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=2000&q=90',
   showroom_luxury:  'https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=2000&q=90',
@@ -30,7 +32,7 @@ async function makeGradientBuffer(id: string): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
   const p = STUDIO_PRESETS[id] ?? STUDIO_PRESETS.studio_white;
   const W = 2000, H = 1333;
-  // Bodenlinie bei 64% — passend zum Compositor
+  // Bodenlinie bei 64% â€” passend zum Compositor
   const FLOOR_Y = Math.round(H * 0.64);
 
   const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
@@ -60,9 +62,9 @@ async function makeGradientBuffer(id: string): Promise<Buffer> {
     <rect width="${W}" height="${FLOOR_Y + 40}" fill="url(#bd)"/>
     <!-- Boden -->
     <rect y="${FLOOR_Y - 40}" width="${W}" height="${H - FLOOR_Y + 40}" fill="url(#fl)"/>
-    <!-- Weicher Übergang Wand→Boden (Infinity-Kurve) -->
+    <!-- Weicher Ãœbergang Wandâ†’Boden (Infinity-Kurve) -->
     <ellipse cx="${W / 2}" cy="${FLOOR_Y}" rx="${W * 0.8}" ry="80" fill="${p.floor}" opacity="0.45"/>
-    <!-- Zentrales Rücklicht / Studio-Glow -->
+    <!-- Zentrales RÃ¼cklicht / Studio-Glow -->
     <rect width="${W}" height="${H}" fill="url(#backglow)"/>
     <!-- Boden-Glanz -->
     <rect y="${FLOOR_Y}" width="${W}" height="${H - FLOOR_Y}" fill="url(#floorglow)"/>
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.PHOTOROOM_API_KEY;
     if (!apiKey) {
-      // Kein PhotoRoom-Key → remove.bg Fallback (besser als rembg für Autos)
+      // Kein PhotoRoom-Key â†’ remove.bg Fallback (besser als rembg fÃ¼r Autos)
       return await fallbackRemoveBg(image, backgroundId);
     }
 
@@ -143,7 +145,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ── Fallback 1: remove.bg (bessere Auto-Erkennung als rembg)
+// â”€â”€ Fallback 1: remove.bg (bessere Auto-Erkennung als rembg)
 async function fallbackRemoveBg(image: string, backgroundId?: string): Promise<NextResponse> {
   const removeBgKey = process.env.REMOVE_BG_API_KEY;
   if (removeBgKey) {
@@ -152,7 +154,7 @@ async function fallbackRemoveBg(image: string, backgroundId?: string): Promise<N
       const formData = new FormData();
       formData.append('image_file_b64', base64Data);
       formData.append('size', 'auto');
-      formData.append('type', 'car');           // ← wichtig: Auto-Modus für bessere Räder/Kanten
+      formData.append('type', 'car');           // â† wichtig: Auto-Modus fÃ¼r bessere RÃ¤der/Kanten
       formData.append('shadow_remove', 'false');
 
       const res = await fetch('https://api.remove.bg/v1.0/removebg', {
@@ -167,14 +169,14 @@ async function fallbackRemoveBg(image: string, backgroundId?: string): Promise<N
         const withBg = await applyBackgroundToTransparent(buf, backgroundId);
         return NextResponse.json({ result: withBg });
       }
-    } catch { /* weiter zum nächsten Fallback */ }
+    } catch { /* weiter zum nÃ¤chsten Fallback */ }
   }
 
-  // ── Fallback 2: FAL rembg
+  // â”€â”€ Fallback 2: FAL rembg
   return await fallbackFalRembg(image, backgroundId);
 }
 
-// ── Fallback 2: FAL.ai rembg → dann Hintergrund draufcompositen
+// â”€â”€ Fallback 2: FAL.ai rembg â†’ dann Hintergrund draufcompositen
 async function fallbackFalRembg(image: string, backgroundId?: string): Promise<NextResponse> {
   try {
     const res = await fetch('https://fal.run/fal-ai/imageutils/rembg', {
@@ -196,7 +198,7 @@ async function fallbackFalRembg(image: string, backgroundId?: string): Promise<N
   }
 }
 
-// ── PNG mit Transparenz auf Hintergrundfarbe compositen — mit Boden-Spiegelung
+// â”€â”€ PNG mit Transparenz auf Hintergrundfarbe compositen â€” mit Boden-Spiegelung
 async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: string): Promise<string> {
   try {
     const sharp = (await import('sharp')).default;
@@ -204,7 +206,7 @@ async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: st
     const id = backgroundId ?? 'studio_infinity';
     let bgBuffer: Buffer;
 
-    // Lokale Datei zuerst prüfen (studio_infinity etc.)
+    // Lokale Datei zuerst prÃ¼fen (studio_infinity etc.)
     const LOCAL_BACKGROUNDS: Record<string, string> = {
       studio_infinity: 'studio_infinity.jpg',
       classic:         'classic.jpg',
@@ -228,7 +230,7 @@ async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: st
     const isRealPhoto = LOCAL_BACKGROUNDS[id] != null || IMAGE_BACKGROUNDS[id] != null;
     const FLOOR_Y = Math.round(H * (isRealPhoto ? 0.60 : 0.64));
 
-    // Hintergrund auf Zielgröße bringen
+    // Hintergrund auf ZielgrÃ¶ÃŸe bringen
     const bgResized = await sharp(bgBuffer).resize(W, H, { fit: 'cover' }).toBuffer();
 
     // 1. PNG sicherstellen + RGBA raw pixels lesen
@@ -271,7 +273,7 @@ async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: st
       .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
       .toBuffer();
 
-    // 4. Auf 65% × 50% skalieren
+    // 4. Auf 65% Ã— 50% skalieren
     const carScaled = await sharp(carCropped)
       .resize(Math.round(W * 0.65), Math.round(H * 0.50), { fit: 'inside', withoutEnlargement: false })
       .png()
@@ -280,7 +282,7 @@ async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: st
     const cW = carMeta.width!;
     const cH = carMeta.height!;
 
-    // 5. Platzierung: Unterkante auf FLOOR_Y (8px einsinken für festen Bodenkontakt)
+    // 5. Platzierung: Unterkante auf FLOOR_Y (8px einsinken fÃ¼r festen Bodenkontakt)
     const carLeft = Math.round((W - cW) / 2);
     const carTop  = FLOOR_Y - cH + 8;
     console.log('[Studio] placed: cW=%d cH=%d carTop=%d floor=%d', cW, cH, carTop, FLOOR_Y);

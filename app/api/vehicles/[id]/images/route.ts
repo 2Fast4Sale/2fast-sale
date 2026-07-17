@@ -1,6 +1,8 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '../../../../../lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 // POST � Bilder zu einem Fahrzeug hinzuf�gen
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {

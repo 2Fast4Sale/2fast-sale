@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 
 const MAKE_MAP: Record<string, string> = {
   volkswagen: 'VW', vw: 'VW',

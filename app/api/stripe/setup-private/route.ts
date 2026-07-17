@@ -3,6 +3,8 @@ import Stripe from 'stripe';
 import { writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 
+export const dynamic = 'force-dynamic';
+
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
 export async function POST() {

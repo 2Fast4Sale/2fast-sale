@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { createClient } from '../../../../lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST() {
   const supabase = await createClient();
@@ -15,12 +17,12 @@ export async function POST() {
   const plan    = profile?.plan || 'free';
   const credits = profile?.listing_credits ?? 0;
 
-  // Händler mit aktivem Abo brauchen keine Credits
+  // HÃ¤ndler mit aktivem Abo brauchen keine Credits
   if (plan !== 'free') {
     return NextResponse.json({ ok: true, type: 'plan' });
   }
 
-  // Privatperson: Credit prüfen und abziehen
+  // Privatperson: Credit prÃ¼fen und abziehen
   if (credits < 1) {
     return NextResponse.json({ error: 'Keine Inserat-Credits vorhanden', code: 'no_credits' }, { status: 402 });
   }

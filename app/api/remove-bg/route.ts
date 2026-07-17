@@ -1,5 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     // Wir holen uns das Bild UND den Key direkt aus deiner page.tsx!

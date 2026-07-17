@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+export const dynamic = 'force-dynamic';
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -23,13 +25,13 @@ export async function DELETE(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) {
       console.error('[delete-account] getUser error:', authErr?.message);
-      return NextResponse.json({ error: 'Ungültiger Token' }, { status: 401 });
+      return NextResponse.json({ error: 'UngÃ¼ltiger Token' }, { status: 401 });
     }
 
     const uid = user.id;
     console.log('[delete-account] Deleting user:', uid);
 
-    // 1. Vehicle images löschen
+    // 1. Vehicle images lÃ¶schen
     const { data: vehicles } = await supabaseAdmin
       .from('vehicles').select('id').eq('user_id', uid);
 
@@ -40,17 +42,17 @@ export async function DELETE(req: NextRequest) {
       if (imgErr) console.warn('[delete-account] images delete:', imgErr.message);
     }
 
-    // 2. Vehicles löschen
+    // 2. Vehicles lÃ¶schen
     const { error: vErr } = await supabaseAdmin
       .from('vehicles').delete().eq('user_id', uid);
     if (vErr) console.warn('[delete-account] vehicles delete:', vErr.message);
 
-    // 3. Profil löschen
+    // 3. Profil lÃ¶schen
     const { error: pErr } = await supabaseAdmin
       .from('profiles').delete().eq('id', uid);
     if (pErr) console.warn('[delete-account] profiles delete:', pErr.message);
 
-    // 4. Auth-Account löschen — kurz warten damit FK-Constraints gelöst sind
+    // 4. Auth-Account lÃ¶schen â€” kurz warten damit FK-Constraints gelÃ¶st sind
     await new Promise(r => setTimeout(r, 200));
     const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(uid);
     if (deleteErr) {

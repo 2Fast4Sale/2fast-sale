@@ -1,5 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const BASE_URL = 'https://listing-creation.api.autoscout24.com';
 
 // AS24 uses numeric IDs for fuel types (from /references?referenceType=FuelType)

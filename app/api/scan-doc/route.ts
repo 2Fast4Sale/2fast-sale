@@ -2,6 +2,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 
+export const dynamic = 'force-dynamic';
+
 const getAnthropic = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function toImageBlock(img: string): Anthropic.ImageBlockParam {

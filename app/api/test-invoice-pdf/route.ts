@@ -2,6 +2,8 @@
 import PDFDocument from 'pdfkit';
 import { Resend } from 'resend';
 
+export const dynamic = 'force-dynamic';
+
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export async function GET() {

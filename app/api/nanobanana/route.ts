@@ -1,5 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const { image } = await req.json(); // Das Base64-Bild aus deinem Frontend
