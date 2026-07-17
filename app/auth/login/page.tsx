@@ -65,8 +65,8 @@ function LoginForm() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#07111f', display: 'flex', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
 
-      {/* Left · Branding */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', position: 'relative', overflow: 'hidden' }}>
+      {/* Left · Branding — hidden on mobile */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', position: 'relative', overflow: 'hidden' }} className="login-branding">
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
           <div style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.18), transparent 70%)', top: '-150px', left: '-100px' }} />
           <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.12), transparent 70%)', bottom: '-100px', right: '-80px' }} />
@@ -112,7 +112,7 @@ function LoginForm() {
       </div>
 
       {/* Right · Form */}
-      <div style={{ width: '480px', flexShrink: 0, backgroundColor: '#0a1628', borderLeft: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 48px' }}>
+      <div style={{ width: '480px', flexShrink: 0, backgroundColor: '#0a1628', borderLeft: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 48px' }} className="login-form-panel">
         <div style={{ marginBottom: '40px' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '900', color: '#f8fafc', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Willkommen zurück</h2>
           <p style={{ color: '#475569', fontSize: '14px', margin: 0 }}>Melde dich an, um dein Dashboard zu öffnen.</p>
@@ -167,6 +167,10 @@ function LoginForm() {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         input::placeholder { color: #334155; }
+        @media (max-width: 768px) {
+          .login-branding { display: none !important; }
+          .login-form-panel { width: 100% !important; padding: 40px 24px !important; border-left: none !important; }
+        }
       `}</style>
     </div>
   );
