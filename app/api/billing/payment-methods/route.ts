@@ -31,7 +31,7 @@ export async function GET() {
     /* SEPA dazu */
     const sepaList = await getStripe().paymentMethods.list({ customer: profile.stripe_customer_id, type: 'sepa_debit' });
 
-    const defaultPmId = (customer as getStripe().Customer).invoice_settings?.default_payment_method as string | undefined;
+    const defaultPmId = (customer as Stripe.Customer).invoice_settings?.default_payment_method as string | undefined;
 
     const paymentMethods = [
       ...pmList.data.map(pm => ({
@@ -97,4 +97,5 @@ export async function GET() {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
 

@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, alreadyFulfilled: true });
   }
 
-  let session: getStripe().Checkout.Session;
+  let session: Stripe.Checkout.Session;
   try {
     session = await getStripe().checkout.sessions.retrieve(sessionId, {
       expand: ['invoice', 'customer'],
@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
 
   // E-Mail versenden
   const customerEmail =
-    (session.customer as getStripe().Customer)?.email ||
+    (session.customer as Stripe.Customer)?.email ||
     session.customer_details?.email || '';
 
-  const invoice        = session.invoice as getStripe().Invoice | null;
+  const invoice        = session.invoice as Stripe.Invoice | null;
   const invoiceNumber  = invoice?.number || sessionId.slice(-8).toUpperCase();
   const invoicePdfUrl  = invoice?.invoice_pdf || null;
   const invoiceDate    = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -385,5 +385,6 @@ async function buildInvoicePdf(p: {
     doc.end();
   });
 }
+
 
 

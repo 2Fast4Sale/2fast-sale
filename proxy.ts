@@ -53,8 +53,8 @@ function cleanupStore() {
   }
 }
 
-// ── Middleware ──────────────────────────────────────────────────────────────
-export async function middleware(request: NextRequest) {
+// ── Proxy (formerly middleware) ─────────────────────────────────────────────
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   cleanupStore();

@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Webhook-Secret fehlt' }, { status: 400 });
   }
 
-  let event: getStripe().Event;
+  let event: Stripe.Event;
   try {
     event = getStripe().webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err: unknown) {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
   switch (event.type) {
     case 'checkout.session.completed': {
-      const session = event.data.object as getStripe().Checkout.Session;
+      const session = event.data.object as Stripe.Checkout.Session;
       if (!session.subscription) break;
       const sub    = await getStripe().subscriptions.retrieve(session.subscription as string);
       const userId = sub.metadata?.user_id;
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     }
 
     case 'customer.subscription.updated': {
-      const sub    = event.data.object as getStripe().Subscription;
+      const sub    = event.data.object as Stripe.Subscription;
       const userId = sub.metadata?.user_id;
       if (!userId) break;
       const isActive = sub.status === 'active' || sub.status === 'trialing';
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     case 'customer.subscription.deleted': {
-      const sub    = event.data.object as getStripe().Subscription;
+      const sub    = event.data.object as Stripe.Subscription;
       const userId = sub.metadata?.user_id;
       if (userId) {
         await supabase.from('profiles').update({
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     }
 
     case 'payment_intent.succeeded': {
-      const pi = event.data.object as getStripe().PaymentIntent;
+      const pi = event.data.object as Stripe.PaymentIntent;
       if (pi.metadata?.type === 'listing_credit') {
         const userId  = pi.metadata.user_id;
         const qty     = parseInt(pi.metadata.quantity || '1', 10);
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     }
 
     case 'invoice.payment_failed': {
-      const invoice    = event.data.object as getStripe().Invoice;
+      const invoice    = event.data.object as Stripe.Invoice;
       const customerId = invoice.customer as string;
       console.error('[webhook] Payment failed for customer', customerId);
       break;
@@ -107,4 +107,5 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ received: true });
 }
+
 
