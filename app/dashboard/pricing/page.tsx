@@ -106,12 +106,13 @@ const FAQS = [
 
 /* ─── Plan Card ─────────────────────────────────────────── */
 function PlanCard({
-  plan, billing, currentPlan, onCheckout,
+  plan, billing, currentPlan, onCheckout, compact = false,
 }: {
   plan: typeof PLANS[0];
   billing: 'monthly' | 'yearly';
   currentPlan: string;
   onCheckout: (planId: string) => void;
+  compact?: boolean;
 }) {
   const isCurrent = plan.id === currentPlan;
   const price = plan.monthlyPrice === -1 ? null
@@ -160,7 +161,7 @@ function PlanCard({
         </div>
       )}
 
-      <div style={{ padding: '28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: compact ? '18px 16px' : '28px', flex: 1, display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -181,16 +182,16 @@ function PlanCard({
         {/* Preis */}
         <div style={{ marginBottom: '24px' }}>
           {price === null ? (
-            <div style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', letterSpacing: '-1px', lineHeight: 1 }}>Auf Anfrage</div>
+            <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', letterSpacing: '-1px', lineHeight: 1 }}>Auf Anfrage</div>
           ) : price === 0 ? (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-              <span style={{ fontSize: '48px', fontWeight: '900', color: '#0f172a', letterSpacing: '-3px', lineHeight: 1 }}>0</span>
+              <span style={{ fontSize: compact ? '38px' : '48px', fontWeight: '900', color: '#0f172a', letterSpacing: '-3px', lineHeight: 1 }}>0</span>
               <span style={{ fontSize: '20px', fontWeight: '700', color: '#94a3b8' }}>€</span>
             </div>
           ) : (
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-                <span style={{ fontSize: '48px', fontWeight: '900', color: '#0f172a', letterSpacing: '-3px', lineHeight: 1 }}>{price % 1 === 0 ? price : price.toFixed(0)}</span>
+                <span style={{ fontSize: compact ? '38px' : '48px', fontWeight: '900', color: '#0f172a', letterSpacing: '-3px', lineHeight: 1 }}>{price % 1 === 0 ? price : price.toFixed(0)}</span>
                 <span style={{ fontSize: '16px', fontWeight: '700', color: '#94a3b8' }}>€<span style={{ fontSize: '13px', fontWeight: '500', color: '#cbd5e1' }}>/Mo.</span></span>
               </div>
               {billing === 'yearly' && savedPct > 0 && (
@@ -281,6 +282,14 @@ function PricingContent() {
   const [buyLoading, setBuyLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [openFaq, setOpenFaq]       = useState<number | null>(null);
+  const [isMobile, setIsMobile]     = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -326,7 +335,7 @@ function PricingContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: F, color: '#0f172a' }}>
-      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '32px 24px 80px' }}>
+      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: isMobile ? '20px 16px 100px' : '32px 24px 80px' }}>
 
         {/* ── No-Credits Banner ── */}
         {noCredits && (
@@ -344,11 +353,11 @@ function PricingContent() {
         )}
 
         {/* ── Header ── */}
-        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        <div style={{ textAlign: 'center', marginBottom: isMobile ? '28px' : '48px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: '#6366f1', fontSize: '11px', fontWeight: '700', padding: '5px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '16px' }}>
             <Sparkles size={11} /> Preise
           </div>
-          <h1 style={{ fontSize: '36px', fontWeight: '900', margin: '0 0 10px', letterSpacing: '-1px', color: '#0f172a', lineHeight: 1.1 }}>
+          <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: '900', margin: '0 0 10px', letterSpacing: '-1px', color: '#0f172a', lineHeight: 1.1 }}>
             Transparent. Fair. Ohne Abo-Fallen.
           </h1>
           <p style={{ color: '#64748b', fontSize: '15px', margin: '0 0 32px', lineHeight: 1.6 }}>
@@ -393,12 +402,12 @@ function PricingContent() {
         {/* ── Privatperson Hero ── */}
         <div style={{
           background: 'linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%)',
-          borderRadius: '24px',
-          padding: '32px 36px',
+          borderRadius: '20px',
+          padding: isMobile ? '24px 20px' : '32px 36px',
           marginBottom: '20px',
           display: 'grid',
-          gridTemplateColumns: '1fr auto',
-          gap: '32px',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+          gap: isMobile ? '20px' : '32px',
           alignItems: 'center',
           boxShadow: '0 16px 48px rgba(6,95,70,0.25)',
           position: 'relative',
@@ -437,7 +446,7 @@ function PricingContent() {
           </div>
 
           {/* Kauf-Box */}
-          <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(255,255,255,0.2)', minWidth: '260px', position: 'relative' }}>
+          <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', borderRadius: '16px', padding: '20px', border: '1px solid rgba(255,255,255,0.2)', minWidth: isMobile ? 'unset' : '260px', position: 'relative' }}>
             {credits > 0 && (
               <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>{credits}</div>
@@ -489,19 +498,46 @@ function PricingContent() {
           <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
         </div>
 
-        {/* ── Plan Grid — Reihe 1: Starter, Basic, Premium ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
-          {PLANS.slice(0, 3).map(plan => (
-            <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
-          ))}
-        </div>
-
-        {/* ── Plan Grid — Reihe 2: Business, Enterprise ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', maxWidth: '780px', margin: '0 auto 48px' }}>
-          {PLANS.slice(3).map(plan => (
-            <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
-          ))}
-        </div>
+        {/* ── Plan Grid ── */}
+        {isMobile && (
+          <div style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '8px', letterSpacing: '0.05em' }}>
+            ← Wischen zum Vergleichen →
+          </div>
+        )}
+        {isMobile ? (
+          /* Mobile: horizontales Swipe-Karussell */
+          <div style={{
+            display: 'flex',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+            gap: '12px',
+            padding: '4px 0 20px',
+            marginBottom: '12px',
+            scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+          }}>
+            {PLANS.map(plan => (
+              <div key={plan.id} style={{ flex: '0 0 82vw', maxWidth: '320px', scrollSnapAlign: 'center' }}>
+                <PlanCard plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} compact />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Desktop: Reihe 1: Starter, Basic, Premium */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
+              {PLANS.slice(0, 3).map(plan => (
+                <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
+              ))}
+            </div>
+            {/* Desktop: Reihe 2: Business, Enterprise */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', maxWidth: '780px', margin: '0 auto 48px' }}>
+              {PLANS.slice(3).map(plan => (
+                <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* ── Vergleich Tabelle ── */}
         <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '20px', overflow: 'hidden', marginBottom: '48px' }}>
