@@ -45,11 +45,14 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Supabase Recovery-Token auf Homepage abfangen → zu /auth/reset weiterleiten
+  // Supabase Auth-Token auf Homepage abfangen → weiterleiten
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash && hash.includes('type=recovery')) {
+    if (!hash) return;
+    if (hash.includes('type=recovery')) {
       window.location.href = `/auth/reset${hash}`;
+    } else if (hash.includes('error=access_denied') || hash.includes('error=')) {
+      window.location.href = `/auth/forgot?error=link_expired`;
     }
   }, []);
 

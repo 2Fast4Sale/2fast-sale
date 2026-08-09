@@ -1,15 +1,17 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { createClient } from '../../../lib/supabase/client';
 
-export default function ForgotPage() {
+function ForgotForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(searchParams.get('error') === 'link_expired' ? 'Der Link ist abgelaufen. Bitte neuen Link anfordern.' : '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,3 +84,10 @@ export default function ForgotPage() {
   );
 }
 
+export default function ForgotPage() {
+  return (
+    <Suspense>
+      <ForgotForm />
+    </Suspense>
+  );
+}
