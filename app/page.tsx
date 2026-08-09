@@ -45,6 +45,14 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Supabase Recovery-Token auf Homepage abfangen → zu /auth/reset weiterleiten
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      window.location.href = `/auth/reset${hash}`;
+    }
+  }, []);
+
   useEffect(() => {
     const el = statsRef.current;
     if (!el) return;
