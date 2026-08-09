@@ -40,7 +40,7 @@ export async function GET() {
     const addrY = doc.y;
     doc.fontSize(8).font('Helvetica-Bold').fillColor(LGRAY).text('VON', 60, addrY);
     doc.fontSize(10).font('Helvetica-Bold').fillColor(DARK).text('2Fast4Sale', 60, addrY + 14);
-    doc.fontSize(9).font('Helvetica').fillColor(GRAY).text('Musterstrasse 1, 80333 Muenchen', 60);
+    doc.fontSize(9).font('Helvetica').fillColor(GRAY).text('Musterstraße 1, 80333 München', 60);
     doc.text('USt-IdNr.: DE123456789', 60);
 
     doc.fontSize(8).font('Helvetica-Bold').fillColor(LGRAY).text('AN', 300, addrY);
@@ -49,7 +49,7 @@ export async function GET() {
     doc.text('12345 Musterstadt', 300);
     doc.text('Deutschland', 300);
 
-    doc.y = addrY + 120;
+    doc.y = Math.max(doc.y, addrY + 70) + 16;
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
 
     doc.rect(60, doc.y, W, 28).fill('#f8fafc');
@@ -90,7 +90,7 @@ export async function GET() {
     doc.moveDown(3);
     doc.rect(60, doc.y, W, 50).fill('#f8fafc').stroke(BORDER);
     doc.fontSize(9).font('Helvetica').fillColor(GRAY)
-      .text('Vielen Dank fuer Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben.', 72, doc.y + 10, { width: W - 24 });
+      .text('Vielen Dank für Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben.', 72, doc.y + 10, { width: W - 24 });
 
     doc.fontSize(8).font('Helvetica').fillColor(LGRAY)
       .text('2Fast4Sale  |  support@2fast4sale.com', 60, 750, { width: W, align: 'center' });

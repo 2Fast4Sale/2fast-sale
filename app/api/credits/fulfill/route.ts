@@ -251,7 +251,7 @@ function buildInvoiceEmail(p: {
       <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="border:1px solid #e2e8f0;border-radius:10px;">
         <tr>
           <td style="padding:16px 20px;font-size:13px;color:#64748b;font-family:Arial,Helvetica,sans-serif;line-height:1.7;">
-            Vielen Dank fuer Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben und steht sofort zur Verfuegung.${p.companyTaxId ? '<br /><br />USt-IdNr. des Leistungserbringers: <strong>' + p.companyTaxId + '</strong>' : ''}
+            Vielen Dank f&uuml;r Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben und steht sofort zur Verf&uuml;gung.${p.companyTaxId ? '<br /><br />USt-IdNr. des Leistungserbringers: <strong>' + p.companyTaxId + '</strong>' : ''}
           </td>
         </tr>
       </table>
@@ -333,7 +333,7 @@ async function buildInvoicePdf(p: {
     if (p.buyerVat) doc.text(`USt-IdNr.: ${p.buyerVat}`, 300);
 
     // â”€â”€ Positions-Tabelle â”€â”€
-    doc.y = addrY + 120;
+    doc.y = Math.max(doc.y, addrY + 70) + 16;
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
 
     // Tabellen-Header
@@ -378,7 +378,7 @@ async function buildInvoicePdf(p: {
     doc.moveDown(3);
     doc.rect(60, doc.y, W, 50).fill('#f8fafc').stroke(BORDER);
     doc.fontSize(9).font('Helvetica').fillColor(GRAY)
-      .text('Vielen Dank fuer Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben.', 72, doc.y + 10, { width: W - 24 });
+      .text('Vielen Dank für Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben.', 72, doc.y + 10, { width: W - 24 });
 
     // â”€â”€ Footer â”€â”€
     doc.fontSize(8).font('Helvetica').fillColor(LGRAY)
