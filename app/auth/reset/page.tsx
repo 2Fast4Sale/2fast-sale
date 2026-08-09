@@ -21,28 +21,32 @@ function ResetForm() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Falls Token im Hash-Fragment steckt (Supabase leitet manchmal zur Homepage) — Session etablieren
     const hash = window.location.hash;
-    if (hash && hash.includes('access_token')) {
-      const params = new URLSearchParams(hash.replace('#', ''));
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      if (accessToken && refreshToken) {
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(() => {
-          setSessionReady(true);
-          // Hash aus URL entfernen
+    const params = new URLSearchParams(hash.replace('#', ''));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+
+    if (accessToken && refreshToken && type === 'recovery') {
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) {
+            setError('Link ungültig oder abgelaufen. Bitte neuen Link anfordern.');
+          } else {
+            setSessionReady(true);
+          }
           window.history.replaceState(null, '', window.location.pathname);
         });
-        return;
-      }
+      return;
     }
 
-    // Normaler Flow: auf PASSWORD_RECOVERY Event warten
-    supabase.auth.onAuthStateChange((event) => {
+    // Kein Token im Hash — auf AUTH_STATE_CHANGE warten
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
       }
     });
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
