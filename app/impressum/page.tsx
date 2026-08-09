@@ -30,20 +30,23 @@ export default function ImpressumPage() {
         <h1 style={S.h1}>Impressum</h1>
         <p style={S.sub}>Angaben gemäß § 5 TMG</p>
 
+        {/* ── BETA-HINWEIS ── */}
+        <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '32px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#fbbf24', lineHeight: 1.6 }}>
+            <strong>Hinweis:</strong> Diese Plattform befindet sich im geschlossenen Testbetrieb (Beta). Ein vollständiges Impressum mit Anschrift wird mit der offiziellen Gewerbeanmeldung ab Oktober 2026 ergänzt. Bei rechtlichen Anfragen wende dich bitte direkt per E-Mail an uns.
+          </p>
+        </div>
+
         {/* ── ANBIETER ── */}
         <div style={S.section}>
           <h2 style={S.h2}>Anbieter</h2>
           <div style={{ marginBottom: '12px' }}>
-            <div style={S.label}>Name / Firma</div>
+            <div style={S.label}>Name</div>
             <div style={S.value}>Fabian Barjamasi<br />2Fast4Sale</div>
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <div style={S.label}>Adresse</div>
-            <div style={S.value}>
-              [Straße und Hausnummer]<br />
-              [PLZ] [Stadt]<br />
-              Deutschland
-            </div>
+            <div style={S.label}>Land</div>
+            <div style={S.value}>Deutschland</div>
           </div>
         </div>
 
@@ -52,8 +55,7 @@ export default function ImpressumPage() {
           <h2 style={S.h2}>Kontakt</h2>
           <div style={{ marginBottom: '12px' }}>
             <div style={S.label}>E-Mail</div>
-            {/* ⚠️ HIER AUSFÜLLEN */}
-            <div style={S.value}><a href="mailto:info@2fast4sale.de" style={{ color: '#60a5fa' }}>info@2fast4sale.de</a></div>
+            <div style={S.value}><a href="mailto:info@2fast4sale.com" style={{ color: '#60a5fa' }}>info@2fast4sale.com</a></div>
           </div>
           <div style={{ marginBottom: '12px' }}>
             <div style={S.label}>Telefon</div>
@@ -65,16 +67,14 @@ export default function ImpressumPage() {
         <div style={S.section}>
           <h2 style={S.h2}>Umsatzsteuer</h2>
           <p style={S.body}>
-            {/* ⚠️ Eine der beiden Zeilen behalten, andere löschen */}
-            Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: DE[XXXXXXXXX]
-            {/* ODER bei Kleinunternehmer: Gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen. */}
+            Gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen (Kleinunternehmerregelung).
           </p>
         </div>
 
         {/* ── VERANTWORTLICH ── */}
         <div style={S.section}>
           <h2 style={S.h2}>Verantwortlich für den Inhalt (§ 55 Abs. 2 RStV)</h2>
-          <div style={S.value}>Fabian Barjamasi<br />[Adresse wie oben]</div>
+          <div style={S.value}>Fabian Barjamasi, Deutschland</div>
         </div>
 
         {/* ── STREIT ── */}
