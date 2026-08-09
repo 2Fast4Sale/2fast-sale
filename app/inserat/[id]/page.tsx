@@ -74,8 +74,8 @@ export default function PublicListingPage() {
         <div style={{ fontSize: '18px', fontWeight: '800', color: '#fff' }}>2Fast<span style={{ color: '#3b82f6' }}>4</span>Sale</div>
       </nav>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '32px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }} className="inserat-page">
+        <div className="inserat-grid" style={{ display: 'grid', gap: '32px', alignItems: 'start' }}>
 
           {/* Left */}
           <div>
@@ -95,11 +95,11 @@ export default function PublicListingPage() {
               </div>
             ) : null}
 
-            <h1 style={{ fontSize: '28px', fontWeight: '900', letterSpacing: '-0.4px', margin: '0 0 6px' }}>{vehicle.brand as string}</h1>
-            <div style={{ fontSize: '32px', fontWeight: '900', color: '#3b82f6', marginBottom: '24px' }}>{price}</div>
+            <h1 className="inserat-title" style={{ fontSize: '28px', fontWeight: '900', letterSpacing: '-0.4px', margin: '0 0 6px' }}>{vehicle.brand as string}</h1>
+            <div className="inserat-price" style={{ fontSize: '32px', fontWeight: '900', color: '#3b82f6', marginBottom: '24px' }}>{price}</div>
 
             {specs.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
+              <div className="inserat-specs" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
                 {specs.map(({ icon, label, value }) => (
                   <div key={label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#3a5a78', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>{icon} {label}</div>
@@ -129,7 +129,7 @@ export default function PublicListingPage() {
           </div>
 
           {/* Contact Form */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '28px', position: 'sticky', top: '24px' }}>
+          <div className="inserat-contact" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '28px', position: 'sticky', top: '24px' }}>
             {sent ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <CheckCircle2 size={48} color="#10b981" style={{ marginBottom: '16px' }} />
@@ -175,7 +175,20 @@ export default function PublicListingPage() {
           </div>
         </div>
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .inserat-grid{grid-template-columns:1fr 360px;}
+        @media (max-width:768px){
+          .inserat-page{padding:24px 16px;}
+          .inserat-grid{grid-template-columns:1fr;gap:24px;}
+          .inserat-contact{position:static;top:auto;}
+          .inserat-title{font-size:22px;}
+          .inserat-price{font-size:26px;}
+        }
+        @media (max-width:480px){
+          .inserat-specs{grid-template-columns:repeat(2,1fr) !important;}
+        }
+      `}</style>
     </div>
   );
 }
