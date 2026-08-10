@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         trial_period_days: 1,
         metadata: { user_id: user.id, plan, billing },
       },
-      success_url: `${baseUrl}/dashboard/payment-success?plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/payment-success?plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${baseUrl}/dashboard/settings/abo?cancelled=1`,
       locale: 'de',
       allow_promotion_codes: true,

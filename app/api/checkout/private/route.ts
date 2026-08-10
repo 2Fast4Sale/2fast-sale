@@ -57,7 +57,7 @@ export async function POST(req: Request) {
           quantity: String(quantity),
         },
       },
-      success_url: `${baseUrl}/dashboard/payment-success?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/payment-success?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${baseUrl}/dashboard/pricing?cancelled=1`,
       locale: 'de',
       allow_promotion_codes: true,
