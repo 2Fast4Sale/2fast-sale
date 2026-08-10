@@ -66,7 +66,7 @@ export async function POST(req: Request) {
           rendering_options: { amount_tax_display: 'include_inclusive_tax' },
         },
       },
-      success_url: successUrl || `${baseUrl}/dashboard?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/dashboard/payment-success?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${baseUrl}/dashboard/pricing?cancelled=1`,
       locale: 'de',
       allow_promotion_codes: true,
