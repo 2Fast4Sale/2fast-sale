@@ -57,13 +57,6 @@ export async function POST(req: Request) {
           quantity: String(quantity),
         },
       },
-      invoice_creation: {
-        enabled: true,
-        invoice_data: {
-          description: `${quantity}x Inserat-Credit auf 2Fast4Sale`,
-          metadata: { user_id: user.id, type: 'listing_credit' },
-        },
-      },
       success_url: `${baseUrl}/dashboard/payment-success?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${baseUrl}/dashboard/pricing?cancelled=1`,
       locale: 'de',
