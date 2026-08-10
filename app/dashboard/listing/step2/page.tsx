@@ -679,7 +679,7 @@ function Step2Inner() {
 
         {/* ---- Tipps (leer) ---- */}
         {photos.length === 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
             {[
               { icon: <Camera size={22} color="#60a5fa" />, title: 'Außen: 3 Seiten', desc: 'Vorne, Seite und Heck  immer aus gleicher Höhe' },
               { icon: <Eye size={22} color="#a78bfa" />,    title: 'Gutes Licht',     desc: 'Tageslicht oder bewölkt  kein direktes Gegenlicht' },

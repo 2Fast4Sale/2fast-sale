@@ -467,6 +467,14 @@ function Step4Inner() {
   const [viewMode,  setViewMode]  = useState<ViewMode>('desktop');
   const [step1,     setStep1]     = useState<Record<string, unknown>>({});
   const [photos,    setPhotos]    = useState<string[]>([]);
+  const [isMobile,  setIsMobile]  = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     try { const r = sessionStorage.getItem('listing_step1'); if (r) { const d = JSON.parse(r); setStep1(d); if (d.suggestedTitle && !title) setTitle(d.suggestedTitle); } } catch {/* */}
@@ -578,11 +586,11 @@ function Step4Inner() {
           <ChevronLeft size={15} /> Zurück
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flex: 1, justifyContent: 'center' }}>
-          {['Fahrzeugdaten', 'Fotos', 'KI-Text', 'Fertigstellen'].map((s, i) => (
+          {(isMobile ? ['Daten','Fotos','KI','Fertig'] : ['Fahrzeugdaten', 'Fotos', 'KI-Text', 'Fertigstellen']).map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '20px', background: i === 3 ? 'rgba(99,102,241,0.1)' : 'transparent', border: i === 3 ? '1px solid rgba(99,102,241,0.25)' : '1px solid transparent' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: isMobile ? '4px 6px' : '4px 10px', borderRadius: '20px', background: i === 3 ? 'rgba(99,102,241,0.1)' : 'transparent', border: i === 3 ? '1px solid rgba(99,102,241,0.25)' : '1px solid transparent' }}>
                 <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: i < 3 ? '#10b981' : IND, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '900', color: '#fff' }}>{i < 3 ? '✓' : '4'}</div>
-                <span style={{ fontSize: '12px', fontWeight: i === 3 ? '700' : '500', color: i === 3 ? IND : '#10b981', whiteSpace: 'nowrap' }}>{s}</span>
+                {!isMobile && <span style={{ fontSize: '12px', fontWeight: i === 3 ? '700' : '500', color: i === 3 ? IND : '#10b981', whiteSpace: 'nowrap' }}>{s}</span>}
               </div>
               {i < 3 && <ChevronRight size={11} color="#cbd5e1" />}
             </div>
@@ -591,11 +599,11 @@ function Step4Inner() {
         <div style={{ flexShrink: 0 }}><Ring score={score} size={48} /></div>
       </div>
 
-      {/* 3-column */}
-      <div style={{ display: 'grid', gridTemplateColumns: '248px 1fr 420px', minHeight: 'calc(100vh - 58px)' }}>
+      {/* 3-column → 1-column on mobile */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '248px 1fr 420px', minHeight: 'calc(100vh - 58px)' }}>
 
-        {/* COL 1: Checklist */}
-        <div style={{ borderRight: `1px solid ${BORD}`, background: CARD, padding: '22px 16px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0' }}>
+        {/* COL 1: Checklist — hidden on mobile */}
+        <div style={{ borderRight: `1px solid ${BORD}`, background: CARD, padding: '22px 16px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'flex', flexDirection: 'column', gap: '0' }}>
           <div style={{ fontSize: '10px', fontWeight: '800', color: TD, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: '16px' }}>Vollständigkeit</div>
 
           {/* Ring centered */}
@@ -755,8 +763,8 @@ function Step4Inner() {
           )}
         </div>
 
-        {/* COL 3: Live Preview */}
-        <div style={{ borderLeft: `1px solid ${BORD}`, background: '#edf0f4', padding: '18px 16px 120px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto' }}>
+        {/* COL 3: Live Preview — hidden on mobile */}
+        <div style={{ borderLeft: `1px solid ${BORD}`, background: '#edf0f4', padding: '18px 16px 120px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'block' }}>
 
           {/* Controls */}
           <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>

@@ -57,6 +57,14 @@ export default function Step1() {
   const brandRef     = useRef<HTMLDivElement>(null);
   const modelRef     = useRef<HTMLDivElement>(null);
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const [data, setData] = useState<FormData>({
     brand: '', model: '', vin: '', firstRegistration: '', km: '', price: '',
     fuelType: '', gearbox: '', powerKw: '', displacementCcm: '',
@@ -267,52 +275,43 @@ export default function Step1() {
         background: '#ffffff', borderBottom: `1px solid ${BORD}`,
         boxShadow: '0 1px 12px rgba(0,0,0,0.06)',
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: TD, fontSize: '13px', fontFamily: F, display: 'flex', alignItems: 'center', gap: '6px', padding: 0 }}>
-            ← Abbrechen
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: TD, fontSize: '13px', fontFamily: F, display: 'flex', alignItems: 'center', gap: '6px', padding: 0, flexShrink: 0 }}>
+            ← {isMobile ? '' : 'Abbrechen'}
           </button>
 
           {/* Step Tracker */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px' }}>
             {[
-              { n: 1, label: 'Fahrzeugdaten', active: true,  done: false },
-              { n: 2, label: 'Fotos',         active: false, done: false },
-              { n: 3, label: 'KI-Text',       active: false, done: false },
-              { n: 4, label: 'Fertig',        active: false, done: false },
+              { n: 1, label: 'Daten',  active: true  },
+              { n: 2, label: 'Fotos',  active: false },
+              { n: 3, label: 'KI',     active: false },
+              { n: 4, label: 'Fertig', active: false },
             ].map((step, idx) => (
-              <div key={step.n} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '5px 12px', borderRadius: '20px', background: step.active ? '#6366f1' : 'transparent', transition: 'all 0.2s' }}>
-                  <div style={{
-                    width: '20px', height: '20px', borderRadius: '50%',
-                    background: step.active ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
-                    border: `2px solid ${step.active ? 'rgba(255,255,255,0.4)' : BORD}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '10px', fontWeight: '800',
-                    color: step.active ? '#fff' : TD,
-                  }}>
+              <div key={step.n} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '2px' : '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: isMobile ? '4px 8px' : '5px 12px', borderRadius: '20px', background: step.active ? '#6366f1' : 'transparent' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: step.active ? 'rgba(255,255,255,0.25)' : '#f1f5f9', border: `2px solid ${step.active ? 'rgba(255,255,255,0.4)' : BORD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800', color: step.active ? '#fff' : TD, flexShrink: 0 }}>
                     {step.n}
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: step.active ? '#fff' : TD, whiteSpace: 'nowrap' }}>
-                    {step.label}
-                  </span>
+                  {!isMobile && <span style={{ fontSize: '12px', fontWeight: '700', color: step.active ? '#fff' : TD, whiteSpace: 'nowrap' }}>{step.label}</span>}
                 </div>
-                {idx < 3 && <div style={{ width: '20px', height: '1px', background: BORD }} />}
+                {idx < 3 && <div style={{ width: isMobile ? '10px' : '20px', height: '1px', background: BORD }} />}
               </div>
             ))}
           </div>
 
           {/* Completion pill */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '80px', height: '4px', background: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <div style={{ width: isMobile ? '50px' : '80px', height: '4px', background: '#f1f5f9', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ width: `${completionPct}%`, height: '100%', background: completionPct === 100 ? '#10b981' : '#6366f1', borderRadius: '2px', transition: 'width 0.3s ease' }} />
             </div>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: completionPct === 100 ? '#10b981' : '#6366f1', minWidth: '32px' }}>{completionPct}%</span>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: completionPct === 100 ? '#10b981' : '#6366f1', minWidth: '28px' }}>{completionPct}%</span>
           </div>
         </div>
       </div>
 
       {/* ══════ MAIN LAYOUT ══════ */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '28px 24px 120px', display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '16px 12px 120px' : '28px 24px 120px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: '24px', alignItems: 'start' }}>
 
         {/* ══ LEFT COLUMN — Form ══ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -344,7 +343,7 @@ export default function Step1() {
             onDrop={handleDrop}
           >
             <div style={{ padding: '20px 24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'stretch' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', alignItems: 'stretch' }}>
 
                 {/* Scan document */}
                 <div>
@@ -496,7 +495,7 @@ export default function Step1() {
             </div>
 
             {/* Quick brand grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', marginBottom: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(6, 1fr)', gap: '8px', marginBottom: '10px' }}>
               {(showAllBrands ? BRAND_NAMES.slice(0, 30) : TOP_BRANDS).map((b) => {
                 const name = typeof b === 'string' ? b : b.name;
                 const abbr = typeof b === 'string' ? b.slice(0, 3).toUpperCase() : b.abbr;
@@ -530,7 +529,7 @@ export default function Step1() {
             </button>
 
             {/* Search + other brand */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} ref={brandRef}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }} ref={brandRef}>
               <div style={{ position: 'relative' }}>
                 <input
                   value={showBrandDrop ? brandSearch : (data.brand || '')}
@@ -598,7 +597,7 @@ export default function Step1() {
             <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Tag size={15} color="#6366f1" /> Kernzahlen
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: '12px' }}>
               {/* KM */}
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '700', color: TS, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
@@ -717,7 +716,7 @@ export default function Step1() {
             <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Fuel size={15} color="#f59e0b" /> Antrieb
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
               {/* Fuel type visual pills */}
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: TS, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '8px' }}>Kraftstoff</label>
@@ -769,7 +768,7 @@ export default function Step1() {
             <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Settings2 size={15} color="#8b5cf6" /> Technische Daten
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '12px' }}>
               {[
                 { label: 'Leistung (PS)', key: 'powerKw' as const, placeholder: '190', icon: <Zap size={12} /> },
                 { label: 'Hubraum (ccm)', key: 'displacementCcm' as const, placeholder: '1998', icon: <Gauge size={12} /> },
@@ -888,8 +887,8 @@ export default function Step1() {
 
         </div>
 
-        {/* ══ RIGHT COLUMN — Live Preview ══ */}
-        <div style={{ position: 'sticky', top: '80px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* ══ RIGHT COLUMN — Live Preview (hidden on mobile) ══ */}
+        <div style={{ position: 'sticky', top: '80px', display: isMobile ? 'none' : 'flex', flexDirection: 'column', gap: '12px' }}>
 
           {/* Preview Card */}
           <div style={{
@@ -1031,26 +1030,36 @@ export default function Step1() {
         borderTop: `1px solid ${BORD}`, padding: '14px 24px',
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
       }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {(errors.brand || errors.km || errors.price) && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
-                <AlertCircle size={14} />
-                {errors.brand ? 'Marke fehlt · ' : ''}{errors.km ? 'KM fehlt · ' : ''}{errors.price ? 'Preis fehlt' : ''}
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          {!isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {(errors.brand || errors.km || errors.price) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
+                  <AlertCircle size={14} />
+                  {errors.brand ? 'Marke fehlt · ' : ''}{errors.km ? 'KM fehlt · ' : ''}{errors.price ? 'Preis fehlt' : ''}
+                </div>
+              )}
+              <div style={{ fontSize: '13px', color: TS }}>
+                <span style={{ fontWeight: '700', color: TH }}>{filledFields.length}</span> / 10 Felder ausgefüllt
+                {data.equipment.length > 0 && <span style={{ marginLeft: '8px', color: '#6366f1', fontWeight: '600' }}>· {data.equipment.length} Ausstattungsmerkmale</span>}
               </div>
-            )}
-            <div style={{ fontSize: '13px', color: TS }}>
-              <span style={{ fontWeight: '700', color: TH }}>{filledFields.length}</span> / 10 Felder ausgefüllt
-              {data.equipment.length > 0 && <span style={{ marginLeft: '8px', color: '#6366f1', fontWeight: '600' }}>· {data.equipment.length} Ausstattungsmerkmale</span>}
             </div>
-          </div>
+          )}
+          {isMobile && (errors.brand || errors.km || errors.price) && (
+            <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <AlertCircle size={12} />
+              {errors.brand ? 'Marke fehlt' : errors.km ? 'KM fehlt' : 'Preis fehlt'}
+            </div>
+          )}
 
           <button
             onClick={handleNext}
             disabled={navigating}
             style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '13px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: '800',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              padding: isMobile ? '14px 0' : '13px 28px',
+              width: isMobile ? '100%' : 'auto',
+              borderRadius: '12px', fontSize: '15px', fontWeight: '800',
               background: navigating ? '#a5b4fc' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
               border: 'none', color: '#fff', cursor: navigating ? 'not-allowed' : 'pointer',
               fontFamily: F, boxShadow: navigating ? 'none' : '0 4px 20px rgba(99,102,241,0.4)',
@@ -1058,7 +1067,7 @@ export default function Step1() {
             }}
           >
             {navigating ? (
-              <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> KI generiert Titel…</>
+              <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> KI generiert…</>
             ) : (
               <>Weiter zu Fotos <ArrowRight size={16} /></>
             )}
