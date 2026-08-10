@@ -27,7 +27,7 @@ function ResetForm() {
     const refreshToken = params.get('refresh_token');
     const type = params.get('type');
 
-    if (accessToken && refreshToken && type === 'recovery') {
+    if (accessToken && refreshToken) {
       supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
         .then(({ error }) => {
           if (error) {
