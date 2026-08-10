@@ -57,13 +57,11 @@ export async function POST(req: Request) {
           quantity: String(quantity),
         },
       },
-      // Stripe erstellt automatisch eine echte Rechnung mit PDF
       invoice_creation: {
         enabled: true,
         invoice_data: {
-          description: `${quantity} Ã— Inserat-Credit auf 2Fast4Sale`,
+          description: `${quantity}x Inserat-Credit auf 2Fast4Sale`,
           metadata: { user_id: user.id, type: 'listing_credit' },
-          rendering_options: { amount_tax_display: 'include_inclusive_tax' },
         },
       },
       success_url: `${baseUrl}/dashboard/payment-success?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
