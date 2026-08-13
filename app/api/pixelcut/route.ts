@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { logApiCost, imageCostMicros, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,6 +137,14 @@ export async function POST(req: NextRequest) {
       return await fallbackRemoveBg(image, backgroundId);
     }
 
+    await logApiCost({
+      userId: await currentUserId(),
+      service: 'photoroom',
+      operation: 'remove-bg',
+      unitsIn: 1,
+      costMicros: imageCostMicros('photoroom'),
+    });
+
     const resultBuffer = Buffer.from(await response.arrayBuffer());
     return NextResponse.json({ result: `data:image/jpeg;base64,${resultBuffer.toString('base64')}` });
 
@@ -164,6 +173,16 @@ async function fallbackRemoveBg(image: string, backgroundId?: string): Promise<N
       });
 
       if (res.ok) {
+        await logApiCost({
+          userId: await currentUserId(),
+          service: 'removebg',
+          operation: 'remove-bg',
+          unitsIn: 1,
+          costMicros: imageCostMicros('removebg'),
+          // Fallback heisst: PhotoRoom hat versagt. Haeufung ist ein Warnsignal,
+          // denn remove.bg ist deutlich teurer.
+          meta: { fallback_stufe: 1 },
+        });
         const buf = Buffer.from(await res.arrayBuffer());
         // Transparentes PNG auf Hintergrundfarbe compositen (Sharp)
         const withBg = await applyBackgroundToTransparent(buf, backgroundId);
@@ -189,6 +208,15 @@ async function fallbackFalRembg(image: string, backgroundId?: string): Promise<N
     });
     if (!res.ok) throw new Error('rembg fehlgeschlagen');
     const data    = await res.json();
+    await logApiCost({
+      userId: await currentUserId(),
+      service: 'fal',
+      operation: 'remove-bg',
+      unitsIn: 1,
+      costMicros: imageCostMicros('fal'),
+      meta: { fallback_stufe: 2 },
+    });
+
     const imgRes  = await fetch(data.image?.url);
     const pngBuf  = Buffer.from(await imgRes.arrayBuffer());
     const result  = await applyBackgroundToTransparent(pngBuf, backgroundId);

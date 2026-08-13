@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '../../../lib/supabase/server';
+import { logLlmCost } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,10 +13,12 @@ export async function POST(req: Request) {
     const { brand, km, year, fuel, gearbox, color, power, equipment, dealerNotes, seats, displacement } = body;
 
     let aiStyleTemplate = '';
+    let userId: string | null = null;
     try {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        userId = user.id;
         const { data } = await supabase.from('profiles').select('ai_style_template').eq('id', user.id).single();
         aiStyleTemplate = data?.ai_style_template || '';
       }
@@ -50,6 +53,14 @@ Schreibe 3â€“4 SÃ¤tze auf Deutsch. Ãœberzeugend, kaufmotivierend, kein 
       max_tokens: 200,
       system: 'Du bist ein erfahrener FahrzeughÃ¤ndler der ehrliche, Ã¼berzeugende Inserate schreibt.',
       messages: [{ role: 'user', content: prompt }],
+    });
+
+    await logLlmCost({
+      userId,
+      vehicleId: body.vehicleId ?? null,
+      operation: 'generate-description',
+      model: 'claude-opus-4-8',
+      usage: response.usage,
     });
 
     const text = (response.content[0] as Anthropic.TextBlock).text;

@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
+import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,6 +148,13 @@ export async function POST(req: Request) {
           toImageBlock(image),
         ],
       }],
+    });
+
+    await logLlmCost({
+      userId: await currentUserId(),
+      operation: 'scan-doc',
+      model: 'claude-opus-4-8',
+      usage: response.usage,
     });
 
     const text = (response.content[0] as Anthropic.TextBlock).text;

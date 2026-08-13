@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,13 @@ Maximal 12 Merkmale. Nur wirklich sichtbare Dinge.`,
           ...imageBlocks,
         ],
       }],
+    });
+
+    await logLlmCost({
+      userId: await currentUserId(),
+      operation: 'detect-equipment',
+      model: 'claude-opus-4-8',
+      usage: response.usage,
     });
 
     const text = (response.content[0] as Anthropic.TextBlock).text;

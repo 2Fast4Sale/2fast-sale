@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '../../../lib/supabase/server';
+import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +59,13 @@ Top-Ausstattung: ${topEquip}
 Antworte NUR mit dem Titel als reinem JSON: {"title": "..."}
 Kein Markdown, keine ErklÃ¤rung, nur JSON.`,
       }],
+    });
+
+    await logLlmCost({
+      userId: await currentUserId(),
+      operation: 'generate-title',
+      model: 'claude-opus-4-8',
+      usage: response.usage,
     });
 
     const text = (response.content[0] as Anthropic.TextBlock).text;
