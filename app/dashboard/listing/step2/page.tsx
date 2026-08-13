@@ -8,7 +8,7 @@ import {
   Wand2, Eye, AlertCircle, Droplets, Lock, Crown
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
-import GuidedCapture from '../../../components/GuidedCapture';
+import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import Link from 'next/link';
 
 // Fotolimit je Plan
@@ -126,7 +126,19 @@ interface Photo {
   error: boolean;
   issues: QualityIssue[];
   analyzing: boolean;
+  /**
+   * Soll dieses Foto in den Studio-Hintergrund gesetzt werden?
+   *
+   * Nur Aussenaufnahmen profitieren davon. Bei Cockpit, Tacho, Motorraum oder
+   * Serviceheft waere ein freigestellter Studio-Hintergrund sogar falsch —
+   * und jede Freistellung kostet bares Geld. Deshalb standardmaessig nur die
+   * ersten Fotos, den Rest kann der Haendler manuell dazuschalten.
+   */
+  studio: boolean;
 }
+
+/** So viele Fotos werden per Voreinstellung freigestellt. */
+const STUDIO_VORAUSWAHL = 8;
 
 const PERSPECTIVES = [
   'Vorne links', 'Hinten rechts', 'Seite links', 'Seite rechts',
@@ -240,16 +252,27 @@ function Step2Inner() {
     const arr = Array.from(files).filter(f => f.type.startsWith('image/')).slice(0, remaining);
 
     // Erstmal sofort anzeigen (analyzing = true)
-    const newPhotos: Photo[] = arr.map(file => ({
-      id:         Math.random().toString(36).slice(2),
-      file,
-      preview:    URL.createObjectURL(file),
-      processed:  null,
-      processing: false,
-      error:      false,
-      issues:     [],
-      analyzing:  true,
-    }));
+    const bereitsStudio = photos.filter(p => p.studio).length;
+    const newPhotos: Photo[] = arr.map((file, i) => {
+      // Aus der gefuehrten Aufnahme kennen wir den Winkel am Dateinamen und
+      // wissen sicher, ob es eine Aussenaufnahme ist. Sonst greift die
+      // Voreinstellung: die ersten Fotos sind erfahrungsgemaess die Aussenbilder.
+      const shot = SHOTS.find(s => file.name === `${s.id}.jpg`);
+      const studio = shot
+        ? shot.rotation === true
+        : bereitsStudio + i < STUDIO_VORAUSWAHL;
+      return {
+        id:         Math.random().toString(36).slice(2),
+        file,
+        preview:    URL.createObjectURL(file),
+        processed:  null,
+        processing: false,
+        error:      false,
+        issues:     [],
+        analyzing:  true,
+        studio,
+      };
+    });
     setPhotos(p => [...p, ...newPhotos]);
 
     // Dann im Hintergrund Qualität analysieren
@@ -312,7 +335,8 @@ function Step2Inner() {
 
   const processAll = async () => {
     setBulk(true);
-    const pending = photos.filter(p => !p.processed && !p.processing);
+    // Nur was auch ins Studio soll — der Rest bleibt unangetastet und kostet nichts
+    const pending = photos.filter(p => p.studio && !p.processed && !p.processing);
     // Parallel in 3er-Batches  schneller, aber API nicht überlasten
     const BATCH = 3;
     for (let i = 0; i < pending.length; i += BATCH) {
@@ -397,7 +421,7 @@ function Step2Inner() {
               Wasserzeichen {watermarkOn ? 'AN' : 'AUS'}
             </button>
 
-          {photos.length > 0 && photos.some(p => !p.processed) && (
+          {photos.length > 0 && photos.some(p => p.studio && !p.processed) && (
             <button
               onClick={processAll}
               disabled={bulkProcessing}
@@ -412,7 +436,7 @@ function Step2Inner() {
             >
               {bulkProcessing
                 ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Verarbeite... ({processedCount}/{totalCount})</>
-                : <><Wand2 size={15} /> KI-Studio starten ({photos.filter(p => !p.processed).length} Fotos)</>
+                : <><Wand2 size={15} /> KI-Studio starten ({photos.filter(p => p.studio && !p.processed).length} Fotos)</>
               }
             </button>
           )}
@@ -597,6 +621,24 @@ function Step2Inner() {
               </button>
             </div>
 
+            {/* Erklaert, warum nicht alle Fotos ins Studio kommen */}
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: '9px',
+              padding: '11px 14px', marginBottom: '12px',
+              background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.18)',
+              borderRadius: '10px',
+            }}>
+              <Wand2 size={14} style={{ color: '#7c3aed', marginTop: '2px', flexShrink: 0 }} />
+              <div style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.6 }}>
+                <strong style={{ color: '#0f172a' }}>
+                  {photos.filter(p => p.studio).length} von {photos.length} Fotos
+                </strong>{' '}
+                kommen ins Studio. Außenaufnahmen profitieren davon — bei Cockpit,
+                Tacho oder Motorraum wirkt ein Studio-Hintergrund unnatürlich.
+                Du kannst das pro Foto umschalten.
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
               {photos.map((p, i) => {
                 const hasIssues = p.issues.length > 0;
@@ -666,6 +708,30 @@ function Step2Inner() {
                   <div style={{ position: 'absolute', bottom: '7px', left: '7px', background: 'rgba(0,0,0,0.65)', color: TS, fontSize: '11px', fontWeight: '700', padding: '2px 7px', borderRadius: '5px' }}>
                     #{i + 1}
                   </div>
+
+                  {/* Studio an/aus — nur solange noch nicht verarbeitet */}
+                  {!p.processed && !p.processing && (
+                    <button
+                      title={p.studio
+                        ? 'Wird ins Studio gesetzt — klicken zum Abwählen'
+                        : 'Bleibt wie es ist — klicken um es ins Studio zu setzen'}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setPhotos(list => list.map(x => x.id === p.id ? { ...x, studio: !x.studio } : x));
+                      }}
+                      style={{
+                        position: 'absolute', top: '7px', right: '7px',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        background: p.studio ? 'rgba(124,58,237,0.92)' : 'rgba(0,0,0,0.6)',
+                        border: `1px solid ${p.studio ? 'rgba(167,139,250,0.7)' : 'rgba(255,255,255,0.25)'}`,
+                        color: p.studio ? '#fff' : 'rgba(255,255,255,0.75)',
+                        padding: '3px 8px', borderRadius: '6px',
+                        fontSize: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: F,
+                      }}
+                    >
+                      <Wand2 size={9} /> {p.studio ? 'Studio' : 'Original'}
+                    </button>
+                  )}
 
                   {/* Process button (hover) */}
                   {!p.processed && !p.processing && (
