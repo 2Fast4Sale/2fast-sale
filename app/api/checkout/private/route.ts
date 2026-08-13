@@ -60,6 +60,9 @@ export async function POST(req: Request) {
       success_url: `${baseUrl}/payment-success?credits_added=${quantity}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${baseUrl}/dashboard/pricing?cancelled=1`,
       locale: 'de',
+      // Stripe beschriftet den Bestellbutton damit als "Jetzt bezahlen" —
+      // ohne submit_type steht dort nur ein generisches "Bezahlen".
+      submit_type: 'pay',
       allow_promotion_codes: true,
       billing_address_collection: 'required',
     });

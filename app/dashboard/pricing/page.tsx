@@ -241,7 +241,7 @@ function PlanCard({
               boxShadow: plan.popular ? `0 6px 20px ${plan.color}40` : '0 3px 10px rgba(0,0,0,0.2)',
               transition: 'all 0.15s',
             }}>
-              Jetzt starten <ArrowRight size={14} />
+              Zahlungspflichtig bestellen <ArrowRight size={14} />
             </button>
           )}
         </div>
@@ -467,6 +467,20 @@ function PricingContent() {
               <button onClick={() => setBuyQty(q => Math.min(20, q + 1))} style={{ width: '44px', height: '44px', border: 'none', cursor: 'pointer', background: 'transparent', fontSize: '20px', color: '#fff', fontWeight: '700', fontFamily: F, flexShrink: 0 }}>+</button>
             </div>
 
+            {/* Bestelluebersicht — Pflicht direkt vor dem Bestellbutton (§ 312j Abs. 2 BGB) */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+              padding: '10px 0', marginBottom: '10px',
+              borderTop: '1px solid rgba(255,255,255,0.2)',
+            }}>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>
+                {buyQty === 1 ? '1 Inserat-Credit' : `${buyQty} Inserat-Credits`}
+              </span>
+              <span style={{ fontSize: '18px', fontWeight: '900', color: '#fff' }}>
+                {totalPrice} €
+              </span>
+            </div>
+
             <button onClick={handleBuyCredits} disabled={buyLoading} style={{
               width: '100%', padding: '13px', borderRadius: '10px',
               background: buyLoading ? 'rgba(255,255,255,0.3)' : '#fff',
@@ -479,7 +493,7 @@ function PricingContent() {
             }}>
               {buyLoading
                 ? <><Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Lädt…</>
-                : <><ShoppingCart size={15} /> {buyQty === 1 ? '1 Inserat' : `${buyQty} Inserate`} kaufen — {totalPrice} €</>
+                : <><ShoppingCart size={15} /> Zahlungspflichtig bestellen</>
               }
             </button>
 

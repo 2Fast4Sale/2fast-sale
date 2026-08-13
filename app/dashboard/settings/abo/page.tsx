@@ -306,8 +306,8 @@ function AboInner() {
                   <div style={{ padding: '8px', borderRadius: '9px', textAlign: 'center', background: `${p.color}10`, color: p.color, fontSize: '12px', fontWeight: '700' }}>✓ Aktuell</div>
                 ) : isUpgrade ? (
                   <button onClick={() => upgrade(p.id)} disabled={!!upgrading}
-                    style={{ padding: '8px', borderRadius: '9px', fontSize: '12px', fontWeight: '700', background: p.color, color: '#fff', border: 'none', cursor: upgrading === p.id ? 'not-allowed' : 'pointer', fontFamily: F, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', opacity: upgrading && upgrading !== p.id ? 0.5 : 1 }}>
-                    {upgrading === p.id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <><Zap size={12} />Upgrade</>}
+                    style={{ padding: '8px 6px', borderRadius: '9px', fontSize: '11px', lineHeight: 1.3, fontWeight: '700', background: p.color, color: '#fff', border: 'none', cursor: upgrading === p.id ? 'not-allowed' : 'pointer', fontFamily: F, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', textAlign: 'center', opacity: upgrading && upgrading !== p.id ? 0.5 : 1 }}>
+                    {upgrading === p.id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : 'Zahlungspflichtig bestellen'}
                   </button>
                 ) : (
                   <button onClick={openPortal} disabled={!!upgrading}

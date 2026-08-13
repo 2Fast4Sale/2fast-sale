@@ -231,7 +231,7 @@ function CheckoutForm() {
         }}>
           {loading
             ? <><Loader2 size={17} style={{ animation: 'spin 0.8s linear infinite' }} /> Weiter zu Stripe…</>
-            : <>1 Tag kostenlos starten <ArrowRight size={16} /></>
+            : <>Zahlungspflichtig bestellen <ArrowRight size={16} /></>
           }
         </button>
 
