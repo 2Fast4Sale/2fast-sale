@@ -40,6 +40,11 @@ export async function POST(req: Request) {
     ];
     /* Neue Spalten aus Migration 004 */
     const NEW_COLS = ['title', 'year', 'gearbox_type'];
+    /* Pkw-EnVKV Spalten aus Migration 012 */
+    const ENVKV_COLS = [
+      'vehicle_kind', 'consumption_combined', 'power_consumption_combined',
+      'co2_combined', 'co2_combined_discharged', 'electric_range_km',
+    ];
 
     const buildPayload = (cols: string[]) => {
       const obj: Record<string, any> = { user_id: user.id };
@@ -54,8 +59,16 @@ export async function POST(req: Request) {
     };
 
     /* Erst mit allen Spalten versuchen */
-    const fullPayload = buildPayload([...BASE_COLS, ...NEW_COLS]);
+    const fullPayload = buildPayload([...BASE_COLS, ...NEW_COLS, ...ENVKV_COLS]);
     let { data, error } = await supabase.from('vehicles').insert(fullPayload).select().single();
+
+    /* Falls die EnVKV-Spalten (Migration 012) noch fehlen - ohne sie erneut versuchen */
+    if (error && ENVKV_COLS.some(c => error!.message.includes(c))) {
+      const retry = await supabase.from('vehicles')
+        .insert(buildPayload([...BASE_COLS, ...NEW_COLS])).select().single();
+      data  = retry.data;
+      error = retry.error;
+    }
 
     /* Falls neue Spalten noch nicht migriert sind â€” Fallback ohne sie */
     if (error && (error.message.includes('gearbox_type') || error.message.includes('title') || error.message.includes('year') || error.message.includes('schema cache'))) {

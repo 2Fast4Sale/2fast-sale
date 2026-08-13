@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Car, Fuel, Gauge, Calendar, Palette, Users, Send, CheckCircle2, Loader2, Images } from 'lucide-react';
 import { Viewer360 } from '../../../components/Viewer360';
+import EnvkvDisplay from '../../components/EnvkvDisplay';
 const F = '"DM Sans", -apple-system, sans-serif';
 
 export default function PublicListingPage() {
@@ -126,6 +127,9 @@ export default function PublicListingPage() {
                 <p style={{ fontSize: '15px', color: '#a8c4dc', lineHeight: 1.8, margin: 0 }}>{vehicle.description as string}</p>
               </div>
             )}
+
+            {/* Pflichtangaben nach Pkw-EnVKV */}
+            <EnvkvDisplay vehicle={vehicle} />
           </div>
 
           {/* Contact Form */}

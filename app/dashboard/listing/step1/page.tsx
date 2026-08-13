@@ -10,6 +10,8 @@ import {
   FileText, Hash, AlertCircle, ArrowRight, Camera,
   ChevronDown, Settings2,
 } from 'lucide-react';
+import EnvkvFields from '../../../components/EnvkvFields';
+import { validateEnvkv, type EnvkvData } from '../../../../lib/envkv';
 
 const F    = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
 const BG   = '#f0f2f5';
@@ -49,7 +51,17 @@ interface FormData {
   fuelType: string; gearbox: string; powerKw: string;
   displacementCcm: string; color: string; seats: string;
   equipment: string[]; dealerNotes: string;
+  envkv: EnvkvData;
 }
+
+const EMPTY_ENVKV: EnvkvData = {
+  vehicleKind: 'gebrauchtwagen',
+  consumptionCombined: null,
+  powerConsumptionCombined: null,
+  co2Combined: null,
+  co2CombinedDischarged: null,
+  electricRangeKm: null,
+};
 
 export default function Step1() {
   const router = useRouter();
@@ -69,6 +81,7 @@ export default function Step1() {
     brand: '', model: '', vin: '', firstRegistration: '', km: '', price: '',
     fuelType: '', gearbox: '', powerKw: '', displacementCcm: '',
     color: '', seats: '', equipment: [], dealerNotes: '',
+    envkv: EMPTY_ENVKV,
   });
 
   const [brandSearch, setBrandSearch]     = useState('');
@@ -201,6 +214,12 @@ export default function Step1() {
     if (!data.brand.trim()) e.brand = 'Bitte Marke wählen';
     if (!data.km.trim())    e.km    = 'Pflichtfeld';
     if (!data.price.trim()) e.price = 'Pflichtfeld';
+
+    // Pkw-EnVKV: bei Neuwagen/Tageszulassung/Vorführwagen sind die
+    // Verbrauchsangaben gesetzlich vorgeschrieben.
+    const envkv = validateEnvkv(data.envkv, data.fuelType);
+    if (!envkv.complete) e.envkv = `EnVKV-Pflichtangaben fehlen: ${envkv.missing.join(', ')}`;
+
     setErrors(e);
     if (Object.keys(e).length > 0) return;
     setNavigating(true);
@@ -789,6 +808,14 @@ export default function Step1() {
             </div>
           </div>
 
+          {/* ══ VERBRAUCH & EMISSIONEN (Pkw-EnVKV) ══ */}
+          <EnvkvFields
+            value={data.envkv}
+            fuelType={data.fuelType}
+            isMobile={isMobile}
+            onChange={patch => setData(p => ({ ...p, envkv: { ...p.envkv, ...patch } }))}
+          />
+
           {/* ══ EQUIPMENT ══ */}
           <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: '16px', padding: '20px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
@@ -1039,16 +1066,22 @@ export default function Step1() {
                   {errors.brand ? 'Marke fehlt · ' : ''}{errors.km ? 'KM fehlt · ' : ''}{errors.price ? 'Preis fehlt' : ''}
                 </div>
               )}
+              {errors.envkv && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#d97706', fontWeight: '600' }}>
+                  <AlertCircle size={14} />
+                  {errors.envkv}
+                </div>
+              )}
               <div style={{ fontSize: '13px', color: TS }}>
                 <span style={{ fontWeight: '700', color: TH }}>{filledFields.length}</span> / 10 Felder ausgefüllt
                 {data.equipment.length > 0 && <span style={{ marginLeft: '8px', color: '#6366f1', fontWeight: '600' }}>· {data.equipment.length} Ausstattungsmerkmale</span>}
               </div>
             </div>
           )}
-          {isMobile && (errors.brand || errors.km || errors.price) && (
-            <div style={{ fontSize: '12px', color: '#ef4444', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {isMobile && (errors.brand || errors.km || errors.price || errors.envkv) && (
+            <div style={{ fontSize: '12px', color: errors.envkv && !errors.brand && !errors.km && !errors.price ? '#d97706' : '#ef4444', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <AlertCircle size={12} />
-              {errors.brand ? 'Marke fehlt' : errors.km ? 'KM fehlt' : 'Preis fehlt'}
+              {errors.brand ? 'Marke fehlt' : errors.km ? 'KM fehlt' : errors.price ? 'Preis fehlt' : 'EnVKV-Angaben fehlen'}
             </div>
           )}
 

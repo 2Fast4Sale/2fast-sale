@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import type { EnvkvData } from '../../../../lib/envkv';
 import {
   Sparkles, Save, ChevronLeft, CheckCircle2, Copy, RefreshCw,
   Send, Car, Gauge, Fuel, Loader2, Zap, Tag as TagIcon,
@@ -465,7 +466,7 @@ function Step4Inner() {
   const [done,      setDone]      = useState(false);
   const [platform,  setPlatform]  = useState<Platform>('mobile');
   const [viewMode,  setViewMode]  = useState<ViewMode>('desktop');
-  const [step1,     setStep1]     = useState<Record<string, unknown>>({});
+  const [step1,     setStep1]     = useState<Record<string, unknown> & { envkv?: Partial<EnvkvData> }>({});
   const [photos,    setPhotos]    = useState<string[]>([]);
   const [isMobile,  setIsMobile]  = useState(false);
 
@@ -500,7 +501,14 @@ function Step4Inner() {
   const save = async (st = 'Aktiv') => {
     setSaving(true); setError('');
     try {
-      const body = { brand, title: title || undefined, km, price: editPrice || price, year: year || undefined, fuel_type: fuel || undefined, gearbox_type: gearbox || undefined, color: carColor || undefined, power_kw: power ? String(Math.round(Number(power)/1.36)) : undefined, description: desc || undefined, status: st, vin: step1.vin || undefined, first_registration: (step1.firstRegistration as string) || year || undefined, displacement_ccm: step1.displacementCcm || undefined, seats: step1.seats || undefined, equipment, dealer_notes: (step1.dealerNotes as string) || undefined };
+      const body = { brand, title: title || undefined, km, price: editPrice || price, year: year || undefined, fuel_type: fuel || undefined, gearbox_type: gearbox || undefined, color: carColor || undefined, power_kw: power ? String(Math.round(Number(power)/1.36)) : undefined, description: desc || undefined, status: st, vin: step1.vin || undefined, first_registration: (step1.firstRegistration as string) || year || undefined, displacement_ccm: step1.displacementCcm || undefined, seats: step1.seats || undefined, equipment, dealer_notes: (step1.dealerNotes as string) || undefined,
+        // Pkw-EnVKV Pflichtangaben aus Schritt 1
+        vehicle_kind:               step1.envkv?.vehicleKind || 'gebrauchtwagen',
+        consumption_combined:       step1.envkv?.consumptionCombined ?? undefined,
+        power_consumption_combined: step1.envkv?.powerConsumptionCombined ?? undefined,
+        co2_combined:               step1.envkv?.co2Combined ?? undefined,
+        co2_combined_discharged:    step1.envkv?.co2CombinedDischarged ?? undefined,
+        electric_range_km:          step1.envkv?.electricRangeKm ?? undefined };
       let id = savedId;
       if (!id) { const res = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Fehler'); } const data = await res.json(); id = data.vehicle?.id || data.id; setSavedId(id!); }
       else { const res = await fetch(`/api/vehicles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Fehler'); } }
