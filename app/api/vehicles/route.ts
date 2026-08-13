@@ -30,6 +30,25 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
 
+    /*
+     * Credit-Pruefung gehoert hierher, nicht ins Formular.
+     * Die Schritte 2-4 beziehen ihre Daten aus der URL — wer sie direkt
+     * aufruft, umgeht jede Pruefung im Frontend. Das ist der Punkt, an dem
+     * das Inserat tatsaechlich entsteht.
+     */
+    const { data: darfAnlegen, error: creditError } = await supabase
+      .rpc('consume_listing_credit', { uid: user.id });
+
+    if (creditError) {
+      // Migration 015 noch nicht eingespielt: nicht blockieren, aber laut sein.
+      console.error('[vehicles] Credit-Pruefung fehlgeschlagen:', creditError.message);
+    } else if (darfAnlegen === false) {
+      return NextResponse.json(
+        { error: 'Keine Inserat-Credits vorhanden', code: 'no_credits' },
+        { status: 402 }
+      );
+    }
+
     const body = await req.json();
 
     /* Basis-Spalten die immer existieren */

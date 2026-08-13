@@ -510,7 +510,20 @@ function Step4Inner() {
         co2_combined_discharged:    step1.envkv?.co2CombinedDischarged ?? undefined,
         electric_range_km:          step1.envkv?.electricRangeKm ?? undefined };
       let id = savedId;
-      if (!id) { const res = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Fehler'); } const data = await res.json(); id = data.vehicle?.id || data.id; setSavedId(id!); }
+      if (!id) {
+        const res = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!res.ok) {
+          const e = await res.json();
+          // Credits erst hier verbraucht — wer ueber die URL eingestiegen ist,
+          // faellt genau an dieser Stelle auf und wird zur Preisseite geleitet.
+          if (res.status === 402 || e.code === 'no_credits') {
+            router.push('/dashboard/pricing?reason=no_credits');
+            return;
+          }
+          throw new Error(e.error || 'Fehler');
+        }
+        const data = await res.json(); id = data.vehicle?.id || data.id; setSavedId(id!);
+      }
       else { const res = await fetch(`/api/vehicles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Fehler'); } }
       setDone(true);
     } catch (e) { setError(e instanceof Error ? e.message : 'Fehler'); }

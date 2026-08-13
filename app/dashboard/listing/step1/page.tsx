@@ -224,11 +224,13 @@ export default function Step1() {
     if (Object.keys(e).length > 0) return;
     setNavigating(true);
 
-    // Credit-Check: Abo oder Privatperson-Credit?
-    const creditRes = await fetch('/api/credits/use', { method: 'POST' });
+    // Nur pruefen, NICHT abbuchen — verbraucht wird der Credit beim
+    // tatsaechlichen Anlegen in /api/vehicles. Hier geht es allein darum,
+    // den Nutzer frueh zu informieren statt ihn vier Schritte ausfuellen
+    // zu lassen und dann abzuweisen.
+    const creditRes = await fetch('/api/credits/check');
     if (!creditRes.ok) {
       setNavigating(false);
-      // Bei jedem Fehler (keine Credits, DB-Fehler, etc.) zur Pricing-Seite
       router.push('/dashboard/pricing?reason=no_credits');
       return;
     }
