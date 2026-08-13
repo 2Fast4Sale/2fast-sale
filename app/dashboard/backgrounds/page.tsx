@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, Lock, Upload, Trash2, Crown, Zap, Sparkles, Info } from 'lucide-react';
 import { createClient } from '../../../lib/supabase/client';
+import StudioEditor, { StudioPreview, type StudioPreset } from '../../components/StudioEditor';
+
+/** Muss mit CUSTOM_STUDIO_ID in app/api/pixelcut/route.ts übereinstimmen. */
+const CUSTOM_STUDIO_ID = 'custom_studio';
 
 interface Background {
   id: string;
@@ -92,6 +96,8 @@ export default function BackgroundsPage() {
   const [plan, setPlan]                   = useState<string>('free');
   const [customBgUrl, setCustomBgUrl]     = useState<string | null>(null);
   const [uploading, setUploading]         = useState(false);
+  const [customPreset, setCustomPreset]   = useState<StudioPreset | null>(null);
+  const [savingPreset, setSavingPreset]   = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -104,14 +110,43 @@ export default function BackgroundsPage() {
       if (!user) return;
       const { data } = await supabase
         .from('profiles')
-        .select('plan')
+        .select('plan, custom_background')
         .eq('id', user.id)
         .single();
       const p = (data?.plan || 'free') as 'free' | 'pro' | 'business';
       setPlan(p);
       localStorage.setItem('dealer_plan', p);
+      if (data?.custom_background) setCustomPreset(data.custom_background as StudioPreset);
     });
   }, []);
+
+  /** Eigenen Hintergrund am Profil speichern und direkt aktivieren. */
+  const saveCustomPreset = async (preset: StudioPreset) => {
+    setSavingPreset(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Nicht angemeldet');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ custom_background: preset })
+        .eq('id', user.id);
+      if (error) throw error;
+
+      setCustomPreset(preset);
+      // Direkt aktiv setzen — sonst speichert man und nichts passiert sichtbar
+      localStorage.setItem('dealer_background', CUSTOM_STUDIO_ID);
+      localStorage.removeItem('dealer_custom_background_url');
+      setSelected(CUSTOM_STUDIO_ID);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unbekannter Fehler';
+      alert('Speichern fehlgeschlagen: ' + msg);
+    } finally {
+      setSavingPreset(false);
+    }
+  };
 
   const canUse = (tier: Background['tier']) => {
     // business / enterprise → alles freigeschaltet
@@ -241,9 +276,91 @@ export default function BackgroundsPage() {
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadCustomBackground(f); e.target.value = ''; }} />
       </div>
 
+      {/* Eigenes Studio gestalten — ab Pro */}
+      <div style={{ marginBottom: '20px' }}>
+        {plan !== 'free' ? (
+          <StudioEditor
+            initial={customPreset}
+            saving={savingPreset}
+            onSave={saveCustomPreset}
+          />
+        ) : (
+          <div style={{
+            background: '#fff', border: '1px solid #e9d5ff', borderRadius: '16px',
+            padding: '20px', display: 'flex', alignItems: 'center', gap: '14px',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
+              background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Sparkles size={16} style={{ color: '#8b5cf6' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>Eigenes Studio gestalten</div>
+              <div style={{ fontSize: '13px', color: '#64748b' }}>
+                Wand-, Boden- und Lichtfarben frei wählen — passend zu deiner Marke.
+              </div>
+            </div>
+            <a href="/dashboard/pricing" style={{
+              background: '#7c3aed', color: '#fff', padding: '8px 15px', borderRadius: '8px',
+              fontSize: '13px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap',
+            }}>Ab Pro</a>
+          </div>
+        )}
+      </div>
+
       {/* Hintergründe Grid */}
       <div style={{ marginBottom: '10px', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Studio-Verläufe & Showrooms</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+
+        {/* Eigenes Studio als auswählbare Kachel — nur wenn eins gespeichert ist */}
+        {customPreset && (
+          <div
+            onClick={() => {
+              localStorage.setItem('dealer_background', CUSTOM_STUDIO_ID);
+              localStorage.removeItem('dealer_custom_background_url');
+              setSelected(CUSTOM_STUDIO_ID);
+              setSaved(true);
+              setTimeout(() => setSaved(false), 2000);
+            }}
+            style={{
+              backgroundColor: '#fff', cursor: 'pointer', overflow: 'hidden',
+              border: `2px solid ${selected === CUSTOM_STUDIO_ID ? '#6366f1' : '#e2e8f0'}`,
+              borderRadius: '14px', transition: 'all 0.15s',
+              boxShadow: selected === CUSTOM_STUDIO_ID ? '0 0 0 3px rgba(99,102,241,0.15)' : '0 1px 4px rgba(0,0,0,0.04)',
+            }}
+          >
+            <div style={{ height: '140px', position: 'relative' }}>
+              <StudioPreview preset={customPreset} height={140} />
+              {selected === CUSTOM_STUDIO_ID && (
+                <div style={{
+                  position: 'absolute', top: '8px', right: '8px', width: '24px', height: '24px',
+                  background: '#6366f1', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <CheckCircle2 size={13} color="#fff" />
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: selected === CUSTOM_STUDIO_ID ? '#6366f1' : '#0f172a' }}>
+                  Mein Studio
+                </div>
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '1px' }}>Selbst gestaltet</div>
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700',
+                background: 'rgba(139,92,246,0.1)', color: '#8b5cf6', padding: '2px 8px', borderRadius: '6px',
+              }}>
+                <Sparkles size={11} /> Eigen
+              </div>
+            </div>
+          </div>
+        )}
+
         {BACKGROUNDS.map(bg => {
           const unlocked  = canUse(bg.tier);
           const isSelected = selected === bg.id;

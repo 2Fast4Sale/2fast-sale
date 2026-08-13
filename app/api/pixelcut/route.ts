@@ -29,9 +29,36 @@ const IMAGE_BACKGROUNDS: Record<string, string> = {
   outdoor_city:     'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=2000&q=90',
 };
 
-async function makeGradientBuffer(id: string): Promise<Buffer> {
+/** Farben eines Studio-Hintergrunds — identisch zum Editor im Dashboard. */
+type StudioPreset = { backdrop: string; floor: string; glow: string; vignette: string };
+
+/** Kennung fuer den selbst gestalteten Hintergrund des Haendlers. */
+const CUSTOM_STUDIO_ID = 'custom_studio';
+
+/**
+ * Laedt den eigenen Hintergrund des angemeldeten Haendlers.
+ * Faellt still auf null zurueck — ein fehlender Hintergrund darf die
+ * Bildverarbeitung nicht kippen.
+ */
+async function loadCustomPreset(): Promise<StudioPreset | null> {
+  try {
+    const { createClient } = await import('../../../lib/supabase/server');
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from('profiles').select('custom_background').eq('id', user.id).single();
+    const p = data?.custom_background as StudioPreset | null;
+    if (!p?.backdrop || !p?.floor || !p?.glow || !p?.vignette) return null;
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+async function makeGradientBuffer(id: string, custom?: StudioPreset | null): Promise<Buffer> {
   const sharp = (await import('sharp')).default;
-  const p = STUDIO_PRESETS[id] ?? STUDIO_PRESETS.studio_white;
+  const p = custom ?? STUDIO_PRESETS[id] ?? STUDIO_PRESETS.studio_white;
   const W = 2000, H = 1333;
   // Bodenlinie bei 64% â€” passend zum Compositor
   const FLOOR_Y = Math.round(H * 0.64);
@@ -83,10 +110,14 @@ export async function POST(req: NextRequest) {
     const { image, backgroundId, customBackgroundUrl } = await req.json();
     if (!image) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
 
+    // Eigenen Hintergrund nur laden, wenn er auch gewaehlt ist —
+    // spart bei allen anderen Faellen einen DB-Aufruf pro Bild.
+    const custom = backgroundId === CUSTOM_STUDIO_ID ? await loadCustomPreset() : null;
+
     const apiKey = process.env.PHOTOROOM_API_KEY;
     if (!apiKey) {
       // Kein PhotoRoom-Key â†’ remove.bg Fallback (besser als rembg fÃ¼r Autos)
-      return await fallbackRemoveBg(image, backgroundId);
+      return await fallbackRemoveBg(image, backgroundId, custom);
     }
 
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
@@ -112,7 +143,7 @@ export async function POST(req: NextRequest) {
       formData.append('background.imageUrl', IMAGE_BACKGROUNDS[bgId]);
       formData.append('background.scaling', 'fill');
     } else {
-      const gradBuf = await makeGradientBuffer(bgId);
+      const gradBuf = await makeGradientBuffer(bgId, custom);
       formData.append('background.imageFile', new Blob([gradBuf as unknown as ArrayBuffer], { type: 'image/jpeg' }), 'bg.jpg');
     }
 
@@ -134,7 +165,7 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error('PhotoRoom Fehler:', err);
-      return await fallbackRemoveBg(image, backgroundId);
+      return await fallbackRemoveBg(image, backgroundId, custom);
     }
 
     await logApiCost({
@@ -155,7 +186,7 @@ export async function POST(req: NextRequest) {
 }
 
 // â”€â”€ Fallback 1: remove.bg (bessere Auto-Erkennung als rembg)
-async function fallbackRemoveBg(image: string, backgroundId?: string): Promise<NextResponse> {
+async function fallbackRemoveBg(image: string, backgroundId?: string, custom?: StudioPreset | null): Promise<NextResponse> {
   const removeBgKey = process.env.REMOVE_BG_API_KEY;
   if (removeBgKey) {
     try {
@@ -185,18 +216,18 @@ async function fallbackRemoveBg(image: string, backgroundId?: string): Promise<N
         });
         const buf = Buffer.from(await res.arrayBuffer());
         // Transparentes PNG auf Hintergrundfarbe compositen (Sharp)
-        const withBg = await applyBackgroundToTransparent(buf, backgroundId);
+        const withBg = await applyBackgroundToTransparent(buf, backgroundId, custom);
         return NextResponse.json({ result: withBg });
       }
     } catch { /* weiter zum nÃ¤chsten Fallback */ }
   }
 
   // â”€â”€ Fallback 2: FAL rembg
-  return await fallbackFalRembg(image, backgroundId);
+  return await fallbackFalRembg(image, backgroundId, custom);
 }
 
 // â”€â”€ Fallback 2: FAL.ai rembg â†’ dann Hintergrund draufcompositen
-async function fallbackFalRembg(image: string, backgroundId?: string): Promise<NextResponse> {
+async function fallbackFalRembg(image: string, backgroundId?: string, custom?: StudioPreset | null): Promise<NextResponse> {
   try {
     const res = await fetch('https://fal.run/fal-ai/imageutils/rembg', {
       method:  'POST',
@@ -219,7 +250,7 @@ async function fallbackFalRembg(image: string, backgroundId?: string): Promise<N
 
     const imgRes  = await fetch(data.image?.url);
     const pngBuf  = Buffer.from(await imgRes.arrayBuffer());
-    const result  = await applyBackgroundToTransparent(pngBuf, backgroundId);
+    const result  = await applyBackgroundToTransparent(pngBuf, backgroundId, custom);
     return NextResponse.json({ result });
   } catch {
     return NextResponse.json({ error: 'Bildverarbeitung fehlgeschlagen' }, { status: 500 });
@@ -227,7 +258,7 @@ async function fallbackFalRembg(image: string, backgroundId?: string): Promise<N
 }
 
 // â”€â”€ PNG mit Transparenz auf Hintergrundfarbe compositen â€” mit Boden-Spiegelung
-async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: string): Promise<string> {
+async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: string, custom?: StudioPreset | null): Promise<string> {
   try {
     const sharp = (await import('sharp')).default;
 
@@ -245,13 +276,13 @@ async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: st
       if (existsSync(filePath)) {
         bgBuffer = readFileSync(filePath);
       } else {
-        bgBuffer = await makeGradientBuffer('studio_white');
+        bgBuffer = await makeGradientBuffer('studio_white', custom);
       }
     } else if (IMAGE_BACKGROUNDS[id]) {
       const res = await fetch(IMAGE_BACKGROUNDS[id]);
       bgBuffer = Buffer.from(await res.arrayBuffer());
     } else {
-      bgBuffer = await makeGradientBuffer(id);
+      bgBuffer = await makeGradientBuffer(id, custom);
     }
 
     const W = 2000, H = 1333;
