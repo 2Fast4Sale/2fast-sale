@@ -8,6 +8,7 @@ import {
   Wand2, Eye, AlertCircle, Droplets, Lock, Crown
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
+import GuidedCapture from '../../../components/GuidedCapture';
 import Link from 'next/link';
 
 // Fotolimit je Plan
@@ -181,6 +182,7 @@ function Step2Inner() {
     typeof window !== 'undefined' ? localStorage.getItem('watermark_enabled') !== 'false' : true
   );
   const [plan, setPlan] = useState<string>('free');
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   const photoLimit = PHOTO_LIMITS[plan] ?? 6;
 
@@ -501,6 +503,48 @@ function Step2Inner() {
             </Link>
           )}
         </div>
+
+        {/* ---- Geführte Aufnahme ---- */}
+        {photos.length < photoLimit && (
+          <button
+            onClick={() => setCaptureOpen(true)}
+            style={{
+              width: '100%', boxSizing: 'border-box', marginBottom: '12px',
+              display: 'flex', alignItems: 'center', gap: '14px', textAlign: 'left',
+              padding: '16px 18px', borderRadius: '12px', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              border: 'none', color: '#fff', fontFamily: F,
+              boxShadow: '0 4px 18px rgba(99,102,241,0.35)',
+            }}
+          >
+            <div style={{
+              width: '42px', height: '42px', borderRadius: '11px', flexShrink: 0,
+              background: 'rgba(255,255,255,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Camera size={20} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: '800', marginBottom: '2px' }}>
+                Geführte Aufnahme starten
+              </div>
+              <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.45 }}>
+                Wir sagen dir Schritt für Schritt, wo du stehen musst — für gleichmäßige Fotos und die 360°-Ansicht.
+              </div>
+            </div>
+          </button>
+        )}
+
+        {captureOpen && (
+          <GuidedCapture
+            maxShots={photoLimit - photos.length}
+            onClose={() => setCaptureOpen(false)}
+            onDone={files => {
+              setCaptureOpen(false);
+              if (files.length) addFiles(files);
+            }}
+          />
+        )}
 
         {/* ---- Upload Zone ---- */}
         <div
