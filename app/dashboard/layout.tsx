@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   FileText, Tag, Image, Plus, ChevronLeft, ChevronRight,
   Layers, Settings, LogOut, Download, Globe,
-  HelpCircle, Zap, Home, Crown, Receipt, Building2, Menu, X
+  HelpCircle, Zap, Home, Crown, Receipt, Building2, Menu, X, Wallet
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string; company: string; plan: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string; company: string; plan: string; isAdmin: boolean } | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -90,12 +90,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user: u } }) => {
       if (!u) return;
-      const { data } = await supabase.from('profiles').select('full_name, company, plan, onboarding_done').eq('id', u.id).single();
+      const { data } = await supabase.from('profiles').select('full_name, company, plan, onboarding_done, is_admin').eq('id', u.id).single();
       setUser({
         name:    data?.full_name || u.email?.split('@')[0] || 'Haendler',
         email:   u.email || '',
         company: data?.company || '',
         plan:    data?.plan || 'free',
+        isAdmin: data?.is_admin === true,
       });
       localStorage.setItem('dealer_plan',    data?.plan    || 'free');
       localStorage.setItem('dealer_company', data?.company || '');
@@ -120,6 +121,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const W = collapsed ? W_CLOSED : W_OPEN;
+
+  // Interne Auswertungen — nur fuer Admins. Haendler sehen diesen Bereich nie.
+  const sections = user?.isAdmin
+    ? [...navSections, {
+        label: 'Intern',
+        items: [{ href: '/dashboard/admin/costs', label: 'API-Kosten', icon: Wallet }],
+      }]
+    : navSections;
 
   if (isMobile) {
     return (
@@ -147,7 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* ── MOBILE SLIDE-DOWN MENU ── */}
         {mobileMenuOpen && (
           <div style={{ position: 'fixed', top: '52px', left: 0, right: 0, zIndex: 190, background: '#fff', borderBottom: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', maxHeight: 'calc(100vh - 52px - 56px)', overflowY: 'auto' }}>
-            {navSections.map(section => (
+            {sections.map(section => (
               <div key={section.label}>
                 <div style={{ fontSize: '10px', fontWeight: '700', color: SECTION_COLOR, textTransform: 'uppercase', letterSpacing: '0.14em', padding: '12px 16px 4px' }}>{section.label}</div>
                 {section.items.map(({ href, label, icon: Icon }) => {
@@ -243,7 +252,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav style={{ flex: 1, padding: '6px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          {navSections.map((section) => (
+          {sections.map((section) => (
             <div key={section.label} style={{ marginBottom: '6px' }}>
               {!collapsed && (
                 <div style={{ fontSize: '11px', fontWeight: '700', color: SECTION_COLOR, textTransform: 'uppercase', letterSpacing: '0.14em', padding: '12px 12px 6px' }}>
