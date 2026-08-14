@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import { createClient } from '../../../lib/supabase/server';
+import { berechneInserat } from '../../../lib/usageBilling';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +99,21 @@ export async function POST(req: Request) {
     }
 
     if (error) throw error;
+
+    /*
+     * Erst jetzt berechnen — nie ein Inserat abrechnen, das gar nicht entstanden
+     * ist. Umgekehrt darf ein Abrechnungsfehler das Inserat nicht kippen:
+     * berechneInserat wirft nicht, sondern haelt den Posten in der Datenbank
+     * fest, damit nichts verloren geht.
+     */
+    if (data?.id) {
+      await berechneInserat({
+        userId:      user.id,
+        vehicleId:   data.id,
+        bezeichnung: [body.brand, body.title].find(Boolean) as string | undefined,
+      });
+    }
+
     return NextResponse.json({ vehicle: data });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
