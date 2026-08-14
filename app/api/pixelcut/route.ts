@@ -147,7 +147,21 @@ export async function POST(req: NextRequest) {
       formData.append('background.imageFile', new Blob([gradBuf as unknown as ArrayBuffer], { type: 'image/jpeg' }), 'bg.jpg');
     }
 
-    // Ausgabe: Auto unten zentriert, kein shadow (shadow.mode war fehlerhaft)
+    /*
+     * Schatten. Frueher deaktiviert, weil ein ungueltiger Wert einen Fehler
+     * ausgeloest hatte — gueltig sind laut PhotoRoom-Doku ausschliesslich
+     * ai.soft, ai.hard, ai.floating und ai.auto-with-overrides.
+     *
+     * ai.soft ist fuer Fahrzeuge richtig: weicher Bodenschatten wie im Studio.
+     * ai.floating waere falsch, das laesst das Objekt schweben — ein Auto steht
+     * auf dem Boden.
+     *
+     * Ohne Schatten wirkt ein freigestelltes Fahrzeug flach aufgeklebt. Das ist
+     * der groesste sichtbare Unterschied zwischen "freigestellt" und "Studio".
+     */
+    formData.append('shadow.mode', process.env.PHOTOROOM_SHADOW_MODE || 'ai.soft');
+
+    // Ausgabe: Auto unten zentriert
     formData.append('outputSize',          '2000x1333');
     formData.append('paddingTop',          '0.18');
     formData.append('paddingRight',        '0.18');
