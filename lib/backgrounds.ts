@@ -1,19 +1,27 @@
 /**
  * Die Hintergrund-Bibliothek.
  *
- * Das hier ist die einzige Stelle, an der Hintergründe definiert werden.
- * Jeder Eintrag ist eine echte Bilddatei unter public/backgrounds/.
+ * Ein Hintergrund ist entweder eine Bilddatei unter public/backgrounds/ oder
+ * — der Regelfall — eine Beschreibung, aus der PhotoRoom ihn erzeugt.
  *
- * Zusammengesetzt wird nichts davon hier — die Datei geht als
- * background.imageFile an PhotoRoom, und PhotoRoom stellt das Fahrzeug frei,
- * setzt den Schatten und platziert es. Diese Liste sagt nur, welche Datei
- * mitgeschickt wird.
+ * Warum Beschreibung statt Datei:
+ * Die PhotoRoom-API kann keinen Hintergrund allein erzeugen, sie braucht immer
+ * ein Motiv. Es gäbe also gar keinen Weg, generierte Hintergründe als Datei
+ * abzulegen. Stattdessen gibt es `background.seed`: gleicher Seed plus
+ * gleiche Beschreibung ergibt denselben Hintergrund. Damit sehen alle Fotos
+ * eines Fahrzeugs gleich aus, obwohl jeder einzeln erzeugt wird.
+ *
+ * Zusammengesetzt wird hier nichts. Diese Liste sagt PhotoRoom nur, was für
+ * ein Raum entstehen soll — Freistellen, Schatten und Platzieren macht
+ * PhotoRoom.
  *
  * ── Einen Hintergrund hinzufügen ──────────────────────────────────────────
- * 1. Bild nach public/backgrounds/ legen, mindestens 2000 px breit
- *    (die Ausgabe ist 2000×1333; kleinere Bilder werden hochskaliert)
- * 2. Hier eine Zeile ergänzen
- * Mehr ist nicht nötig.
+ * Eine Zeile mit prompt und seed ergänzen. Der Seed ist eine beliebige feste
+ * Zahl; ändert man sie, sieht der Hintergrund anders aus.
+ *
+ * Die Beschreibungen sind bewusst auf Licht und Tiefe formuliert. Eine leere
+ * Wand ohne Lichtverlauf lässt jedes freigestellte Fahrzeug aufgeklebt wirken
+ * — genau das ist der Unterschied zwischen "ausgeschnitten" und "fotografiert".
  */
 
 export type BackgroundTier = 'free' | 'pro' | 'business';
@@ -21,34 +29,91 @@ export type BackgroundTier = 'free' | 'pro' | 'business';
 export interface BackgroundEntry {
   /** Wird in localStorage und in der API verwendet — nicht nachträglich ändern */
   id: string;
-  /** Anzeigename im Dashboard */
   label: string;
-  /** Dateiname unter public/backgrounds/ */
-  file: string;
-  /** Ab welchem Plan nutzbar */
   tier: BackgroundTier;
-  /** Gruppierung im Dashboard */
   category: string;
+  /** Beschreibung für PhotoRoom. Entweder das oder `file`. */
+  prompt?: string;
+  /** Feste Zahl, damit alle Fotos eines Fahrzeugs gleich aussehen. */
+  seed?: number;
+  /** Alternativ eine fertige Datei unter public/backgrounds/ */
+  file?: string;
 }
 
 export const BACKGROUNDS: BackgroundEntry[] = [
+  // ── Studio ──────────────────────────────────────────────────────────────
   {
-    id: 'studio_infinity',
-    label: 'Infinity Studio',
-    file: 'studio_infinity.jpg',
-    tier: 'free',
-    category: 'Studio',
+    id: 'studio_white', label: 'Studio Weiß', tier: 'free', category: 'Studio',
+    seed: 10_101,
+    prompt: 'professional automotive photography studio, seamless white cyclorama wall, '
+          + 'large softbox lighting from above, smooth gradient falloff towards the corners, '
+          + 'light grey polished concrete floor with a subtle reflection, empty room, no vehicles',
+  },
+  {
+    id: 'studio_dark', label: 'Studio Dunkel', tier: 'free', category: 'Studio',
+    seed: 20_202,
+    prompt: 'dark automotive photography studio, black seamless backdrop, dramatic rim lighting '
+          + 'from behind, glossy dark floor with soft reflection, pool of light in the centre, '
+          + 'deep shadows at the edges, empty room, no vehicles',
+  },
+  {
+    id: 'studio_grey', label: 'Studio Grau', tier: 'free', category: 'Studio',
+    seed: 30_303,
+    prompt: 'minimalist photography studio, seamless mid grey backdrop, even diffused overhead '
+          + 'lighting, gentle vignette, smooth matte floor, empty room, no vehicles',
   },
 
-  // ── Hier kommen deine PhotoRoom-Hintergründe rein ──
-  // Beispiel:
-  // { id: 'showroom_glas', label: 'Showroom Glasfront', file: 'showroom_glas.jpg', tier: 'pro',      category: 'Showroom' },
-  // { id: 'loft_ziegel',   label: 'Industrieloft',      file: 'loft_ziegel.jpg',   tier: 'pro',      category: 'Showroom' },
-  // { id: 'tiefgarage',    label: 'Tiefgarage',         file: 'tiefgarage.jpg',    tier: 'business', category: 'Outdoor'  },
+  // ── Showroom ────────────────────────────────────────────────────────────
+  {
+    id: 'showroom_glas', label: 'Showroom Glasfront', tier: 'pro', category: 'Showroom',
+    seed: 40_404,
+    prompt: 'modern car showroom interior, floor to ceiling glass front, soft natural daylight, '
+          + 'polished light grey concrete floor with gentle reflections, minimal architecture, '
+          + 'empty showroom, no vehicles',
+  },
+  {
+    id: 'showroom_loft', label: 'Industrieloft', tier: 'pro', category: 'Showroom',
+    seed: 50_505,
+    prompt: 'industrial loft showroom, exposed red brick wall, black steel beams, warm pendant '
+          + 'lights, dark polished concrete floor with reflections, empty space, no vehicles',
+  },
+  {
+    id: 'showroom_luxus', label: 'Luxus-Showroom', tier: 'pro', category: 'Showroom',
+    seed: 60_606,
+    prompt: 'luxury car showroom, warm walnut wall panelling, indirect cove lighting, '
+          + 'polished marble floor with soft reflections, elegant and restrained, '
+          + 'empty showroom, no vehicles',
+  },
+
+  // ── Outdoor ─────────────────────────────────────────────────────────────
+  {
+    id: 'outdoor_garage', label: 'Tiefgarage', tier: 'business', category: 'Outdoor',
+    seed: 70_707,
+    prompt: 'underground parking garage, raw concrete pillars and ceiling, cool neon strip '
+          + 'lighting, wet asphalt floor with reflections, moody atmosphere, empty, no vehicles',
+  },
+  {
+    id: 'outdoor_pass', label: 'Bergpass', tier: 'business', category: 'Outdoor',
+    seed: 80_808,
+    prompt: 'empty mountain pass road at golden hour, smooth asphalt, dramatic sky, distant '
+          + 'peaks in soft haze, warm low sun, no vehicles',
+  },
+  {
+    id: 'outdoor_stadt', label: 'Stadt bei Nacht', tier: 'business', category: 'Outdoor',
+    seed: 90_909,
+    prompt: 'empty city street at blue hour, wet asphalt with reflections, bokeh city lights '
+          + 'in the background, cool cinematic tone, no vehicles',
+  },
+  {
+    id: 'outdoor_hafen', label: 'Hafenkulisse', tier: 'business', category: 'Outdoor',
+    seed: 11_111,
+    prompt: 'industrial harbour at dusk, stacked shipping containers in the background, '
+          + 'wide concrete quay, cool light with warm accents, empty, no vehicles',
+  },
 ];
 
 /** Standardhintergrund, wenn nichts gewählt wurde. */
-export const DEFAULT_BACKGROUND_ID = BACKGROUNDS[0]?.id ?? 'studio_infinity';
+export const DEFAULT_BACKGROUND_ID = BACKGROUNDS[0]?.id ?? 'studio_white';
 
 export function findBackground(id: string | null | undefined): BackgroundEntry | null {
   if (!id) return null;

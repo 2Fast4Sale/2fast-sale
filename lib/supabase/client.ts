@@ -17,23 +17,28 @@ import { createBrowserClient } from '@supabase/ssr';
  * gespeicherten Client bekommen alle dieselbe Instanz, und es gibt nur noch
  * einen Refresh-Vorgang.
  */
-let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+/*
+ * Ueber diese Hilfsfunktion, damit TypeScript den konkreten Client-Typ
+ * ableiten kann. Ein direktes ReturnType<typeof createBrowserClient> loest
+ * die Generics auf und verliert dabei die Typinformation — Aufrufer bekommen
+ * dann implizites any.
+ */
+function neuerClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
-export function createClient() {
+type BrowserClient = ReturnType<typeof neuerClient>;
+
+let browserClient: BrowserClient | null = null;
+
+export function createClient(): BrowserClient {
   // Auf dem Server (z.B. beim Vorrendern) nie zwischenspeichern — sonst
   // teilen sich verschiedene Anfragen denselben Client.
-  if (typeof window === 'undefined') {
-    return createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
+  if (typeof window === 'undefined') return neuerClient();
 
-  if (!browserClient) {
-    browserClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
+  if (!browserClient) browserClient = neuerClient();
   return browserClient;
 }

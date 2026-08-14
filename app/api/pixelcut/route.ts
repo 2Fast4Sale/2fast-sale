@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     formData.append('imageFile', new Blob([imageBuffer], { type: 'image/jpeg' }), 'car.jpg');
 
     /* ── Hintergrund anhaengen ─────────────────────────────────────────────
-     * Genau zwei Faelle. Mehr gibt es nicht.
+     * Drei Faelle: eigenes Showroom-Foto, Beschreibung, oder fertige Datei.
      */
     if (customBackgroundUrl) {
       // Eigenes Showroom-Foto des Haendlers — steht vor allem anderen.
@@ -58,21 +58,35 @@ export async function POST(req: NextRequest) {
       const bg = findBackground(backgroundId) ?? findBackground(DEFAULT_BACKGROUND_ID);
       if (!bg) {
         console.error('[pixelcut] Kein Hintergrund in der Bibliothek');
-        return NextResponse.json(
-          { error: 'Kein Hintergrund verfügbar.' },
-          { status: 503 }
-        );
+        return NextResponse.json({ error: 'Kein Hintergrund verfügbar.' }, { status: 503 });
       }
-      const filePath = join(process.cwd(), 'public', 'backgrounds', bg.file);
-      if (!existsSync(filePath)) {
-        console.error('[pixelcut] Hintergrunddatei fehlt:', bg.file);
-        return NextResponse.json(
-          { error: `Hintergrund "${bg.label}" ist nicht verfügbar.` },
-          { status: 503 }
-        );
+
+      if (bg.prompt) {
+        /*
+         * PhotoRoom erzeugt den Hintergrund aus der Beschreibung.
+         *
+         * Der Seed ist entscheidend: gleicher Seed plus gleiche Beschreibung
+         * ergibt denselben Raum. Ohne ihn bekaeme jedes Foto eines Fahrzeugs
+         * einen leicht anderen Hintergrund — bei acht Bildern desselben Autos
+         * sieht das kaputt aus.
+         */
+        formData.append('background.prompt', bg.prompt);
+        if (bg.seed !== undefined) formData.append('background.seed', String(bg.seed));
+      } else if (bg.file) {
+        const filePath = join(process.cwd(), 'public', 'backgrounds', bg.file);
+        if (!existsSync(filePath)) {
+          console.error('[pixelcut] Hintergrunddatei fehlt:', bg.file);
+          return NextResponse.json(
+            { error: `Hintergrund "${bg.label}" ist nicht verfügbar.` },
+            { status: 503 }
+          );
+        }
+        formData.append('background.imageFile', new Blob([readFileSync(filePath)], { type: 'image/jpeg' }), 'bg.jpg');
+        formData.append('background.scaling', 'fill');
+      } else {
+        console.error('[pixelcut] Hintergrund ohne prompt und ohne file:', bg.id);
+        return NextResponse.json({ error: 'Hintergrund ist unvollständig.' }, { status: 503 });
       }
-      formData.append('background.imageFile', new Blob([readFileSync(filePath)], { type: 'image/jpeg' }), 'bg.jpg');
-      formData.append('background.scaling', 'fill');
     }
 
     /*
