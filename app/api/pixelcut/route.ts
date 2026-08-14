@@ -114,7 +114,17 @@ export async function POST(req: NextRequest) {
     // spart bei allen anderen Faellen einen DB-Aufruf pro Bild.
     const custom = backgroundId === CUSTOM_STUDIO_ID ? await loadCustomPreset() : null;
 
-    const apiKey = process.env.PHOTOROOM_API_KEY;
+    /*
+     * Sandbox-Modus: derselbe Key mit Praefix "sandbox_". Kostenlos, 1.000
+     * Aufrufe im Monat (max. 100 taeglich), Ergebnis traegt ein Wasserzeichen.
+     * Gedacht zum Ausprobieren von Hintergruenden und Schatten, ohne Guthaben
+     * zu verbrauchen. Fuer echte Kundenbilder muss PHOTOROOM_SANDBOX aus sein.
+     */
+    const roherKey = process.env.PHOTOROOM_API_KEY;
+    const apiKey = roherKey && process.env.PHOTOROOM_SANDBOX === 'true'
+      ? `sandbox_${roherKey}`
+      : roherKey;
+
     if (!apiKey) {
       // Kein PhotoRoom-Key â†’ remove.bg Fallback (besser als rembg fÃ¼r Autos)
       return await fallbackRemoveBg(image, backgroundId, custom);
