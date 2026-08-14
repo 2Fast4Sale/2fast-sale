@@ -206,10 +206,34 @@ export default function BackgroundsPage() {
                   boxShadow: istAktiv ? '0 0 0 3px rgba(99,102,241,0.15)' : '0 1px 4px rgba(0,0,0,0.04)',
                   transition: 'all 0.15s',
                 }}>
-                <div style={{ height: '140px', position: 'relative', background: '#f1f5f9' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/backgrounds/${bg.file}`} alt={bg.label}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: frei ? 'none' : 'grayscale(60%) brightness(0.75)' }} />
+                <div style={{ height: '150px', position: 'relative', background: '#f1f5f9', overflow: 'hidden' }}>
+                  {bg.preview || bg.file ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={`/backgrounds/${bg.preview || bg.file}`} alt={bg.label}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', filter: frei ? 'none' : 'grayscale(60%) brightness(0.75)' }} />
+                  ) : (
+                    /*
+                     * Noch kein Vorschaubild erzeugt. Statt einer grauen Fläche
+                     * die hinterlegten Farben als Wand/Boden andeuten, mit
+                     * Fahrzeug-Silhouette zur Orientierung. Ersetzt kein echtes
+                     * Vorschaubild, macht die Auswahl aber überhaupt lesbar.
+                     */
+                    <div style={{ position: 'absolute', inset: 0, filter: frei ? 'none' : 'grayscale(60%) brightness(0.75)' }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '64%',
+                        background: `linear-gradient(180deg, ${bg.farben[0]} 0%, ${bg.farben[1]} 100%)` }} />
+                      <div style={{ position: 'absolute', top: '64%', left: 0, right: 0, bottom: 0,
+                        background: bg.farben[1] }} />
+                      <div style={{ position: 'absolute', left: '50%', top: '68%', transform: 'translate(-50%,-50%)',
+                        width: '78%', height: '58%', pointerEvents: 'none',
+                        background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.30) 0%, transparent 68%)' }} />
+                      <svg viewBox="0 0 130 56" style={{ position: 'absolute', left: '50%', top: '62%', transform: 'translate(-50%,-50%)', width: '66%', opacity: 0.42 }}>
+                        <g fill="rgba(0,0,0,0.6)">
+                          <path d="M14 38 L22 23 Q28 15 42 14 L66 14 Q80 15 90 24 L110 28 Q118 30 118 37 L118 43 L14 43 Z" />
+                          <circle cx="34" cy="44" r="7.5" /><circle cx="95" cy="44" r="7.5" />
+                        </g>
+                      </svg>
+                    </div>
+                  )}
                   {!frei && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       <Lock size={18} style={{ color: t.color }} />
@@ -222,13 +246,15 @@ export default function BackgroundsPage() {
                     </div>
                   )}
                 </div>
-                <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  <div style={{ minWidth: 0 }}>
+                <div style={{ padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '5px' }}>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: istAktiv ? '#6366f1' : '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bg.label}</div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{bg.category}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: t.bg, color: t.color, padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
+                      {t.icon} {t.label}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: t.bg, color: t.color, padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>
-                    {t.icon} {t.label}
+                  <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.45 }}>
+                    {bg.beschreibung}
                   </div>
                 </div>
               </div>
