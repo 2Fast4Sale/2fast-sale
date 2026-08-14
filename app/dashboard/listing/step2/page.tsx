@@ -197,6 +197,16 @@ function Step2Inner() {
   const [plan, setPlan] = useState<string>('free');
   const [captureOpen, setCaptureOpen] = useState(false);
 
+  // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px hoch).
+  // Die Weiter-Leiste muss darueber liegen, sonst ist sie nicht antippbar.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const photoLimit = PHOTO_LIMITS[plan] ?? 6;
 
   // Plan aus localStorage holen (wird vom Layout aktuell gehalten)
@@ -400,7 +410,9 @@ function Step2Inner() {
         <div style={{ width: '100px' }} />
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 24px 60px' }}>
+      {/* Unten Platz fuer die Weiter-Leiste, auf dem Handy zusaetzlich fuer
+          die Navigation darunter. */}
+      <div style={{ maxWidth: '960px', margin: '0 auto', padding: isMobile ? '16px 14px 200px' : '20px 24px 100px' }}>
 
         {/* ---- Header ---- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
@@ -842,7 +854,9 @@ function Step2Inner() {
       </div>
 
       {/* ---- Sticky Bottom Bar ---- */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: `${CARD}ee`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${BORD}`, padding: '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+      {/* Auf dem Handy ueber die Dashboard-Navigation (56 px, zIndex 200)
+          heben, sonst liegt die Leiste darunter und ist nicht antippbar. */}
+      <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: `${CARD}ee`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${BORD}`, padding: isMobile ? '12px 16px' : '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', zIndex: 50 }}>
         <div style={{ fontSize: '13px', color: TS }}>
           {photos.length === 0
             ? 'Mindestens 1 Foto hochladen'

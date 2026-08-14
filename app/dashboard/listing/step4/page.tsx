@@ -674,7 +674,9 @@ function Step4Inner() {
         </div>
 
         {/* COL 2: Editor */}
-        <div style={{ padding: '26px 26px 120px', overflowY: 'auto' }}>
+        {/* Unten Platz fuer die Aktionsleiste, auf dem Handy zusaetzlich fuer
+            die Navigation darunter. */}
+        <div style={{ padding: isMobile ? '18px 14px 200px' : '26px 26px 120px', overflowY: 'auto' }}>
           <div style={{ marginBottom: '22px' }}>
             <h1 style={{ fontSize: '23px', fontWeight: '900', color: TH, margin: '0 0 3px', letterSpacing: '-0.6px' }}>Inserat fertigstellen</h1>
             <p style={{ color: TS, fontSize: '13px', margin: 0 }}>{brand && <strong style={{ color: TH }}>{brand} · </strong>}{km && `${Number(km).toLocaleString('de-DE')} km · `}{editPrice && `${Number(editPrice).toLocaleString('de-DE')} €`}</p>
@@ -822,7 +824,9 @@ function Step4Inner() {
       </div>
 
       {/* Bottom Bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${BORD}`, padding: '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 40, gap: '10px' }}>
+      {/* Auf dem Handy ueber die Dashboard-Navigation (56 px, zIndex 200)
+          heben, sonst liegt die Leiste darunter und ist nicht antippbar. */}
+      <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${BORD}`, padding: isMobile ? '11px 14px' : '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 50, gap: '10px' }}>
         <div style={{ display: 'flex', gap: '7px' }}>
           <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '10px 14px', background: SURF, border: `1px solid ${BORD}`, borderRadius: '9px', color: TS, fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}><ChevronLeft size={14} /> Zurück</button>
           <button onClick={() => save('Entwurf')} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '10px 15px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '9px', color: '#d97706', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}><Save size={13} /> Entwurf</button>
