@@ -84,14 +84,22 @@ export async function POST(req: NextRequest) {
     formData.append('shadow.mode', process.env.PHOTOROOM_SHADOW_MODE || 'ai.soft');
 
     /*
-     * Raender. Unten darf nicht 0 sein, sonst sitzt das Fahrzeug auf der
+     * Raender, als Anteil der Bildkante.
+     *
+     * Achtung beim Nachjustieren: 0.22 links und rechts bedeutet, dass das
+     * Fahrzeug nur 56 % der Bildbreite einnehmen darf. Es wirkt dann klein und
+     * verloren, mit viel toter Flaeche darueber — genau das laesst ein Bild
+     * billig aussehen. Professionelle Haendlerfotos fuellen 80 bis 90 % der
+     * Breite.
+     *
+     * Unten darf trotzdem nicht 0 stehen, sonst sitzt das Fahrzeug auf der
      * Bildkante und wirkt angeschnitten statt aufgestellt.
      */
     formData.append('outputSize',          '2000x1333');
-    formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.24');
-    formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.22');
-    formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.10');
-    formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.22');
+    formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.09');
+    formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.06');
+    formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.07');
+    formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.06');
     formData.append('verticalAlignment',   'bottom');
     formData.append('horizontalAlignment', 'center');
 
