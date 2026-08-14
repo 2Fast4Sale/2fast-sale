@@ -332,7 +332,10 @@ export default function Step1() {
       </div>
 
       {/* ══════ MAIN LAYOUT ══════ */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '16px 12px 120px' : '28px 24px 120px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: '24px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', /* Unten Platz fuer die Weiter-Leiste — auf dem Handy zusaetzlich fuer
+           die 56 px hohe Navigation darunter, sonst liegt das letzte Feld
+           dahinter und laesst sich nicht mehr bedienen. */
+        padding: isMobile ? '16px 12px 200px' : '28px 24px 120px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 360px', gap: '24px', alignItems: 'start' }}>
 
         {/* ══ LEFT COLUMN — Form ══ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1053,8 +1056,14 @@ export default function Step1() {
       </div>
 
       {/* ══════ STICKY BOTTOM CTA ══════ */}
+      {/*
+        Auf dem Handy sitzt die Dashboard-Navigation unten fest: 56 px hoch,
+        zIndex 200. Bei bottom: 0 lag diese Leiste komplett darunter und der
+        Weiter-Knopf war weder sichtbar noch antippbar. Deshalb auf dem Handy
+        um die Höhe der Navigation nach oben versetzt.
+      */}
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 40,
+        position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, zIndex: 40,
         background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
         borderTop: `1px solid ${BORD}`, padding: '14px 24px',
         boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
