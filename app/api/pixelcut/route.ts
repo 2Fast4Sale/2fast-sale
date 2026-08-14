@@ -103,10 +103,10 @@ export async function POST(req: NextRequest) {
      * Werte unten, die sich einzeln ueber Env ueberschreiben lassen.
      */
     if (process.env.STUDIO_PADDING !== 'auto') {
-      formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.09');
-      formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.06');
-      formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.07');
-      formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.06');
+      formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.12');
+      formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.10');
+      formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.08');
+      formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.10');
       formData.append('verticalAlignment',   'bottom');
       formData.append('horizontalAlignment', 'center');
     }
