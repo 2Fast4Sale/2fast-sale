@@ -313,10 +313,16 @@ function Step2Inner() {
         ? localStorage.getItem('dealer_background') || 'studio_infinity'
         : 'studio_infinity';
 
+      // Eigenes Showroom-Foto des Haendlers. Wurde bisher gespeichert, aber nie
+      // mitgeschickt — dadurch bekam der Haendler trotz Upload den Standard.
+      const customBackgroundUrl = backgroundId === 'custom' && typeof window !== 'undefined'
+        ? localStorage.getItem('dealer_custom_background_url')
+        : null;
+
       const res = await fetch('/api/pixelcut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: compressed, backgroundId }),
+        body: JSON.stringify({ image: compressed, backgroundId, customBackgroundUrl }),
       });
       if (!res.ok) throw new Error('Verarbeitung fehlgeschlagen');
       const data = await res.json();

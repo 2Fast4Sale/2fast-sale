@@ -126,8 +126,11 @@ export async function POST(req: NextRequest) {
       : roherKey;
 
     if (!apiKey) {
-      // Kein PhotoRoom-Key â†’ remove.bg Fallback (besser als rembg fÃ¼r Autos)
-      return await fallbackRemoveBg(image, backgroundId, custom);
+      console.error('[pixelcut] PHOTOROOM_API_KEY fehlt');
+      return NextResponse.json(
+        { error: 'Studio-Bearbeitung ist nicht konfiguriert.' },
+        { status: 503 }
+      );
     }
 
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
@@ -143,7 +146,15 @@ export async function POST(req: NextRequest) {
     };
     const bgId = backgroundId ?? 'studio_infinity';
 
-    if (LOCAL_BG_MAP[bgId]) {
+    if (customBackgroundUrl) {
+      /*
+       * Eigenes Showroom-Foto des Haendlers. Steht vor allen anderen Faellen:
+       * wer sein eigenes hochgeladen hat, will genau das sehen — nicht eine
+       * Vorlage. Bisher wurde der Wert entgegengenommen und ignoriert.
+       */
+      formData.append('background.imageUrl', customBackgroundUrl);
+      formData.append('background.scaling', 'fill');
+    } else if (LOCAL_BG_MAP[bgId]) {
       const filePath = join(process.cwd(), 'public', 'backgrounds', LOCAL_BG_MAP[bgId]);
       if (existsSync(filePath)) {
         const bgBuf = readFileSync(filePath);
@@ -171,12 +182,19 @@ export async function POST(req: NextRequest) {
      */
     formData.append('shadow.mode', process.env.PHOTOROOM_SHADOW_MODE || 'ai.soft');
 
-    // Ausgabe: Auto unten zentriert
+    /*
+     * Raender. Frueher stand unten 0.00 — dadurch sass das Fahrzeug auf der
+     * Bildkante und wirkte angeschnitten statt aufgestellt. Mit Luft nach unten
+     * sieht man den Boden unter den Raedern, was zusammen mit dem Schatten erst
+     * den Studio-Eindruck ergibt.
+     *
+     * Ueber Env feinjustierbar, ohne Deploy.
+     */
     formData.append('outputSize',          '2000x1333');
-    formData.append('paddingTop',          '0.18');
-    formData.append('paddingRight',        '0.18');
-    formData.append('paddingBottom',       '0.00');
-    formData.append('paddingLeft',         '0.18');
+    formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.24');
+    formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.22');
+    formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.10');
+    formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.22');
     formData.append('verticalAlignment',   'bottom');
     formData.append('horizontalAlignment', 'center');
 
@@ -189,7 +207,16 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error('PhotoRoom Fehler:', err);
-      return await fallbackRemoveBg(image, backgroundId, custom);
+      /*
+       * Bewusst kein Ersatz-Compositing mehr. Ein selbst zusammengesetztes
+       * Bild sieht schlechter aus als gar keins und beschaedigt genau das,
+       * wofuer der Haendler zahlt. Besser ehrlich melden und erneut versuchen
+       * lassen — das Originalfoto bleibt im Inserat erhalten.
+       */
+      return NextResponse.json(
+        { error: 'Studio-Bearbeitung gerade nicht verfügbar. Bitte gleich nochmal versuchen.' },
+        { status: 503 }
+      );
     }
 
     await logApiCost({
@@ -206,210 +233,5 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Pixelcut Fehler:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// â”€â”€ Fallback 1: remove.bg (bessere Auto-Erkennung als rembg)
-async function fallbackRemoveBg(image: string, backgroundId?: string, custom?: StudioPreset | null): Promise<NextResponse> {
-  const removeBgKey = process.env.REMOVE_BG_API_KEY;
-  if (removeBgKey) {
-    try {
-      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-      const formData = new FormData();
-      formData.append('image_file_b64', base64Data);
-      formData.append('size', 'auto');
-      formData.append('type', 'car');           // â† wichtig: Auto-Modus fÃ¼r bessere RÃ¤der/Kanten
-      formData.append('shadow_remove', 'false');
-
-      const res = await fetch('https://api.remove.bg/v1.0/removebg', {
-        method:  'POST',
-        headers: { 'X-Api-Key': removeBgKey },
-        body:    formData,
-      });
-
-      if (res.ok) {
-        await logApiCost({
-          userId: await currentUserId(),
-          service: 'removebg',
-          operation: 'remove-bg',
-          unitsIn: 1,
-          costMicros: imageCostMicros('removebg'),
-          // Fallback heisst: PhotoRoom hat versagt. Haeufung ist ein Warnsignal,
-          // denn remove.bg ist deutlich teurer.
-          meta: { fallback_stufe: 1 },
-        });
-        const buf = Buffer.from(await res.arrayBuffer());
-        // Transparentes PNG auf Hintergrundfarbe compositen (Sharp)
-        const withBg = await applyBackgroundToTransparent(buf, backgroundId, custom);
-        return NextResponse.json({ result: withBg });
-      }
-    } catch { /* weiter zum nÃ¤chsten Fallback */ }
-  }
-
-  // â”€â”€ Fallback 2: FAL rembg
-  return await fallbackFalRembg(image, backgroundId, custom);
-}
-
-// â”€â”€ Fallback 2: FAL.ai rembg â†’ dann Hintergrund draufcompositen
-async function fallbackFalRembg(image: string, backgroundId?: string, custom?: StudioPreset | null): Promise<NextResponse> {
-  try {
-    const res = await fetch('https://fal.run/fal-ai/imageutils/rembg', {
-      method:  'POST',
-      headers: {
-        'Authorization':  `Key ${process.env.FAL_API_KEY}`,
-        'Content-Type':   'application/json',
-      },
-      body: JSON.stringify({ image_url: image }),
-    });
-    if (!res.ok) throw new Error('rembg fehlgeschlagen');
-    const data    = await res.json();
-    await logApiCost({
-      userId: await currentUserId(),
-      service: 'fal',
-      operation: 'remove-bg',
-      unitsIn: 1,
-      costMicros: imageCostMicros('fal'),
-      meta: { fallback_stufe: 2 },
-    });
-
-    const imgRes  = await fetch(data.image?.url);
-    const pngBuf  = Buffer.from(await imgRes.arrayBuffer());
-    const result  = await applyBackgroundToTransparent(pngBuf, backgroundId, custom);
-    return NextResponse.json({ result });
-  } catch {
-    return NextResponse.json({ error: 'Bildverarbeitung fehlgeschlagen' }, { status: 500 });
-  }
-}
-
-// â”€â”€ PNG mit Transparenz auf Hintergrundfarbe compositen â€” mit Boden-Spiegelung
-async function applyBackgroundToTransparent(pngBuffer: Buffer, backgroundId?: string, custom?: StudioPreset | null): Promise<string> {
-  try {
-    const sharp = (await import('sharp')).default;
-
-    const id = backgroundId ?? 'studio_infinity';
-    let bgBuffer: Buffer;
-
-    // Lokale Datei zuerst prÃ¼fen (studio_infinity etc.)
-    const LOCAL_BACKGROUNDS: Record<string, string> = {
-      studio_infinity: 'studio_infinity.jpg',
-      classic:         'classic.jpg',
-      modern:          'backgrounds/modern.jpg',
-    };
-    if (LOCAL_BACKGROUNDS[id]) {
-      const filePath = join(process.cwd(), 'public', 'backgrounds', LOCAL_BACKGROUNDS[id]);
-      if (existsSync(filePath)) {
-        bgBuffer = readFileSync(filePath);
-      } else {
-        bgBuffer = await makeGradientBuffer('studio_white', custom);
-      }
-    } else if (IMAGE_BACKGROUNDS[id]) {
-      const res = await fetch(IMAGE_BACKGROUNDS[id]);
-      bgBuffer = Buffer.from(await res.arrayBuffer());
-    } else {
-      bgBuffer = await makeGradientBuffer(id, custom);
-    }
-
-    const W = 2000, H = 1333;
-    const isRealPhoto = LOCAL_BACKGROUNDS[id] != null || IMAGE_BACKGROUNDS[id] != null;
-    const FLOOR_Y = Math.round(H * (isRealPhoto ? 0.60 : 0.64));
-
-    // Hintergrund auf ZielgrÃ¶ÃŸe bringen
-    const bgResized = await sharp(bgBuffer).resize(W, H, { fit: 'cover' }).toBuffer();
-
-    // 1. PNG sicherstellen + RGBA raw pixels lesen
-    const carPng  = await sharp(pngBuffer).ensureAlpha().png().toBuffer();
-    const carFull = await sharp(carPng).metadata();
-    const srcW = carFull.width!;
-    const srcH = carFull.height!;
-    const rawFull = await sharp(carPng).raw().toBuffer(); // RGBA
-
-    // 2. Pixel-Scan: Bounding Box aller Pixel mit Alpha > 200
-    let bottomRow = 0;
-    let topRow    = srcH;
-    let leftCol   = srcW;
-    let rightCol  = 0;
-    for (let r = 0; r < srcH; r++) {
-      for (let c = 0; c < srcW; c++) {
-        const a = rawFull[(r * srcW + c) * 4 + 3];
-        if (a > 100) {
-          if (r < topRow)  topRow  = r;
-          if (r > bottomRow) bottomRow = r;
-          if (c < leftCol)  leftCol  = c;
-          if (c > rightCol) rightCol = c;
-        }
-      }
-    }
-    // Fallback falls keine Pixel gefunden
-    if (topRow >= srcH) { topRow = 0; bottomRow = srcH - 1; leftCol = 0; rightCol = srcW - 1; }
-    // Sicherheitsmarge: 4px Polster auf jeder Seite
-    const pad = 4;
-    const cropTop    = Math.max(0, topRow - pad);
-    const cropLeft   = Math.max(0, leftCol - pad);
-    const cropWidth  = Math.min(srcW - cropLeft, rightCol - leftCol + 1 + pad * 2);
-    const cropHeight = Math.min(srcH - cropTop,  bottomRow - topRow  + 1 + pad * 2);
-
-    console.log('[Studio] scan: top=%d bottom=%d left=%d right=%d src=%dx%d',
-      topRow, bottomRow, leftCol, rightCol, srcW, srcH);
-
-    // 3. Eng zugeschnitten
-    const carCropped = await sharp(carPng)
-      .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
-      .toBuffer();
-
-    // 4. Auf 65% Ã— 50% skalieren
-    const carScaled = await sharp(carCropped)
-      .resize(Math.round(W * 0.65), Math.round(H * 0.50), { fit: 'inside', withoutEnlargement: false })
-      .png()
-      .toBuffer();
-    const carMeta = await sharp(carScaled).metadata();
-    const cW = carMeta.width!;
-    const cH = carMeta.height!;
-
-    // 5. Platzierung: Unterkante auf FLOOR_Y (8px einsinken fÃ¼r festen Bodenkontakt)
-    const carLeft = Math.round((W - cW) / 2);
-    const carTop  = FLOOR_Y - cH + 8;
-    console.log('[Studio] placed: cW=%d cH=%d carTop=%d floor=%d', cW, cH, carTop, FLOOR_Y);
-
-    // 6. Reflexion: untere 35% des Autos, gespiegelt + weichgezeichnet
-    const reflSrcH = Math.round(cH * 0.35);
-    const reflH    = Math.min(reflSrcH, H - FLOOR_Y - 5);
-    const mirrorBlurred = await sharp(carScaled)
-      .extract({ left: 0, top: cH - reflSrcH, width: cW, height: reflSrcH })
-      .flip()
-      .blur(5)
-      .toBuffer();
-    const fadeSvg = `<svg width="${cW}" height="${reflH}" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stop-color="white" stop-opacity="0.22"/>
-        <stop offset="100%" stop-color="white" stop-opacity="0"/>
-      </linearGradient></defs>
-      <rect width="${cW}" height="${reflH}" fill="url(#f)"/>
-    </svg>`;
-    const mirrorMasked = await sharp(mirrorBlurred)
-      .extract({ left: 0, top: 0, width: cW, height: reflH })
-      .composite([{ input: Buffer.from(fadeSvg), blend: 'dest-in' }])
-      .png().toBuffer();
-
-    // 7. Schatten-Ellipse auf dem Boden
-    const shadowSvg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-      <filter id="b"><feGaussianBlur stdDeviation="13"/></filter>
-      <ellipse cx="${W/2}" cy="${FLOOR_Y+3}" rx="${Math.round(cW*0.42)}" ry="${Math.round(H*0.021)}"
-        fill="rgba(0,0,0,0.65)" filter="url(#b)"/>
-    </svg>`;
-
-    const result = await sharp(bgResized)
-      .composite([
-        { input: Buffer.from(shadowSvg), blend: 'multiply' },
-        { input: mirrorMasked, left: carLeft, top: FLOOR_Y, blend: 'over' },
-        { input: carScaled,    left: carLeft, top: carTop,  blend: 'over' },
-      ])
-      .jpeg({ quality: 93 })
-      .toBuffer();
-
-    return `data:image/jpeg;base64,${result.toString('base64')}`;
-  } catch (e: any) {
-    console.error('[applyBackground] FEHLER:', e?.message ?? e);
-    console.error('[applyBackground] Stack:', e?.stack);
-    return `data:image/png;base64,${pngBuffer.toString('base64')}`;
   }
 }
