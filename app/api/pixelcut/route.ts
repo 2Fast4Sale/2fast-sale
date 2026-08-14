@@ -95,13 +95,21 @@ export async function POST(req: NextRequest) {
      * Unten darf trotzdem nicht 0 stehen, sonst sitzt das Fahrzeug auf der
      * Bildkante und wirkt angeschnitten statt aufgestellt.
      */
-    formData.append('outputSize',          '2000x1333');
-    formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.09');
-    formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.06');
-    formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.07');
-    formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.06');
-    formData.append('verticalAlignment',   'bottom');
-    formData.append('horizontalAlignment', 'center');
+    formData.append('outputSize', '2000x1333');
+
+    /*
+     * STUDIO_PADDING=auto laesst die Raender komplett weg — dann entscheidet
+     * PhotoRoom selbst, wie das Fahrzeug im Bild sitzt. Sonst gelten die
+     * Werte unten, die sich einzeln ueber Env ueberschreiben lassen.
+     */
+    if (process.env.STUDIO_PADDING !== 'auto') {
+      formData.append('paddingTop',          process.env.STUDIO_PADDING_TOP    || '0.09');
+      formData.append('paddingRight',        process.env.STUDIO_PADDING_RIGHT  || '0.06');
+      formData.append('paddingBottom',       process.env.STUDIO_PADDING_BOTTOM || '0.07');
+      formData.append('paddingLeft',         process.env.STUDIO_PADDING_LEFT   || '0.06');
+      formData.append('verticalAlignment',   'bottom');
+      formData.append('horizontalAlignment', 'center');
+    }
 
     const response = await fetch('https://image-api.photoroom.com/v2/edit', {
       method:  'POST',
