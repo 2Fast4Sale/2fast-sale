@@ -202,7 +202,7 @@ export default function BackgroundsPage() {
                 style={{
                   background: '#fff', borderRadius: '14px', overflow: 'hidden',
                   border: `2px solid ${istAktiv ? '#6366f1' : '#e2e8f0'}`,
-                  cursor: frei ? 'pointer' : 'not-allowed', opacity: frei ? 1 : 0.6,
+                  cursor: frei ? 'pointer' : 'not-allowed',
                   boxShadow: istAktiv ? '0 0 0 3px rgba(99,102,241,0.15)' : '0 1px 4px rgba(0,0,0,0.04)',
                   transition: 'all 0.15s',
                 }}>
@@ -210,7 +210,7 @@ export default function BackgroundsPage() {
                   {bg.preview || bg.file ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={`/backgrounds/${bg.preview || bg.file}`} alt={bg.label}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', filter: frei ? 'none' : 'grayscale(60%) brightness(0.75)' }} />
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', filter: frei ? 'none' : 'brightness(0.9)' }} />
                   ) : (
                     /*
                      * Noch kein Vorschaubild erzeugt. Statt einer grauen Fläche
@@ -218,7 +218,7 @@ export default function BackgroundsPage() {
                      * Fahrzeug-Silhouette zur Orientierung. Ersetzt kein echtes
                      * Vorschaubild, macht die Auswahl aber überhaupt lesbar.
                      */
-                    <div style={{ position: 'absolute', inset: 0, filter: frei ? 'none' : 'grayscale(60%) brightness(0.75)' }}>
+                    <div style={{ position: 'absolute', inset: 0, filter: frei ? 'none' : 'brightness(0.9)' }}>
                       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '64%',
                         background: `linear-gradient(180deg, ${bg.farben[0]} 0%, ${bg.farben[1]} 100%)` }} />
                       <div style={{ position: 'absolute', top: '64%', left: 0, right: 0, bottom: 0,
@@ -235,9 +235,15 @@ export default function BackgroundsPage() {
                     </div>
                   )}
                   {!frei && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <Lock size={18} style={{ color: t.color }} />
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: t.color }}>{t.label} erforderlich</span>
+                    /*
+                     * Bewusst nur ein schmales Band statt einer Vollflaeche:
+                     * Wer den Hintergrund nicht sehen kann, hat auch keinen
+                     * Grund fuer ein Upgrade. Die Sperre muss klar sein, darf
+                     * das Bild aber nicht verdecken.
+                     */
+                    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px 0' }}>
+                      <Lock size={13} style={{ color: t.color }} />
+                      <span style={{ fontSize: '11.5px', fontWeight: '700', color: t.color }}>{t.label} erforderlich</span>
                     </div>
                   )}
                   {istAktiv && (
