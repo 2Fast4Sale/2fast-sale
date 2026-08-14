@@ -108,9 +108,10 @@ export async function POST(req: Request) {
      */
     if (data?.id) {
       await berechneInserat({
-        userId:      user.id,
-        vehicleId:   data.id,
-        bezeichnung: [body.brand, body.title].find(Boolean) as string | undefined,
+        userId:       user.id,
+        vehicleId:    data.id,
+        bezeichnung:  [body.brand, body.title].find(Boolean) as string | undefined,
+        studioImages: Number(body.studio_images ?? 0),
       });
     }
 

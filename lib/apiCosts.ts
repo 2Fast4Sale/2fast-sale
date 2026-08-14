@@ -36,7 +36,11 @@ const LLM_PRICES_USD_PER_MTOK: Record<string, { input: number; output: number }>
  */
 const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
   removebg:  0.20,
-  photoroom: 0.05,
+  // Belegt aus dem PhotoRoom API-Dashboard (Stand August 2026):
+  // Basic 20 EUR fuer 1.000 Bilder = 0,02 EUR/Bild. Hier in USD hinterlegt,
+  // weil die Umrechnung unten pauschal erfolgt. Bei groesseren Kontingenten
+  // sinkt der Stueckpreis weiter — dann hier nachziehen.
+  photoroom: 0.0217,
   fal:       0.03,
   pixelcut:  0.04,
   // Octopus Piranha soll die obigen Dienste spaeter ersetzen.

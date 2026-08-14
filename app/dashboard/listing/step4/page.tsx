@@ -508,7 +508,11 @@ function Step4Inner() {
         power_consumption_combined: step1.envkv?.powerConsumptionCombined ?? undefined,
         co2_combined:               step1.envkv?.co2Combined ?? undefined,
         co2_combined_discharged:    step1.envkv?.co2CombinedDischarged ?? undefined,
-        electric_range_km:          step1.envkv?.electricRangeKm ?? undefined };
+        electric_range_km:          step1.envkv?.electricRangeKm ?? undefined,
+        // Bestimmt die Zusatzposten fuer Studio-Bilder ueber dem Kontingent
+        studio_images: Number(
+          (typeof window !== 'undefined' && sessionStorage.getItem('listing_studio_count')) || 0
+        ) };
       let id = savedId;
       if (!id) {
         const res = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

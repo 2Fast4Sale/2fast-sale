@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
+import { STUDIO_INKLUSIVE, studioAufteilung, centAlsEuro } from '../../../../lib/studioQuota';
 import Link from 'next/link';
 
 // Fotolimit je Plan
@@ -348,6 +349,12 @@ function Step2Inner() {
   const handleNext = () => {
     const previews = photos.map(p => p.processed || p.preview);
     sessionStorage.setItem('listing_photos', JSON.stringify(previews));
+    // Anzahl der freigestellten Bilder mitgeben — davon haengen die
+    // Zusatzposten auf der Rechnung ab.
+    sessionStorage.setItem(
+      'listing_studio_count',
+      String(photos.filter(p => p.studio && p.processed).length)
+    );
     const params = new URLSearchParams({ brand, km, price, year, fuel, gearbox, color, power });
     router.push(`/dashboard/listing/step3?${params.toString()}`);
   };
@@ -636,6 +643,19 @@ function Step2Inner() {
                 kommen ins Studio. Außenaufnahmen profitieren davon — bei Cockpit,
                 Tacho oder Motorraum wirkt ein Studio-Hintergrund unnatürlich.
                 Du kannst das pro Foto umschalten.
+                {(() => {
+                  const auf = studioAufteilung(photos.filter(p => p.studio).length);
+                  return auf.extra > 0 ? (
+                    <div style={{ marginTop: '6px', color: '#7c3aed', fontWeight: '600' }}>
+                      {STUDIO_INKLUSIVE} inklusive · {auf.extra} zusätzlich
+                      {' '}= {centAlsEuro(auf.extraCent)} extra
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '6px', color: '#64748b' }}>
+                      {STUDIO_INKLUSIVE} Studio-Bilder sind im Inseratspreis enthalten.
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
