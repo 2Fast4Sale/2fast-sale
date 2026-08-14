@@ -44,11 +44,33 @@ const statusStyle: Record<string, { bg: string; color: string; dot: string }> = 
 
 const STATUS_CYCLE = ['Entwurf', 'Aktiv', 'Reserviert', 'Verkauft'];
 
+/**
+ * Platzhalter für Inserate ohne Fotos.
+ *
+ * Bewusst ein neutrales Bild statt eines Stockfotos: ein fremdes Fahrzeug an
+ * dieser Stelle sieht aus, als hätte das Inserat Bilder — und der Händler
+ * merkt nicht, dass welche fehlen.
+ *
+ * Als Data-URI eingebettet, damit weder eine Datei noch ein fremdes CDN
+ * gebraucht wird.
+ */
+const KEIN_FOTO = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+     <rect width="800" height="600" fill="#eef1f5"/>
+     <g fill="none" stroke="#c3ccd8" stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
+       <path d="M170 360 L205 275 Q230 232 300 226 L470 226 Q540 232 590 285 L690 305 Q730 315 730 355 L730 392 L666 392 M300 392 L470 392 M170 360 L170 392 L232 392"/>
+       <circle cx="266" cy="392" r="44"/><circle cx="600" cy="392" r="44"/>
+     </g>
+     <text x="400" y="500" font-family="Inter, Arial, sans-serif" font-size="30"
+           fill="#9aa7b8" text-anchor="middle">Keine Fotos</text>
+   </svg>`
+);
+
 function getImages(v: Vehicle): string[] {
   const imgs = (v.vehicle_images || [])
     .map(i => i.processed_url || i.original_url)
     .filter(Boolean) as string[];
-  if (imgs.length === 0) return ['https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&q=60&w=800'];
+  if (imgs.length === 0) return [KEIN_FOTO];
   return imgs;
 }
 
