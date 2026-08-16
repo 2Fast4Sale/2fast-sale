@@ -297,12 +297,12 @@ async function buildInvoicePdf(p: {
     const PURPLE = '#6366f1';
     const BORDER = '#e2e8f0';
 
-    // â”€â”€ Header-Block â”€â”€
+    // ── Header-Block ──
     doc.rect(0, 0, 595, 90).fill('#0f172a');
     doc.fontSize(20).font('Helvetica-Bold').fillColor('#ffffff').text('2Fast4Sale', 60, 32);
     doc.fontSize(9).font('Helvetica').fillColor('#64748b').text('RECHNUNG', 60, 60, { align: 'right', width: W });
 
-    // â”€â”€ Rechnungstitel â”€â”€
+    // ── Rechnungstitel ──
     doc.moveDown(3);
     doc.fontSize(18).font('Helvetica-Bold').fillColor(DARK).text(`Rechnung ${p.invoiceNumber}`, 60);
     doc.fontSize(10).font('Helvetica').fillColor(GRAY).text(`Rechnungsdatum: ${p.invoiceDate}`, 60);
@@ -311,12 +311,12 @@ async function buildInvoicePdf(p: {
     doc.roundedRect(595 - 60 - 80, 100, 80, 22, 4).fill('#dcfce7');
     doc.fontSize(9).font('Helvetica-Bold').fillColor('#166534').text('Bezahlt', 595 - 60 - 80, 107, { width: 80, align: 'center' });
 
-    // â”€â”€ Trennlinie â”€â”€
+    // ── Trennlinie ──
     doc.moveDown(1.2);
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
     doc.moveDown(1);
 
-    // â”€â”€ Adressen â”€â”€
+    // ── Adressen ──
     const addrY = doc.y;
     doc.fontSize(8).font('Helvetica-Bold').fillColor(LGRAY).text('VON', 60, addrY);
     doc.fontSize(10).font('Helvetica-Bold').fillColor(DARK).text('2Fast4Sale', 60, addrY + 14);
@@ -332,7 +332,7 @@ async function buildInvoicePdf(p: {
     if (p.buyerCountry) doc.text(p.buyerCountry, 300);
     if (p.buyerVat) doc.text(`USt-IdNr.: ${p.buyerVat}`, 300);
 
-    // â”€â”€ Positions-Tabelle â”€â”€
+    // ── Positions-Tabelle ──
     doc.y = Math.max(doc.y, addrY + 70) + 16;
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
 
@@ -358,7 +358,7 @@ async function buildInvoicePdf(p: {
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor(BORDER).lineWidth(1).stroke();
     doc.moveDown(1);
 
-    // â”€â”€ Summen â”€â”€
+    // ── Summen ──
     const sumX = 360;
     const sumW = 163;
     doc.fontSize(9).font('Helvetica').fillColor(GRAY);
@@ -374,13 +374,13 @@ async function buildInvoicePdf(p: {
     doc.fontSize(13).font('Helvetica-Bold').fillColor(DARK).text('Gesamtbetrag', sumX, doc.y, { width: 100 });
     doc.fillColor(PURPLE).text(`${p.totalPrice} EUR`, sumX, doc.y - 16, { width: sumW, align: 'right' });
 
-    // â”€â”€ Hinweis â”€â”€
+    // ── Hinweis ──
     doc.moveDown(3);
     doc.rect(60, doc.y, W, 50).fill('#f8fafc').stroke(BORDER);
     doc.fontSize(9).font('Helvetica').fillColor(GRAY)
       .text('Vielen Dank für Ihren Kauf! Ihr Inserat-Credit wurde Ihrem Konto gutgeschrieben.', 72, doc.y + 10, { width: W - 24 });
 
-    // â”€â”€ Footer â”€â”€
+    // ── Footer ──
     doc.fontSize(8).font('Helvetica').fillColor(LGRAY)
       .text(`2Fast4Sale  |  ${p.companyAddr}  |  support@2fast4sale.com`, 60, 750, { width: W, align: 'center' });
 

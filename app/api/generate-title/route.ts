@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     if (!titleTemplate) {
       // Fallback: einfacher Titel ohne KI
       const parts = [brand, model, year, power ? `${power} PS` : '', fuel].filter(Boolean);
-      return NextResponse.json({ title: parts.join(' Â· ') });
+      return NextResponse.json({ title: parts.join(' · ') });
     }
 
     const topEquip = Array.isArray(equipment) ? equipment.slice(0, 5).join(', ') : '';
@@ -40,12 +40,12 @@ export async function POST(req: Request) {
       max_tokens: 100,
       messages: [{
         role: 'user',
-        content: `Du bist ein Experte fÃ¼r mobile.de Inserate.
+        content: `Du bist ein Experte für mobile.de Inserate.
 
-Der HÃ¤ndler mÃ¶chte Titel IMMER in diesem Format/Stil:
+Der Händler möchte Titel IMMER in diesem Format/Stil:
 "${titleTemplate}"
 
-Erstelle jetzt einen Titel fÃ¼r dieses Fahrzeug im EXAKT gleichen Stil (gleiche Sonderzeichen, gleiche Schreibweise, gleiche Struktur):
+Erstelle jetzt einen Titel für dieses Fahrzeug im EXAKT gleichen Stil (gleiche Sonderzeichen, gleiche Schreibweise, gleiche Struktur):
 
 Marke: ${brand || ''}
 Modell: ${model || ''}
@@ -57,7 +57,7 @@ Leistung: ${power ? `${power} PS` : ''}
 Top-Ausstattung: ${topEquip}
 
 Antworte NUR mit dem Titel als reinem JSON: {"title": "..."}
-Kein Markdown, keine ErklÃ¤rung, nur JSON.`,
+Kein Markdown, keine Erklärung, nur JSON.`,
       }],
     });
 

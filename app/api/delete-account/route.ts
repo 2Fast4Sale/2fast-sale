@@ -25,13 +25,13 @@ export async function DELETE(req: NextRequest) {
     const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
     if (authErr || !user) {
       console.error('[delete-account] getUser error:', authErr?.message);
-      return NextResponse.json({ error: 'UngÃ¼ltiger Token' }, { status: 401 });
+      return NextResponse.json({ error: 'Ungültiger Token' }, { status: 401 });
     }
 
     const uid = user.id;
     console.log('[delete-account] Deleting user:', uid);
 
-    // 1. Vehicle images lÃ¶schen
+    // 1. Vehicle images löschen
     const { data: vehicles } = await supabaseAdmin
       .from('vehicles').select('id').eq('user_id', uid);
 
@@ -42,17 +42,17 @@ export async function DELETE(req: NextRequest) {
       if (imgErr) console.warn('[delete-account] images delete:', imgErr.message);
     }
 
-    // 2. Vehicles lÃ¶schen
+    // 2. Vehicles löschen
     const { error: vErr } = await supabaseAdmin
       .from('vehicles').delete().eq('user_id', uid);
     if (vErr) console.warn('[delete-account] vehicles delete:', vErr.message);
 
-    // 3. Profil lÃ¶schen
+    // 3. Profil löschen
     const { error: pErr } = await supabaseAdmin
       .from('profiles').delete().eq('id', uid);
     if (pErr) console.warn('[delete-account] profiles delete:', pErr.message);
 
-    // 4. Auth-Account lÃ¶schen â€” kurz warten damit FK-Constraints gelÃ¶st sind
+    // 4. Auth-Account löschen — kurz warten damit FK-Constraints gelöst sind
     await new Promise(r => setTimeout(r, 200));
     const { error: deleteErr } = await supabaseAdmin.auth.admin.deleteUser(uid);
     if (deleteErr) {

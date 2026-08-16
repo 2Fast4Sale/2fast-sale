@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     const priceId = PRICE_IDS[plan]?.[billing];
     if (!priceId) {
       return NextResponse.json({
-        error: `Kein Stripe Price-ID fÃ¼r Plan "${plan}" / "${billing}".\nBitte in .env.local eintragen: STRIPE_${plan.toUpperCase()}_${billing.toUpperCase()}_PRICE_ID=price_xxx`,
+        error: `Kein Stripe Price-ID für Plan "${plan}" / "${billing}".\nBitte in .env.local eintragen: STRIPE_${plan.toUpperCase()}_${billing.toUpperCase()}_PRICE_ID=price_xxx`,
       }, { status: 400 });
     }
 

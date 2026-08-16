@@ -27,7 +27,7 @@ export async function POST() {
       cancel_at_period_end: true,
     });
 
-    return NextResponse.json({ success: true, message: 'Abo wird zum Periodenende gekÃ¼ndigt.' });
+    return NextResponse.json({ success: true, message: 'Abo wird zum Periodenende gekündigt.' });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Fehler';
     return NextResponse.json({ error: message }, { status: 500 });

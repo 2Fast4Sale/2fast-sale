@@ -33,11 +33,11 @@ export async function POST(req: Request) {
         content: [
           {
             type: 'text',
-            text: `Du bist ein Experte fÃ¼r Kfz-Ausstattung und mobile.de-Inserate.
+            text: `Du bist ein Experte für Kfz-Ausstattung und mobile.de-Inserate.
 
-Analysiere dieses Dokument (kann sein: BestellbestÃ¤tigung, Ausstattungsliste, altes Inserat, Ãœbergabeprotokoll, Herstellerbrief, Screenshot einer Anzeige, oder beliebiges anderes Dokument mit Fahrzeuginformationen).
+Analysiere dieses Dokument (kann sein: Bestellbestätigung, Ausstattungsliste, altes Inserat, Übergabeprotokoll, Herstellerbrief, Screenshot einer Anzeige, oder beliebiges anderes Dokument mit Fahrzeuginformationen).
 
-Extrahiere ALLE Ausstattungsmerkmale die du findest. Ãœbersetze alles ins Deutsche.
+Extrahiere ALLE Ausstattungsmerkmale die du findest. Übersetze alles ins Deutsche.
 
 Beispiele was zu suchen ist:
 - Navigationssystem, Navi, GPS, MMI, iDrive, COMAND, Sync
@@ -46,13 +46,13 @@ Beispiele was zu suchen ist:
 - Sitzheizung, Lenkradheizung, Standheizung
 - Panoramadach, Schiebedach, Glasdach
 - LED, Xenon, Matrix, Laser (Scheinwerfer)
-- Einparkhilfe, PDC, Parkpilot, RÃ¼ckfahrkamera, 360Â° Kamera
+- Einparkhilfe, PDC, Parkpilot, Rückfahrkamera, 360° Kamera
 - Apple CarPlay, Android Auto, Bluetooth, USB, DAB+
 - Tempomat, ACC, adaptiver Tempomat, Abstandsregeltempomat
-- Spurhalteassistent, Totwinkel, Notbremssystem, SpurfÃ¼hrung
+- Spurhalteassistent, Totwinkel, Notbremssystem, Spurführung
 - Head-up Display, digitales Cockpit, Virtual Cockpit
-- AnhÃ¤ngerkupplung, Dachreling, Sportfahrwerk, Luftfederung
-- Alufelgen (mit ZollgrÃ¶ÃŸe wenn angegeben), WinterrÃ¤der
+- Anhängerkupplung, Dachreling, Sportfahrwerk, Luftfederung
+- Alufelgen (mit Zollgröße wenn angegeben), Winterräder
 - Allradantrieb, 4WD, AWD, xDrive, quattro, 4Motion
 - Premium-Soundsystem (Bose, Harman Kardon, B&O, Burmester, JBL)
 - Ambientebeleuchtung, elektrische Sitze, Memory-Sitze
@@ -62,7 +62,7 @@ Beispiele was zu suchen ist:
 Antworte NUR als pures JSON ohne Markdown:
 {"equipment": ["Merkmal 1", "Merkmal 2", ...]}
 
-Gib so viele Merkmale wie mÃ¶glich zurÃ¼ck. Lieber zu viel als zu wenig.`,
+Gib so viele Merkmale wie möglich zurück. Lieber zu viel als zu wenig.`,
           },
           toImageBlock(image),
         ],

@@ -6,14 +6,14 @@ export const dynamic = 'force-dynamic';
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
-// Plan definitions â€” prices in Euro cents
+// Plan definitions — prices in Euro cents
 const PLANS = [
   {
     id: 'basic',
     name: 'Basic',
-    description: '30 Inserate pro Monat, KI-Beschreibungen, Studio-HintergrÃ¼nde',
-    monthly_price: 2900,   // â‚¬29/Monat
-    yearly_price:  29000,  // â‚¬290/Jahr (2 Monate gratis)
+    description: '30 Inserate pro Monat, KI-Beschreibungen, Studio-Hintergründe',
+    monthly_price: 2900,   // €29/Monat
+    yearly_price:  29000,  // €290/Jahr (2 Monate gratis)
   },
   {
     id: 'premium',

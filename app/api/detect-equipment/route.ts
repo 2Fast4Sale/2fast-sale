@@ -39,7 +39,7 @@ export async function POST(req: Request) {
           {
             type: 'text',
             text: `Analysiere diese Fahrzeugfotos und erkenne sichtbare Ausstattungsmerkmale.
-Schaue genau auf: Innenraum, Sitze, Lenkrad, Armaturenbrett, Felgen, Dach, Scheinwerfer, StoÃŸstangen.
+Schaue genau auf: Innenraum, Sitze, Lenkrad, Armaturenbrett, Felgen, Dach, Scheinwerfer, Stoßstangen.
 
 Erkenne nur was wirklich sichtbar ist, z.B.:
 - Ledersitze, Stoff-Sitze, Sportsitze
@@ -48,11 +48,11 @@ Erkenne nur was wirklich sichtbar ist, z.B.:
 - LED-Scheinwerfer, Xenon-Scheinwerfer
 - Navigationssystem, Touchscreen
 - Klimaanlage, Klimaautomatik
-- Sitzheizung (wenn KnÃ¶pfe sichtbar)
-- RÃ¼ckfahrkamera
+- Sitzheizung (wenn Knöpfe sichtbar)
+- Rückfahrkamera
 - Sportauspuff
 - Dachreling
-- AnhÃ¤ngerkupplung
+- Anhängerkupplung
 
 Antworte NUR als pures JSON ohne Markdown:
 {"equipment": ["Merkmal 1", "Merkmal 2"]}

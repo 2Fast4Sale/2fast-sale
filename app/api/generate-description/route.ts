@@ -29,10 +29,10 @@ export async function POST(req: Request) {
       : '';
 
     const styleInstruction = aiStyleTemplate
-      ? `\n\nWICHTIG â€” Orientiere dich am Schreibstil dieses HÃ¤ndlers:\n"${aiStyleTemplate}"\nÃœbernimm den Ton und Stil, aber schreib eine neue Beschreibung fÃ¼r das aktuelle Fahrzeug.`
+      ? `\n\nWICHTIG — Orientiere dich am Schreibstil dieses Händlers:\n"${aiStyleTemplate}"\nÜbernimm den Ton und Stil, aber schreib eine neue Beschreibung für das aktuelle Fahrzeug.`
       : '';
 
-    const prompt = `Erstelle eine professionelle Verkaufsbeschreibung fÃ¼r folgendes Fahrzeug:
+    const prompt = `Erstelle eine professionelle Verkaufsbeschreibung für folgendes Fahrzeug:
 
 Fahrzeug: ${brand || 'Unbekannt'}
 Erstzulassung: ${year || 'k.A.'}
@@ -41,17 +41,17 @@ Leistung: ${power ? `${power} PS` : 'k.A.'}
 Kraftstoff: ${fuel || 'k.A.'}
 Getriebe: ${gearbox || 'k.A.'}
 Farbe: ${color || 'k.A.'}
-SitzplÃ¤tze: ${seats || 'k.A.'}
+Sitzplätze: ${seats || 'k.A.'}
 Hubraum: ${displacement ? `${Number(displacement).toLocaleString('de-DE')} ccm` : 'k.A.'}
 ${equipmentList}
-${dealerNotes ? `\nHÃ¤ndler-Notizen: ${dealerNotes}` : ''}${styleInstruction}
+${dealerNotes ? `\nHändler-Notizen: ${dealerNotes}` : ''}${styleInstruction}
 
-Schreibe 3â€“4 SÃ¤tze auf Deutsch. Ãœberzeugend, kaufmotivierend, kein Marketing-Blabla. Nur FlieÃŸtext, keine AufzÃ¤hlungen. Max. 80 WÃ¶rter.`;
+Schreibe 3–4 Sätze auf Deutsch. Überzeugend, kaufmotivierend, kein Marketing-Blabla. Nur Fließtext, keine Aufzählungen. Max. 80 Wörter.`;
 
     const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 200,
-      system: 'Du bist ein erfahrener FahrzeughÃ¤ndler der ehrliche, Ã¼berzeugende Inserate schreibt.',
+      system: 'Du bist ein erfahrener Fahrzeughändler der ehrliche, überzeugende Inserate schreibt.',
       messages: [{ role: 'user', content: prompt }],
     });
 

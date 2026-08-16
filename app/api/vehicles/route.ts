@@ -4,7 +4,7 @@ import { berechneInserat } from '../../../lib/usageBilling';
 
 export const dynamic = 'force-dynamic';
 
-// GET â€” alle Fahrzeuge des eingeloggten Haendlers
+// GET — alle Fahrzeuge des eingeloggten Haendlers
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -24,7 +24,7 @@ export async function GET() {
   }
 }
 
-// POST â€” neues Fahrzeug anlegen
+// POST — neues Fahrzeug anlegen
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       error = retry.error;
     }
 
-    /* Falls neue Spalten noch nicht migriert sind â€” Fallback ohne sie */
+    /* Falls neue Spalten noch nicht migriert sind — Fallback ohne sie */
     if (error && (error.message.includes('gearbox_type') || error.message.includes('title') || error.message.includes('year') || error.message.includes('schema cache'))) {
       const basePayload = buildPayload(BASE_COLS);
       const retry = await supabase.from('vehicles').insert(basePayload).select().single();

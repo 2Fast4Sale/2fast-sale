@@ -26,7 +26,7 @@ export async function GET() {
       getStripe().paymentMethods.list({ customer: profile.stripe_customer_id, type: 'card' }),
       getStripe().invoices.list({ customer: profile.stripe_customer_id, limit: 12 }),
       getStripe().customers.retrieve(profile.stripe_customer_id),
-      // Einmalzahlungen (z.B. Inserat-Credits) â€” haben keine Invoice
+      // Einmalzahlungen (z.B. Inserat-Credits) — haben keine Invoice
       getStripe().charges.list({ customer: profile.stripe_customer_id, limit: 20 }),
     ]);
 
@@ -73,7 +73,7 @@ export async function GET() {
       invoiceList.data.map(inv => inv.charge as string | null).filter(Boolean)
     );
 
-    // Einmalzahlungen (ohne zugehÃ¶rige Invoice)
+    // Einmalzahlungen (ohne zugehörige Invoice)
     const chargeItems = chargeList.data
       .filter(ch => ch.status === 'succeeded' && !invoiceChargeIds.has(ch.id))
       .map(ch => ({
@@ -88,7 +88,7 @@ export async function GET() {
         type: 'charge' as const,
       }));
 
-    // ZusammenfÃ¼hren und nach Datum sortieren (neueste zuerst)
+    // Zusammenführen und nach Datum sortieren (neueste zuerst)
     const invoices = [...invoiceItems, ...chargeItems]
       .sort((a, b) => b.date - a.date);
 
