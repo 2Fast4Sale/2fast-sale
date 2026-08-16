@@ -543,3 +543,86 @@ export function searchBrands(query: string): CarBrand[] {
       b.models.some(m => m.toLowerCase().includes(q))
   );
 }
+
+/**
+ * Schreibweisen, die im Fahrzeugschein (Feld D.1) und bei VIN-Decodern
+ * vorkommen, aber nicht dem Namen in der Datenbank entsprechen.
+ */
+const MARKEN_ALIASE: Record<string, string> = {
+  'vw':               'Volkswagen',
+  'vw nutzfahrzeuge': 'Volkswagen',
+  'mercedes':         'Mercedes-Benz',
+  'mercedes benz':    'Mercedes-Benz',
+  'mb':               'Mercedes-Benz',
+  'land-rover':       'Land Rover',
+  'range rover':      'Land Rover',
+  'alfa':             'Alfa Romeo',
+  'citroen':          'Citroën',
+  'skoda':            'Škoda',
+};
+
+/**
+ * Zerlegt eine zusammenhängende Fahrzeugbezeichnung in Marke und Modell.
+ *
+ * Der Fahrzeugschein-Scan und der VIN-Decoder liefern beides in einem String,
+ * etwa "Volkswagen Golf 2.0 TDI" oder "VW Golf GTI". Das Formular hat dafür
+ * zwei Felder mit Auswahllisten. Ohne Zerlegung landete der ganze String im
+ * Markenfeld und das Modell blieb leer — der Händler musste beides von Hand
+ * nachtragen, obwohl es erkannt worden war.
+ *
+ * Die Marke wird auf die Schreibweise der Datenbank normalisiert, damit sie
+ * zum Auswahlfeld passt: "seat" wird zu "SEAT", "VW" zu "Volkswagen".
+ */
+export function splitBrandModel(bezeichnung: string): { brand: string; model: string } {
+  const roh = (bezeichnung || '').trim().replace(/\s+/g, ' ');
+  if (!roh) return { brand: '', model: '' };
+  const klein = roh.toLowerCase();
+
+  /** Findet das passende Modell im Rest, sonst eine brauchbare Näherung. */
+  const modellAus = (marke: CarBrand, rest: string): string => {
+    if (!rest) return '';
+    const kleinRest = rest.toLowerCase();
+    // Längstes bekanntes Modell zuerst: "3er Gran Turismo" soll nicht bei "3er" enden
+    const treffer = [...marke.models]
+      .sort((a, b) => b.length - a.length)
+      .find(m => kleinRest === m.toLowerCase() || kleinRest.startsWith(m.toLowerCase() + ' '));
+    if (treffer) return treffer;
+
+    // Unbekanntes Modell: erstes Wort. Bei sehr kurzen Bezeichnern wie "C 200"
+    // oder "A 45" das zweite mitnehmen — "C" allein wäre wertlos.
+    const worte = rest.split(' ');
+    return worte[0].length <= 2 && worte[1] ? `${worte[0]} ${worte[1]}` : worte[0];
+  };
+
+  /*
+   * Kandidaten sammeln: echte Markennamen und Aliase gemeinsam, dann nach
+   * Länge des gefundenen Präfixes entscheiden. Bewusst ohne Rekursion — ein
+   * Alias wie "alfa" ist ein Präfix seines eigenen Ziels "Alfa Romeo", ein
+   * erneuter Durchlauf würde endlos "Alfa Romeo Romeo ..." erzeugen.
+   */
+  const kandidaten: { praefix: string; marke: CarBrand }[] = [];
+
+  for (const marke of CAR_DATABASE) {
+    const name = marke.name.toLowerCase();
+    if (klein === name || klein.startsWith(name + ' ')) {
+      kandidaten.push({ praefix: marke.name, marke });
+    }
+  }
+  for (const [alias, ziel] of Object.entries(MARKEN_ALIASE)) {
+    if (klein !== alias && !klein.startsWith(alias + ' ')) continue;
+    const marke = CAR_DATABASE.find(b => b.name.toLowerCase() === ziel.toLowerCase());
+    if (marke) kandidaten.push({ praefix: roh.slice(0, alias.length), marke });
+  }
+
+  if (kandidaten.length > 0) {
+    // Längster Treffer gewinnt: "Alfa Romeo" schlägt den Alias "alfa",
+    // "Land Rover" schlägt "Land".
+    kandidaten.sort((a, b) => b.praefix.length - a.praefix.length);
+    const { praefix, marke } = kandidaten[0];
+    return { brand: marke.name, model: modellAus(marke, roh.slice(praefix.length).trim()) };
+  }
+
+  // Unbekannte Marke — erstes Wort als Marke, Rest als Modell.
+  const teile = roh.split(' ');
+  return { brand: teile[0], model: teile.slice(1).join(' ') };
+}

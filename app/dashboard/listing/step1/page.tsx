@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { BRAND_NAMES, getModels } from '../../../../lib/carDatabase';
+import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
 import { EQUIPMENT_DB, searchEquipment, normalizeEquipment } from '../../../../lib/equipmentDatabase';
 import { useRouter } from 'next/navigation';
 import {
@@ -148,9 +148,22 @@ export default function Step1() {
         });
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || 'Scan fehlgeschlagen');
+        /*
+         * scan-doc liefert Marke, Modell und Variante in EINEM String
+         * ("Volkswagen Golf 2.0 TDI"). Das Formular hat dafür zwei Felder mit
+         * Auswahllisten. Ohne Zerlegung landete alles im Markenfeld und das
+         * Modell blieb leer — der Händler musste beides nachtragen, obwohl es
+         * erkannt worden war.
+         */
+        const erkannt = d.brand ? splitBrandModel(String(d.brand)) : null;
+
         setData(p => ({
           ...p,
-          brand: d.brand ?? p.brand, vin: d.vin ?? p.vin,
+          brand: erkannt?.brand || p.brand,
+          // Nur setzen wenn erkannt — ein leeres Ergebnis darf eine bereits
+          // getroffene Auswahl des Händlers nicht überschreiben.
+          model: erkannt?.model || p.model,
+          vin: d.vin ?? p.vin,
           firstRegistration: d.firstRegistration ?? p.firstRegistration,
           km: d.km != null ? String(d.km) : p.km,
           fuelType: d.fuelType ?? p.fuelType,
@@ -189,9 +202,13 @@ export default function Step1() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
+      // Auch der VIN-Decoder liefert Marke und Modell zusammen
+      const vinErkannt = d.brand ? splitBrandModel(String(d.brand)) : null;
+
       setData(p => ({
         ...p,
-        brand:           !p.brand && d.brand ? d.brand : p.brand,
+        brand:           !p.brand && vinErkannt?.brand ? vinErkannt.brand : p.brand,
+        model:           !p.model && vinErkannt?.model ? vinErkannt.model : p.model,
         fuelType:        !p.fuelType && d.fuelType ? d.fuelType : p.fuelType,
         powerKw:         !p.powerKw && d.powerKw ? String(d.powerKw) : p.powerKw,
         displacementCcm: !p.displacementCcm && d.displacementCcm ? String(d.displacementCcm) : p.displacementCcm,
