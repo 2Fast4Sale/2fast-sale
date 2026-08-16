@@ -140,11 +140,15 @@ const nf = (v: number, digits = 1) =>
 
 /**
  * Erzeugt den Pflichttext-Block fuer das Inserat.
- * Gibt null zurueck, wenn keine EnVKV-Pflicht besteht.
+ * Gibt null zurueck, wenn keine Werte vorliegen.
+ *
+ * Wird auch fuer Gebrauchtwagen erzeugt: wer dort freiwillig Verbrauchswerte
+ * angibt, will sie auch im Inserat sehen. Der Unterschied liegt im Schlusssatz
+ * — der Hinweis auf den DAT-Leitfaden ist gesetzlich fuer NEUE Pkw
+ * vorgeschrieben und waere bei einem Gebrauchtwagen sachlich falsch.
  */
 export function buildEnvkvText(data: EnvkvData, fuelType: string): string | null {
-  if (!isEnvkvRequired(data.vehicleKind)) return null;
-
+  const pflicht    = isEnvkvRequired(data.vehicleKind);
   const drivetrain = drivetrainFromFuel(fuelType);
   const lines: string[] = [];
 
@@ -191,14 +195,21 @@ export function buildEnvkvText(data: EnvkvData, fuelType: string): string | null
     data.electricRangeKm != null;
   if (!hasMeasured) return null;
 
-  lines.push(
-    'Die angegebenen Werte wurden nach dem vorgeschriebenen Messverfahren (WLTP) ermittelt. ' +
-    'Weitere Informationen zum offiziellen Kraftstoffverbrauch und zu den offiziellen ' +
-    'spezifischen CO₂-Emissionen neuer Personenkraftwagen können dem „Leitfaden über den ' +
-    'Kraftstoffverbrauch, die CO₂-Emissionen und den Stromverbrauch neuer Personenkraftwagen" ' +
-    'entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH ' +
-    'unentgeltlich erhältlich ist.'
-  );
+  if (pflicht) {
+    // Vorgeschriebener Schlusssatz — gilt nur fuer neue Pkw.
+    lines.push(
+      'Die angegebenen Werte wurden nach dem vorgeschriebenen Messverfahren (WLTP) ermittelt. ' +
+      'Weitere Informationen zum offiziellen Kraftstoffverbrauch und zu den offiziellen ' +
+      'spezifischen CO₂-Emissionen neuer Personenkraftwagen können dem „Leitfaden über den ' +
+      'Kraftstoffverbrauch, die CO₂-Emissionen und den Stromverbrauch neuer Personenkraftwagen" ' +
+      'entnommen werden, der an allen Verkaufsstellen und bei der Deutschen Automobil Treuhand GmbH ' +
+      'unentgeltlich erhältlich ist.'
+    );
+  } else {
+    // Freiwillige Angabe. Bewusst ohne den Leitfaden-Hinweis: der bezieht sich
+    // ausdruecklich auf neue Personenkraftwagen und waere hier irrefuehrend.
+    lines.push('Angaben des Verkäufers nach Herstellerangaben (WLTP).');
+  }
 
   return lines.join('\n');
 }

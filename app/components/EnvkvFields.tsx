@@ -183,13 +183,20 @@ export default function EnvkvFields({ value, fuelType, isMobile = false, onChang
         </div>
       )}
 
-      {/* Eingabefelder */}
-      {required && (
+      {/*
+        Eingabefelder immer zeigen, nicht nur bei EnVKV-Pflicht.
+        Auch bei Gebrauchtwagen wollen Händler Verbrauchswerte angeben — sie
+        sind auf den Portalen ein Standardfeld. Vorher stand hier der Hinweis
+        "kannst du freiwillig ergänzen", ohne dass es dafür ein Feld gab.
+        Pflicht bleibt die Angabe nur bei Neuwagen, Tageszulassung und
+        Vorführwagen; die Prüfung hängt an isEnvkvRequired, nicht hieran.
+      */}
+      {value.vehicleKind && (
         <>
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-            gap: '14px', marginBottom: '18px',
+            gap: '14px', marginBottom: '18px', marginTop: required ? 0 : '16px',
           }}>
             {drivetrain !== 'elektro' &&
               field('Kraftstoffverbrauch komb.', 'l/100km', 'consumptionCombined', 'z.B. 5,4')}

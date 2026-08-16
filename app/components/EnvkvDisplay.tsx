@@ -35,8 +35,9 @@ export default function EnvkvDisplay({ vehicle }: Props) {
   const fuel  = (vehicle.fuel_type as string) || '';
   const text  = buildEnvkvText(data, fuel);
 
-  // Nur anzeigen, wenn EnVKV-Pflicht besteht UND Werte vorhanden sind
-  if (!isEnvkvRequired(data.vehicleKind) || !text) return null;
+  // Anzeigen sobald Werte vorliegen — auch freiwillige bei Gebrauchtwagen.
+  // buildEnvkvText gibt null zurueck, wenn gar nichts eingetragen wurde.
+  if (!text) return null;
 
   const drivetrain = drivetrainFromFuel(fuel);
   const activeClass =
