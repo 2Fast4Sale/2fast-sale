@@ -25,6 +25,7 @@ import {
   ArrowRight, ScanLine, Camera, Sparkles, FileDown, Check, Menu, X,
   ShieldCheck, Clock, Layers, Gauge, ChevronDown,
 } from 'lucide-react';
+import StudioVisual from './components/StudioVisual';
 import './styles/homepage.css';
 
 /* ── Was das Werkzeug tatsächlich tut ─────────────────────────────────── */
@@ -172,26 +173,44 @@ export default function Startseite() {
             Drei Inserate im Starter-Tarif kostenlos · Keine Zahlungsdaten nötig
           </p>
         </div>
+
+        {/* Das Produkt zeigen statt beschreiben */}
+        <div className="hero-visual">
+          <StudioVisual />
+        </div>
       </section>
 
       {/* ══ ABLAUF ══ */}
+      {/*
+        Bewusst zweispaltig statt zentriertem Raster wie die anderen
+        Abschnitte. Acht Mal dasselbe Layout liest sich wie eine Foliensammlung.
+      */}
       <section className="how-section" id="ablauf">
-        <div className="section-inner">
-          <h2 className="section-title">In vier Schritten</h2>
-          <p className="section-subtitle">
-            Der zeitraubende Teil beim Inserieren sind Fotos und Text. Genau den nimmt dir das Werkzeug ab.
-          </p>
-
-          <div className="steps-grid">
-            {SCHRITTE.map((s, i) => (
-              <div className="step-card" key={s.titel}>
-                <span className="step-num">Schritt {i + 1}</span>
-                <div className="step-icon-wrap">{s.icon}</div>
-                <h3>{s.titel}</h3>
-                <p>{s.text}</p>
-              </div>
-            ))}
+        <div className="section-inner how-split">
+          <div className="how-intro">
+            <span className="eyebrow">Ablauf</span>
+            <h2>In vier Schritten<br />zum Inserat</h2>
+            <p>
+              Der zeitraubende Teil beim Inserieren sind Fotos und Text.
+              Genau den nimmt dir das Werkzeug ab — das Formular füllt sich
+              aus dem Fahrzeugschein, die Bilder kommen ins Studio.
+            </p>
+            <Link href="/auth/register" className="btn-hero-ghost how-cta">
+              Kostenlos ausprobieren <ArrowRight size={16} />
+            </Link>
           </div>
+
+          <ol className="steps-list">
+            {SCHRITTE.map((s, i) => (
+              <li className="step-row" key={s.titel}>
+                <span className="step-marker">{i + 1}</span>
+                <div className="step-body">
+                  <h3>{s.titel}</h3>
+                  <p>{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

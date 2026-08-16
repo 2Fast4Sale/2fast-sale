@@ -98,7 +98,7 @@
 }
 
 /* ═══ EINSTIEG ═════════════════════════════════════════════════════════ */
-.hero-section { padding: 88px 24px 72px; }
+.hero-section { padding: 104px 24px 0; }
 .hero-container { max-width: 780px; margin: 0 auto; text-align: center; }
 
 .hero-badge {
@@ -111,8 +111,8 @@
   margin-bottom: 26px;
 }
 .hero-title {
-  font-size: clamp(34px, 6vw, 56px);
-  font-weight: 900; line-height: 1.08; letter-spacing: -1.6px;
+  font-size: clamp(38px, 6.4vw, 68px);
+  font-weight: 900; line-height: 1.08; letter-spacing: -2.4px;
   color: var(--hp-heading);
   margin: 0 0 20px;
 }
@@ -122,8 +122,8 @@
   -webkit-text-fill-color: transparent;
 }
 .hero-subtitle {
-  font-size: 17px; line-height: 1.65; color: var(--hp-muted);
-  max-width: 580px; margin: 0 auto 32px;
+  font-size: 18.5px; line-height: 1.6; color: var(--hp-muted);
+  max-width: 600px; margin: 0 auto 34px;
 }
 .hero-buttons {
   display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
@@ -158,14 +158,14 @@
 .section-narrow { max-width: 760px; }
 
 .how-section, .features-section, .pricing-section, .faq-section {
-  padding: 72px 0;
+  padding: 104px 0;
 }
 .features-section { background: var(--hp-card); border-block: 1px solid var(--hp-border); }
 .faq-section     { background: var(--hp-card); border-block: 1px solid var(--hp-border); }
 
 .section-title {
-  font-size: clamp(26px, 4vw, 34px);
-  font-weight: 800; letter-spacing: -0.9px;
+  font-size: clamp(30px, 4.4vw, 42px);
+  font-weight: 800; letter-spacing: -1.4px;
   color: var(--hp-heading);
   text-align: center; margin: 0 0 12px;
 }
@@ -358,4 +358,133 @@
   .how-section, .features-section, .pricing-section, .faq-section { padding: 52px 0; }
   .cta-section { padding: 56px 0; }
   .footer-inner { flex-direction: column; gap: 22px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Ergänzungen: Produktbild im Einstieg und zweispaltiger Ablauf.
+   Vorher war jeder Abschnitt zentrierte Überschrift plus Raster — acht Mal
+   dasselbe liest sich wie eine Foliensammlung, nicht wie ein Produkt.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Produktbild im Einstieg ── */
+.hero-visual {
+  max-width: 1000px;
+  margin: 64px auto 0;
+  padding: 0 24px;
+}
+.visual-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 20px;
+}
+.visual-card {
+  margin: 0;
+  background: var(--hp-card);
+  border: 1px solid var(--hp-border);
+  border-radius: 18px;
+  overflow: hidden;
+  /* Geschichteter Schatten statt einer flachen Kante — das erzeugt Tiefe */
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.06),
+    0 24px 60px rgba(15, 23, 42, 0.05);
+}
+.visual-card-studio {
+  border-color: rgba(99, 102, 241, 0.28);
+  box-shadow:
+    0 1px 2px rgba(79, 70, 229, 0.06),
+    0 10px 30px rgba(79, 70, 229, 0.12),
+    0 30px 70px rgba(79, 70, 229, 0.10);
+}
+.visual-svg { display: block; width: 100%; height: auto; }
+.visual-caption {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px;
+  font-size: 13px; color: var(--hp-muted);
+  border-top: 1px solid var(--hp-border);
+  background: var(--hp-soft);
+}
+.visual-tag {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 9px; border-radius: 100px; white-space: nowrap;
+}
+.visual-tag-vorher  { background: #e2e8f0; color: #475569; }
+.visual-tag-nachher { background: rgba(99, 102, 241, 0.12); color: var(--hp-accent-dk); }
+
+.visual-arrow {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.visual-arrow-line {
+  width: 1px; flex: 1; min-height: 26px;
+  background: linear-gradient(180deg, transparent, var(--hp-border), transparent);
+}
+.visual-arrow-badge {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff; background: var(--hp-accent-dk);
+  padding: 6px 13px; border-radius: 100px; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.32);
+}
+
+/* ── Zweispaltiger Ablauf ── */
+.how-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 1.35fr);
+  gap: 72px;
+  align-items: start;
+}
+.how-intro { position: sticky; top: 104px; }
+.eyebrow {
+  display: block;
+  font-size: 11.5px; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--hp-accent-dk);
+  margin-bottom: 16px;
+}
+.how-intro h2 {
+  font-size: clamp(28px, 3.6vw, 40px);
+  font-weight: 800; letter-spacing: -1.3px; line-height: 1.12;
+  color: var(--hp-heading); margin: 0 0 18px;
+}
+.how-intro p {
+  font-size: 16px; line-height: 1.7; color: var(--hp-muted);
+  margin: 0 0 26px;
+}
+.how-cta { font-size: 14.5px !important; padding: 12px 20px !important; gap: 8px; }
+
+.steps-list { list-style: none; margin: 0; padding: 0; }
+.step-row {
+  display: flex; gap: 22px;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--hp-border);
+}
+.step-row:first-child { padding-top: 0; }
+.step-row:last-child  { border-bottom: none; padding-bottom: 0; }
+.step-marker {
+  flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800;
+  color: var(--hp-accent-dk);
+  background: rgba(99, 102, 241, 0.09);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+}
+.step-body h3 {
+  font-size: 17.5px; font-weight: 700; letter-spacing: -0.3px;
+  color: var(--hp-heading); margin: 6px 0 8px;
+}
+.step-body p {
+  font-size: 15px; line-height: 1.7; color: var(--hp-muted); margin: 0;
+}
+
+@media (max-width: 900px) {
+  .how-split { grid-template-columns: 1fr; gap: 40px; }
+  .how-intro { position: static; }
+  .visual-wrap { grid-template-columns: 1fr; gap: 16px; }
+  .visual-arrow { flex-direction: row; }
+  .visual-arrow-line { width: auto; height: 1px; min-height: 0; flex: 1;
+    background: linear-gradient(90deg, transparent, var(--hp-border), transparent); }
+  .hero-visual { margin-top: 44px; }
+  .hero-section { padding: 64px 20px 0; }
 }

@@ -13,11 +13,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "2Fast4Sale — KI-Inserate in 2 Minuten",
-  description: "Fahrzeugschein scannen, Studio-Fotos per KI, direkt auf mobile.de & AutoScout24 veröffentlichen.",
+  title: "2Fast4Sale — Inserate für Autohändler",
+  description: "Fahrzeugschein abfotografieren, Fotos ins Studio setzen, Beschreibung erzeugen lassen. Fertiges Inserat als Fotopaket und PDF.",
   openGraph: {
-    title: "2Fast4Sale — KI-Inserate in 2 Minuten",
-    description: "Fahrzeugschein scannen, Studio-Fotos per KI, direkt auf mobile.de & AutoScout24 veröffentlichen.",
+    title: "2Fast4Sale — Inserate für Autohändler",
+    description: "Fahrzeugschein abfotografieren, Fotos ins Studio setzen, Beschreibung erzeugen lassen. Fertiges Inserat als Fotopaket und PDF.",
     type: "website",
   },
 };
