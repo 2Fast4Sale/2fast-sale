@@ -38,7 +38,7 @@ PFLICHTFELDER (immer ausfüllen):
 • E: FIN / VIN (17 Zeichen, exakt wie abgedruckt)
 • B: Datum der Erstzulassung → Format MM/JJJJ
 • P.1: Hubraum in cm³ (nur Zahl)
-• P.2: Leistung in kW → in PS umrechnen: kW × 1,3596 (runden)
+• P.2: Nennleistung in kW — EXAKT so ablesen wie abgedruckt, NICHT umrechnen
 • P.3: Kraftstoffart → "Benzin" | "Diesel" | "Elektro" | "Hybrid" | "Plug-in Hybrid" | "LPG" | "CNG"
 • R: Farbe des Fahrzeugs (auf Deutsch, z.B. "Schwarz", "Silber Metallic", "Perlweiß")
 • S.1: Anzahl Sitzplätze gesamt (inkl. Fahrer)
@@ -89,7 +89,8 @@ Erkennst du Ausstattungsnamen → füge typische Merkmale dieser Linie hinzu:
 
 Gibt es Codes die du nicht kennst → übersetze sie bestmöglich aus dem Kontext.
 Füge ALLE erkannten Merkmale ein. Lieber 5 zu viel als 1 zu wenig.
-powerPs = kW aus P.2 × 1.3596 (gerundet auf ganze Zahl).
+powerKw = der Wert aus Feld P.2, unveraendert. Fuehrende Nullen weglassen (0081 wird zu 81).
+Rechne NICHT in PS um — das macht die Anwendung.
 
 Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
 {
@@ -97,7 +98,7 @@ Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
   "vin": "XXXXXXXXXXXXXXXXX",
   "firstRegistration": "MM/JJJJ",
   "displacementCcm": 1968,
-  "powerPs": 150,
+  "powerKw": 110,
   "fuelType": "Diesel",
   "color": "Farbe",
   "seats": 5,
@@ -168,11 +169,42 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Dokument konnte nicht gelesen werden' }, { status: 422 });
     }
 
-    // powerKw Feld rückwärtskompatibel — Scanner gibt jetzt powerPs direkt
-    // Fallback: falls Modell noch powerKw schickt, konvertieren
-    if (result.powerKw && !result.powerPs) {
-      result.powerPs = Math.round(Number(result.powerKw) * 1.3596);
-      delete result.powerKw;
+    /*
+     * Leistung: Der Fahrzeugschein nennt in Feld P.2 immer kW. Die Umrechnung
+     * in PS macht die Anwendung, nicht das Modell — ein Sprachmodell soll
+     * ablesen, nicht rechnen. Vorher stand die Multiplikation im Prompt, und
+     * ein Rechenfehler landete ungeprueft im Formular (ein 1.6 TDI mit 81 kW
+     * erschien als 490 PS).
+     *
+     * Plausibilitaetspruefung dazu: Leistung je Liter Hubraum. Serienfahrzeuge
+     * liegen bei 40 bis 150 PS/l, extreme Sportwagen bei etwa 200. Alles
+     * darueber ist ein Lesefehler und wird verworfen — ein leeres Feld ist
+     * besser als eine falsche Zahl, die der Haendler ungeprueft uebernimmt.
+     */
+    const kw = Number(result.powerKw);
+    const ccm = Number(result.displacementCcm);
+
+    if (Number.isFinite(kw) && kw > 0) {
+      const ps = Math.round(kw * 1.3596);
+      const psProLiter = Number.isFinite(ccm) && ccm > 0 ? ps / (ccm / 1000) : null;
+
+      if (ps < 15 || ps > 2000 || (psProLiter !== null && psProLiter > 250)) {
+        console.error('[scan-doc] Leistung unplausibel, verworfen:',
+          { kw, ccm, ps, psProLiter: psProLiter?.toFixed(0) });
+        delete result.powerPs;
+        delete result.powerKw;
+      } else {
+        result.powerPs = ps;
+        delete result.powerKw;
+      }
+    } else if (result.powerPs) {
+      // Aeltere Antwortform: das Modell hat schon PS geliefert
+      const ps = Number(result.powerPs);
+      const psProLiter = Number.isFinite(ccm) && ccm > 0 ? ps / (ccm / 1000) : null;
+      if (!Number.isFinite(ps) || ps < 15 || ps > 2000 || (psProLiter !== null && psProLiter > 250)) {
+        console.error('[scan-doc] Leistung unplausibel, verworfen:', { ps, ccm });
+        delete result.powerPs;
+      }
     }
 
     // Equipment normalisieren: zuerst gegen DB-Labels matchen, Rest behalten

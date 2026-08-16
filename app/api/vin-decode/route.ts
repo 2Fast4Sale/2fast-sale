@@ -62,14 +62,22 @@ async function fetchVincario(vin: string): Promise<VincarioResult | null> {
   const json = await res.json();
   const rows: { label: string; value: unknown }[] = Array.isArray(json?.decode) ? json.decode : [];
 
+  /*
+   * Exakte Treffer haben Vorrang. Vorher wurde in einem Durchlauf gesucht und
+   * der erste Teiltreffer genommen — bei einer Antwort mit "Engine Power (HP)"
+   * und "Max Engine Power (HP)" haette die Reihenfolge im Feld entschieden,
+   * welcher Wert gewinnt. Bei Leistungsangaben ist das der Unterschied
+   * zwischen einer richtigen und einer unbrauchbaren Zahl.
+   */
   const get = (label: string): string | null => {
-    const row = rows.find(r =>
-      r.label.toLowerCase() === label.toLowerCase() ||
-      r.label.toLowerCase().includes(label.toLowerCase())
-    );
-    if (!row || row.value == null || row.value === '') return null;
-    if (Array.isArray(row.value)) return row.value.length > 0 ? String(row.value[0]) : null;
-    return String(row.value).trim() || null;
+    const gesucht = label.toLowerCase();
+    const wert = (row: { label: string; value: unknown } | undefined): string | null => {
+      if (!row || row.value == null || row.value === '') return null;
+      if (Array.isArray(row.value)) return row.value.length > 0 ? String(row.value[0]) : null;
+      return String(row.value).trim() || null;
+    };
+    return wert(rows.find(r => r.label.toLowerCase() === gesucht))
+        ?? wert(rows.find(r => r.label.toLowerCase().includes(gesucht)));
   };
 
   const make   = get('Make');
