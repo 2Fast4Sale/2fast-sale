@@ -70,14 +70,14 @@ export default function EnvkvDisplay({ vehicle }: Props) {
   return (
     <div style={{ marginTop: '24px', fontFamily: F }}>
       <div style={{
-        fontSize: '13px', fontWeight: '700', color: '#3a5a78',
+        fontSize: '13px', fontWeight: '700', color: '#64748b',
         textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px',
       }}>
         Verbrauch & Emissionen
       </div>
 
       <div style={{
-        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+        background: '#ffffff', border: '1px solid #e2e8f0',
         borderRadius: '16px', padding: '20px',
       }}>
 
@@ -87,10 +87,10 @@ export default function EnvkvDisplay({ vehicle }: Props) {
             <div key={label} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
               gap: '16px', padding: '8px 0',
-              borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+              borderBottom: i < rows.length - 1 ? '1px solid #f1f5f9' : 'none',
             }}>
-              <span style={{ fontSize: '14px', color: '#7a9cbc' }}>{label}</span>
-              <span style={{ fontSize: '15px', fontWeight: '700', color: '#f0f8ff', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '14px', color: '#64748b' }}>{label}</span>
+              <span style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
                 {value}
               </span>
             </div>
@@ -100,7 +100,7 @@ export default function EnvkvDisplay({ vehicle }: Props) {
         {/* CO2-Klassen-Skala */}
         {activeClass && (
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', color: '#7a9cbc', marginBottom: '8px', fontWeight: '600' }}>
+            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px', fontWeight: '600' }}>
               CO₂-Klasse
             </div>
             <div style={{ display: 'flex', gap: '4px' }}>
@@ -114,7 +114,7 @@ export default function EnvkvDisplay({ vehicle }: Props) {
                     fontSize: on ? '16px' : '13px', fontWeight: '800',
                     opacity: on ? 1 : 0.28,
                     transform: on ? 'scale(1.05)' : 'none',
-                    boxShadow: on ? '0 3px 12px rgba(0,0,0,0.4)' : 'none',
+                    boxShadow: on ? '0 3px 12px rgba(0,0,0,0.18)' : 'none',
                     transition: 'all 0.18s',
                   }}>
                     {c}
@@ -127,7 +127,7 @@ export default function EnvkvDisplay({ vehicle }: Props) {
 
         {/* Gesetzlicher Hinweistext */}
         <p style={{
-          margin: 0, fontSize: '11.5px', lineHeight: 1.65, color: '#5c7a99',
+          margin: 0, fontSize: '11.5px', lineHeight: 1.65, color: '#64748b',
         }}>
           {legalNote}
         </p>

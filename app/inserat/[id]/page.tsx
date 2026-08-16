@@ -36,18 +36,18 @@ export default function PublicListingPage() {
   };
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#050d1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Loader2 size={32} color="#3b82f6" style={{ animation: 'spin 1s linear infinite' }} />
+    <div style={{ minHeight: '100vh', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Loader2 size={32} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   if (!vehicle) return (
-    <div style={{ minHeight: '100vh', background: '#050d1a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f0f8ff', fontFamily: F }}>
+    <div style={{ minHeight: '100vh', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0f172a', fontFamily: F }}>
       <div style={{ textAlign: 'center' }}>
-        <Car size={48} color="#3a5a78" style={{ marginBottom: '16px' }} />
+        <Car size={48} color="#94a3b8" style={{ marginBottom: '16px' }} />
         <h1 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '8px' }}>Inserat nicht gefunden</h1>
-        <p style={{ color: '#7a9cbc' }}>Dieses Inserat existiert nicht oder wurde entfernt.</p>
+        <p style={{ color: '#64748b' }}>Dieses Inserat existiert nicht oder wurde entfernt.</p>
       </div>
     </div>
   );
@@ -69,10 +69,10 @@ export default function PublicListingPage() {
   ].filter(s => s.value);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050d1a', color: '#f0f8ff', fontFamily: F }}>
+    <div style={{ minHeight: '100vh', background: '#f0f2f5', color: '#0f172a', fontFamily: F }}>
       {/* Navbar */}
-      <nav style={{ padding: '16px 32px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ fontSize: '18px', fontWeight: '800', color: '#fff' }}>2Fast<span style={{ color: '#3b82f6' }}>4</span>Sale</div>
+      <nav style={{ padding: '16px 32px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>2Fast<span style={{ color: '#6366f1' }}>4</span>Sale</div>
       </nav>
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
@@ -83,9 +83,9 @@ export default function PublicListingPage() {
             {has360 ? (
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <Images size={15} color="#3b82f6" />
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#3b82f6' }}>360°-Ansicht</span>
-                  <span style={{ fontSize: '13px', color: '#3a5a78' }}>— Ziehe das Bild zum Drehen</span>
+                  <Images size={15} color="#6366f1" />
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#6366f1' }}>360°-Ansicht</span>
+                  <span style={{ fontSize: '13px', color: '#64748b' }}>— Ziehe das Bild zum Drehen</span>
                 </div>
                 <Viewer360 images={imgUrls} autoPlay={true} />
               </div>
@@ -97,13 +97,13 @@ export default function PublicListingPage() {
             ) : null}
 
             <h1 style={{ fontSize: '28px', fontWeight: '900', letterSpacing: '-0.4px', margin: '0 0 6px' }}>{vehicle.brand as string}</h1>
-            <div style={{ fontSize: '32px', fontWeight: '900', color: '#3b82f6', marginBottom: '24px' }}>{price}</div>
+            <div style={{ fontSize: '32px', fontWeight: '900', color: '#6366f1', marginBottom: '24px' }}>{price}</div>
 
             {specs.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '24px' }}>
                 {specs.map(({ icon, label, value }) => (
-                  <div key={label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#3a5a78', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>{icon} {label}</div>
+                  <div key={label} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>{icon} {label}</div>
                     <div style={{ fontSize: '15px', fontWeight: '700' }}>{value}</div>
                   </div>
                 ))}
@@ -112,10 +112,10 @@ export default function PublicListingPage() {
 
             {(vehicle.equipment as string[])?.length > 0 && (
               <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#3a5a78', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Ausstattung</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>Ausstattung</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {(vehicle.equipment as string[]).map((item, i) => (
-                    <span key={i} style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)', color: '#93c5fd', padding: '5px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>✓ {item}</span>
+                    <span key={i} style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: '#4f46e5', padding: '5px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>✓ {item}</span>
                   ))}
                 </div>
               </div>
@@ -123,8 +123,8 @@ export default function PublicListingPage() {
 
             {vehicle.description && (
               <div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#3a5a78', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Beschreibung</div>
-                <p style={{ fontSize: '15px', color: '#a8c4dc', lineHeight: 1.8, margin: 0 }}>{vehicle.description as string}</p>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Beschreibung</div>
+                <p style={{ fontSize: '15px', color: '#64748b', lineHeight: 1.8, margin: 0 }}>{vehicle.description as string}</p>
               </div>
             )}
 
@@ -133,12 +133,12 @@ export default function PublicListingPage() {
           </div>
 
           {/* Contact Form */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '28px', position: 'sticky', top: '24px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '28px', position: 'sticky', top: '24px' }}>
             {sent ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <CheckCircle2 size={48} color="#10b981" style={{ marginBottom: '16px' }} />
                 <h3 style={{ fontSize: '18px', fontWeight: '800', margin: '0 0 8px' }}>Anfrage gesendet!</h3>
-                <p style={{ fontSize: '14px', color: '#7a9cbc', margin: 0 }}>Der Händler meldet sich so schnell wie möglich bei dir.</p>
+                <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>Der Händler meldet sich so schnell wie möglich bei dir.</p>
               </div>
             ) : (
               <>
@@ -150,26 +150,26 @@ export default function PublicListingPage() {
                     { key: 'phone',   label: 'Telefon',    type: 'tel',   required: false },
                   ].map(({ key, label, type, required }) => (
                     <div key={key}>
-                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#3a5a78', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '5px' }}>{label}{required ? ' *' : ''}</label>
+                      <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '5px' }}>{label}{required ? ' *' : ''}</label>
                       <input
                         type={type} required={required}
                         value={form[key as keyof typeof form]}
                         onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-                        style={{ width: '100%', boxSizing: 'border-box', background: '#0c1829', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '9px', padding: '10px 14px', color: '#f0f8ff', fontSize: '15px', fontFamily: F, outline: 'none' }}
+                        style={{ width: '100%', boxSizing: 'border-box', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '9px', padding: '10px 14px', color: '#0f172a', fontSize: '15px', fontFamily: F, outline: 'none' }}
                       />
                     </div>
                   ))}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#3a5a78', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '5px' }}>Nachricht</label>
+                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: '5px' }}>Nachricht</label>
                     <textarea
                       rows={4} placeholder="Ich interessiere mich für dieses Fahrzeug..."
                       value={form.message}
                       onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
-                      style={{ width: '100%', boxSizing: 'border-box', background: '#0c1829', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '9px', padding: '10px 14px', color: '#f0f8ff', fontSize: '15px', fontFamily: F, outline: 'none', resize: 'vertical' }}
+                      style={{ width: '100%', boxSizing: 'border-box', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '9px', padding: '10px 14px', color: '#0f172a', fontSize: '15px', fontFamily: F, outline: 'none', resize: 'vertical' }}
                     />
                   </div>
                   <button type="submit" disabled={sending}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', border: 'none', borderRadius: '10px', color: '#fff', padding: '13px', cursor: sending ? 'wait' : 'pointer', fontSize: '15px', fontWeight: '700', fontFamily: F }}>
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'linear-gradient(135deg,#4f46e5,#4338ca)', border: 'none', borderRadius: '10px', color: '#fff', padding: '13px', cursor: sending ? 'wait' : 'pointer', fontSize: '15px', fontWeight: '700', fontFamily: F }}>
                     {sending ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} />}
                     {sending ? 'Wird gesendet...' : 'Anfrage senden'}
                   </button>

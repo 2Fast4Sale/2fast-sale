@@ -6,16 +6,16 @@ export const metadata = {
 };
 
 const S = {
-  page:    { minHeight: '100vh', background: '#050d1a', color: '#e8f1fa', fontFamily: '"Inter", -apple-system, sans-serif', padding: '60px 24px' } as React.CSSProperties,
+  page:    { minHeight: '100vh', background: '#f0f2f5', color: '#0f172a', fontFamily: '"Inter", -apple-system, sans-serif', padding: '60px 24px' } as React.CSSProperties,
   wrap:    { maxWidth: '760px', margin: '0 auto' } as React.CSSProperties,
-  h1:      { fontSize: '36px', fontWeight: '800' as const, letterSpacing: '-0.5px', marginBottom: '8px', color: '#f0f8ff' },
-  sub:     { color: '#7a9cbc', fontSize: '15px', marginBottom: '48px' } as React.CSSProperties,
-  h2:      { fontSize: '18px', fontWeight: '700' as const, color: '#f0f8ff', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
-  label:   { fontSize: '12px', fontWeight: '700' as const, color: '#3a5a78', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '4px' },
-  value:   { fontSize: '15px', color: '#a8c4dc', lineHeight: 1.7 } as React.CSSProperties,
-  body:    { color: '#a8c4dc', lineHeight: 1.75, margin: 0, fontSize: '15px' } as React.CSSProperties,
+  h1:      { fontSize: '36px', fontWeight: '800' as const, letterSpacing: '-0.5px', marginBottom: '8px', color: '#0f172a' },
+  sub:     { color: '#64748b', fontSize: '15px', marginBottom: '48px' } as React.CSSProperties,
+  h2:      { fontSize: '18px', fontWeight: '700' as const, color: '#0f172a', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f8fafc' },
+  label:   { fontSize: '12px', fontWeight: '700' as const, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '4px' },
+  value:   { fontSize: '15px', color: '#64748b', lineHeight: 1.7 } as React.CSSProperties,
+  body:    { color: '#64748b', lineHeight: 1.75, margin: 0, fontSize: '15px' } as React.CSSProperties,
   section: { marginBottom: '36px' } as React.CSSProperties,
-  footer:  { marginTop: '48px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '20px', fontSize: '14px' } as React.CSSProperties,
+  footer:  { marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '20px', fontSize: '14px' } as React.CSSProperties,
 };
 
 export default function ImpressumPage() {
@@ -23,7 +23,7 @@ export default function ImpressumPage() {
     <div style={S.page}>
       <div style={S.wrap}>
 
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#7a9cbc', textDecoration: 'none', fontSize: '14px', marginBottom: '40px' }}>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#64748b', textDecoration: 'none', fontSize: '14px', marginBottom: '40px' }}>
           ← Zurück zur Startseite
         </Link>
 
@@ -32,7 +32,7 @@ export default function ImpressumPage() {
 
         {/* ── BETA-HINWEIS ── */}
         <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '32px' }}>
-          <p style={{ margin: 0, fontSize: '13px', color: '#fbbf24', lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#d97706', lineHeight: 1.6 }}>
             <strong>Hinweis:</strong> Diese Plattform befindet sich im geschlossenen Testbetrieb (Beta). Ein vollständiges Impressum mit Anschrift wird mit der offiziellen Gewerbeanmeldung ab Oktober 2026 ergänzt. Bei rechtlichen Anfragen wende dich bitte direkt per E-Mail an uns.
           </p>
         </div>
@@ -55,7 +55,7 @@ export default function ImpressumPage() {
           <h2 style={S.h2}>Kontakt</h2>
           <div style={{ marginBottom: '12px' }}>
             <div style={S.label}>E-Mail</div>
-            <div style={S.value}><a href="mailto:info@2fast4sale.com" style={{ color: '#60a5fa' }}>info@2fast4sale.com</a></div>
+            <div style={S.value}><a href="mailto:info@2fast4sale.com" style={{ color: '#6366f1' }}>info@2fast4sale.com</a></div>
           </div>
           <div style={{ marginBottom: '12px' }}>
             <div style={S.label}>Telefon</div>
@@ -82,7 +82,7 @@ export default function ImpressumPage() {
           <h2 style={S.h2}>EU-Streitschlichtung</h2>
           <p style={S.body}>
             Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:{' '}
-            <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer" style={{ color: '#60a5fa' }}>
+            <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1' }}>
               https://ec.europa.eu/consumers/odr/
             </a>. Unsere E-Mail-Adresse finden Sie oben im Impressum.
           </p>
@@ -135,9 +135,9 @@ export default function ImpressumPage() {
         </div>
 
         <div style={S.footer}>
-          <Link href="/datenschutz" style={{ color: '#60a5fa', textDecoration: 'none' }}>Datenschutz</Link>
-          <Link href="/agb" style={{ color: '#60a5fa', textDecoration: 'none' }}>AGB</Link>
-          <Link href="/" style={{ color: '#7a9cbc', textDecoration: 'none' }}>Startseite</Link>
+          <Link href="/datenschutz" style={{ color: '#6366f1', textDecoration: 'none' }}>Datenschutz</Link>
+          <Link href="/agb" style={{ color: '#6366f1', textDecoration: 'none' }}>AGB</Link>
+          <Link href="/" style={{ color: '#64748b', textDecoration: 'none' }}>Startseite</Link>
         </div>
 
       </div>

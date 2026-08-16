@@ -5,26 +5,26 @@ export const metadata = {
   description: 'Allgemeine Geschäftsbedingungen von 2Fast4Sale',
 };
 
-const page:    React.CSSProperties = { minHeight: '100vh', background: '#050d1a', color: '#e8f1fa', fontFamily: '"Inter", -apple-system, sans-serif', padding: '60px 24px' };
+const page:    React.CSSProperties = { minHeight: '100vh', background: '#f0f2f5', color: '#0f172a', fontFamily: '"Inter", -apple-system, sans-serif', padding: '60px 24px' };
 const wrap:    React.CSSProperties = { maxWidth: '760px', margin: '0 auto' };
-const h1style: React.CSSProperties = { fontSize: '36px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '8px', color: '#f0f8ff' };
-const h2style: React.CSSProperties = { fontSize: '18px', fontWeight: 700, color: '#f0f8ff', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.07)', marginTop: '0' };
-const body:    React.CSSProperties = { color: '#a8c4dc', lineHeight: 1.8, margin: '0 0 12px', fontSize: '15px' };
+const h1style: React.CSSProperties = { fontSize: '36px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '8px', color: '#0f172a' };
+const h2style: React.CSSProperties = { fontSize: '18px', fontWeight: 700, color: '#0f172a', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f8fafc', marginTop: '0' };
+const body:    React.CSSProperties = { color: '#64748b', lineHeight: 1.8, margin: '0 0 12px', fontSize: '15px' };
 const sec:     React.CSSProperties = { marginBottom: '36px' };
-const foot:    React.CSSProperties = { marginTop: '48px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '20px', fontSize: '14px' };
-const lnk = { color: '#60a5fa' };
+const foot:    React.CSSProperties = { marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '20px', fontSize: '14px' };
+const lnk = { color: '#6366f1' };
 
 export default function AGBPage() {
   return (
     <div style={page}>
       <div style={wrap}>
 
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#7a9cbc', textDecoration: 'none', fontSize: '14px', marginBottom: '40px' }}>
+        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#64748b', textDecoration: 'none', fontSize: '14px', marginBottom: '40px' }}>
           ← Zurück zur Startseite
         </Link>
 
         <h1 style={h1style}>Allgemeine Geschäftsbedingungen</h1>
-        <p style={{ color: '#7a9cbc', fontSize: '15px', marginBottom: '48px' }}>Stand: Juni 2026 — 2Fast4Sale</p>
+        <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '48px' }}>Stand: Juni 2026 — 2Fast4Sale</p>
 
         <div style={sec}>
           <h2 style={h2style}>§ 1 Geltungsbereich</h2>
@@ -40,7 +40,7 @@ export default function AGBPage() {
           <p style={body}>
             2Fast4Sale ist eine SaaS-Plattform für Gebrauchtwagenhändler, die folgende Dienste anbietet:
           </p>
-          <ul style={{ color: '#a8c4dc', lineHeight: 1.8, paddingLeft: '20px', margin: '0 0 12px' }}>
+          <ul style={{ color: '#64748b', lineHeight: 1.8, paddingLeft: '20px', margin: '0 0 12px' }}>
             <li>KI-gestützte Erstellung von Fahrzeuginseraten</li>
             <li>Automatische Auslese von Fahrzeugscheinen (OCR/KI)</li>
             <li>KI-Bildbearbeitung und Hintergrundersatz</li>
@@ -100,7 +100,7 @@ export default function AGBPage() {
         <div style={sec}>
           <h2 style={h2style}>§ 6 Widerrufsrecht</h2>
           <p style={body}>
-            <strong style={{ color: '#f0f8ff' }}>Für Verbraucher</strong> gilt: Sie haben das Recht, binnen 14 Tagen ohne Angabe von Gründen
+            <strong style={{ color: '#0f172a' }}>Für Verbraucher</strong> gilt: Sie haben das Recht, binnen 14 Tagen ohne Angabe von Gründen
             diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt 14 Tage ab Vertragsschluss.
           </p>
           <p style={body}>
@@ -109,14 +109,14 @@ export default function AGBPage() {
             Widerrufsfrist mit der Ausführung beginnt (§ 356 Abs. 5 BGB).
           </p>
           <p style={body}>
-            <strong style={{ color: '#f0f8ff' }}>Für Unternehmer</strong> (gewerbliche Händler) gilt kein Verbraucher-Widerrufsrecht.
+            <strong style={{ color: '#0f172a' }}>Für Unternehmer</strong> (gewerbliche Händler) gilt kein Verbraucher-Widerrufsrecht.
           </p>
         </div>
 
         <div style={sec}>
           <h2 style={h2style}>§ 7 Nutzungspflichten & verbotene Inhalte</h2>
           <p style={body}>Der Nutzer verpflichtet sich, keine Inhalte einzustellen die:</p>
-          <ul style={{ color: '#a8c4dc', lineHeight: 1.8, paddingLeft: '20px', margin: '0 0 12px' }}>
+          <ul style={{ color: '#64748b', lineHeight: 1.8, paddingLeft: '20px', margin: '0 0 12px' }}>
             <li>gegen geltendes Recht verstoßen</li>
             <li>Rechte Dritter (Urheberrecht, Markenrecht) verletzen</li>
             <li>irreführende oder falsche Fahrzeugangaben enthalten</li>
@@ -191,7 +191,7 @@ export default function AGBPage() {
         <div style={foot}>
           <Link href="/impressum" style={lnk}>Impressum</Link>
           <Link href="/datenschutz" style={lnk}>Datenschutz</Link>
-          <Link href="/" style={{ color: '#7a9cbc', textDecoration: 'none' }}>Startseite</Link>
+          <Link href="/" style={{ color: '#64748b', textDecoration: 'none' }}>Startseite</Link>
         </div>
 
       </div>

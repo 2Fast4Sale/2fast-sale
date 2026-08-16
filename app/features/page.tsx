@@ -9,16 +9,16 @@ import {
 } from 'lucide-react';
 
 const F   = '"Inter", -apple-system, sans-serif';
-const BG  = '#050d1a';
+const BG  = '#f0f2f5';
 const CARD = 'rgba(255,255,255,0.025)';
-const BORD = 'rgba(255,255,255,0.07)';
-const TH  = '#f0f8ff';
-const TS  = '#5a7a96';
-const TD  = '#3a5a78';
+const BORD = '#f8fafc';
+const TH  = '#0f172a';
+const TS  = '#94a3b8';
+const TD  = '#94a3b8';
 
 const FEATURES = [
   {
-    id: 'ocr', icon: <FileText size={32} />, color: '#3b82f6', tag: 'Core',
+    id: 'ocr', icon: <FileText size={32} />, color: '#6366f1', tag: 'Core',
     title: 'OCR Dokumentenscan',
     headline: 'Fahrzeugschein in 30 Sekunden ausgelesen',
     desc: 'Kein manuelles Tippen mehr. Fotografiere einfach den Fahrzeugschein &mdash; unsere KI (powered by GPT-4o Vision) liest alle relevanten Daten automatisch aus: Marke, Modell, FIN/VIN, Hubraum, Leistung, Erstzulassung, Farbe, Sitzplätze und mehr.',
@@ -46,7 +46,7 @@ const FEATURES = [
     ],
   },
   {
-    id: 'description', icon: <AlignLeft size={32} />, color: '#10b981', tag: 'Core',
+    id: 'description', icon: <AlignLeft size={32} />, color: '#059669', tag: 'Core',
     title: 'KI Inseratsbeschreibung',
     headline: 'Kaufmotivierende Texte in 60 Sekunden',
     desc: 'GPT-4o analysiert alle Fahrzeugdaten und generiert automatisch professionelle, verkaufsorientierte Beschreibungen. Der Text ist SEO-optimiert für mobile.de und AutoScout24 und berücksichtigt deine Händler-Notizen.',
@@ -60,7 +60,7 @@ const FEATURES = [
     ],
   },
   {
-    id: 'equipment', icon: <Cpu size={32} />, color: '#f59e0b', tag: 'Pro',
+    id: 'equipment', icon: <Cpu size={32} />, color: '#d97706', tag: 'Pro',
     title: 'Ausstattungserkennung',
     headline: 'KI sieht was andere übersehen',
     desc: 'Neben dem OCR-Scan des Fahrzeugscheins analysiert unsere KI auch hochgeladene Fotos und erkennt sichtbare Ausstattungsmerkmale: Sitzheizung, Navi, Sportpaket, Panoramadach und vieles mehr.',
@@ -88,7 +88,7 @@ const FEATURES = [
     ],
   },
   {
-    id: 'dsgvo', icon: <Shield size={32} />, color: '#06b6d4', tag: 'Alle',
+    id: 'dsgvo', icon: <Shield size={32} />, color: '#0891b2', tag: 'Alle',
     title: 'DSGVO &amp; Sicherheit',
     headline: 'Deine Daten in deutschen Handen',
     desc: 'Alle Daten werden ausschließlich auf deutschen Servern gespeichert. SSL-verschlüsselt, DSGVO-zertifiziert, keine Weitergabe an Dritte. Vollständige Datenkontrolle fur dein Unternehmen.',
@@ -102,7 +102,7 @@ const FEATURES = [
     ],
   },
   {
-    id: 'watermark', icon: <Camera size={32} />, color: '#a78bfa', tag: 'Premium',
+    id: 'watermark', icon: <Camera size={32} />, color: '#7c3aed', tag: 'Premium',
     title: 'Firmen-Wasserzeichen',
     headline: 'Professioneller Auftritt auf jeder Plattform',
     desc: 'Ab dem Premium-Plan wird dein Firmenname und Logo automatisch in jedes generierte Foto eingeblendet &mdash; dezent positioniert, professionell und unverwechselbar.',
@@ -116,7 +116,7 @@ const FEATURES = [
     ],
   },
   {
-    id: 'analytics', icon: <TrendingUp size={32} />, color: '#34d399', tag: 'Pro',
+    id: 'analytics', icon: <TrendingUp size={32} />, color: '#059669', tag: 'Pro',
     title: 'Verkaufsanalysen',
     headline: 'Datengetriebene Verkaufsentscheidungen',
     desc: 'Dashboard mit Live-Statistiken für alle deine Inserate: Aufrufe, Anfragen, Click-Through-Rates und Verkaufszeiten. Erkenne welche Fahrzeuge gut laufen und optimiere deine Strategie.',
@@ -130,7 +130,7 @@ const FEATURES = [
     ],
   },
   {
-    id: 'team', icon: <Users size={32} />, color: '#fb923c', tag: 'Business',
+    id: 'team', icon: <Users size={32} />, color: '#ea580c', tag: 'Business',
     title: 'Team-Accounts',
     headline: 'Zusammenarbeit ohne Grenzen',
     desc: 'Mehrere Mitarbeiter können gleichzeitig Inserate bearbeiten. Rollenbasierte Zugriffsrechte (Admin, Ersteller, Beobachter) und Vollständige Aktivitätsprotokollierung fur dein Autohaus.',
@@ -154,36 +154,36 @@ export default function FeaturesPage() {
 
       {/* BG Orbs */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: '-200px', left: '-200px', width: '700px', height: '700px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%)', filter: 'blur(80px)' }} />
+        <div style={{ position: 'absolute', top: '-200px', left: '-200px', width: '700px', height: '700px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,70,229,0.18) 0%, transparent 70%)', filter: 'blur(80px)' }} />
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)', filter: 'blur(80px)' }} />
       </div>
 
       {/* Grid texture */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: 'linear-gradient(rgba(59,130,246,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.025) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: 'linear-gradient(rgba(99,102,241,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.025) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
       {/* Navbar */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(5,13,26,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 48px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(5,13,26,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #f8fafc', padding: '0 48px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#6a8caa', fontSize: '14px' }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '14px' }}>
             <ArrowLeft size={15} /> Startseite
           </Link>
           <Link href="/" style={{ textDecoration: 'none', fontSize: '18px', fontWeight: '800', color: TH, letterSpacing: '-0.5px' }}>
-            2Fast<span style={{ color: '#3b82f6' }}>4</span>Sale
+            2Fast<span style={{ color: '#6366f1' }}>4</span>Sale
           </Link>
         </div>
-        <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '700' }}>
+        <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '700' }}>
           Kostenlos starten <ArrowRight size={14} />
         </Link>
       </nav>
 
       {/* Hero */}
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '100px 48px 80px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 16px', borderRadius: '100px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', fontSize: '12px', fontWeight: '700', color: '#60a5fa', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '24px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 16px', borderRadius: '100px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', fontSize: '12px', fontWeight: '700', color: '#6366f1', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '24px' }}>
           <Sparkles size={13} /> Alle Features
         </div>
         <h1 style={{ fontSize: 'clamp(40px,5vw,72px)', fontWeight: '800', letterSpacing: '-2px', color: TH, margin: '0 0 20px', lineHeight: 1.05 }}>
           Technologie die<br />
-          <span style={{ background: 'linear-gradient(135deg,#60a5fa,#a78bfa,#34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          <span style={{ background: 'linear-gradient(135deg,#6366f1,#a78bfa,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             verkauft.
           </span>
         </h1>
@@ -206,7 +206,7 @@ export default function FeaturesPage() {
                 padding: '13px 16px', borderRadius: '12px', cursor: 'pointer',
                 background: active === f.id ? `${f.color}12` : 'transparent',
                 border: `1px solid ${active === f.id ? `${f.color}30` : 'transparent'}`,
-                color: active === f.id ? f.color : '#3a5a78',
+                color: active === f.id ? f.color : '#94a3b8',
                 fontFamily: F, fontSize: '14px', fontWeight: active === f.id ? '700' : '500',
                 textAlign: 'left', transition: 'all 0.15s',
               }}
@@ -237,9 +237,9 @@ export default function FeaturesPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '40px' }}>
             {feat.bullets.map((b, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: `1px solid ${BORD}`, borderRadius: '10px' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px 16px', background: '#f8fafc', border: `1px solid ${BORD}`, borderRadius: '10px' }}>
                 <CheckCircle2 size={15} color={feat.color} style={{ flexShrink: 0, marginTop: '1px' }} />
-                <span style={{ fontSize: '14px', color: '#8ab0d0', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: b }} />
+                <span style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: b }} />
               </div>
             ))}
           </div>
@@ -248,7 +248,7 @@ export default function FeaturesPage() {
             <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: `linear-gradient(135deg, ${feat.color}, ${feat.color}cc)`, color: '#fff', textDecoration: 'none', padding: '13px 24px', borderRadius: '10px', fontSize: '15px', fontWeight: '700', boxShadow: `0 8px 24px ${feat.color}30` }}>
               Jetzt testen <ArrowRight size={15} />
             </Link>
-            <Link href="/#pricing" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', color: '#8ab0d0', textDecoration: 'none', padding: '13px 20px', borderRadius: '10px', fontSize: '15px', fontWeight: '600' }}>
+            <Link href="/#pricing" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', textDecoration: 'none', padding: '13px 20px', borderRadius: '10px', fontSize: '15px', fontWeight: '600' }}>
               Preise ansehen
             </Link>
           </div>
@@ -256,12 +256,12 @@ export default function FeaturesPage() {
       </div>
 
       {/* CTA Strip */}
-      <div style={{ position: 'relative', zIndex: 1, background: 'rgba(37,99,235,0.05)', borderTop: '1px solid rgba(59,130,246,0.1)', borderBottom: '1px solid rgba(59,130,246,0.1)', padding: '60px 48px', textAlign: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 1, background: 'rgba(79,70,229,0.05)', borderTop: '1px solid rgba(99,102,241,0.1)', borderBottom: '1px solid rgba(99,102,241,0.1)', padding: '60px 48px', textAlign: 'center' }}>
         <h2 style={{ fontSize: 'clamp(28px,3vw,44px)', fontWeight: '800', color: TH, letterSpacing: '-1px', margin: '0 0 14px' }}>
           Alle Features. Ein Plan.
         </h2>
         <p style={{ fontSize: '17px', color: TS, margin: '0 0 32px' }}>3 Inserate kostenlos testen &mdash; keine Kreditkarte benötigt.</p>
-        <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '14px 28px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', boxShadow: '0 8px 32px rgba(37,99,235,0.4)' }}>
+        <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '14px 28px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', boxShadow: '0 8px 32px rgba(79,70,229,0.4)' }}>
           Kostenlos starten <ArrowRight size={16} />
         </Link>
       </div>
