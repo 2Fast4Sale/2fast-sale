@@ -50,7 +50,13 @@ Schreibe 3–4 Sätze auf Deutsch. Überzeugend, kaufmotivierend, kein Marketing
 
     const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
-      max_tokens: 200,
+      /*
+       * 200 war zu knapp: Eine deutsche Beschreibung mit 80 Wörtern liegt nahe
+       * an der Grenze, und wenn das Modell etwas länger schreibt, bricht der
+       * Text mitten im Wort ab — bei einem Inserat sichtbar und peinlich.
+       * Umlaute brauchen ausserdem mehr Tokens als englischer Text.
+       */
+      max_tokens: 500,
       system: 'Du bist ein erfahrener Fahrzeughändler der ehrliche, überzeugende Inserate schreibt.',
       messages: [{ role: 'user', content: prompt }],
     });
