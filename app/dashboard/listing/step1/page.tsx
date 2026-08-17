@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
+import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB, searchEquipment, normalizeEquipment } from '../../../../lib/equipmentDatabase';
 import { useRouter } from 'next/navigation';
 import {
@@ -554,8 +555,21 @@ export default function Step1() {
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
                     }}
                   >
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: isSelected ? color : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
-                      <span style={{ fontSize: '9px', fontWeight: '800', color: isSelected ? '#fff' : '#64748b', letterSpacing: '-0.2px' }}>{abbr}</span>
+                    {/*
+                      Marken mit einfacher geometrischer Form bekommen ein
+                      gezeichnetes Zeichen, der Rest ein Namenskürzel. Eine
+                      schlechte Nachzeichnung wirkt unruhiger als sauberer Text.
+                    */}
+                    <div style={{
+                      width: '32px', height: '32px', borderRadius: '9px',
+                      background: isSelected ? color : '#eef1f5',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: isSelected ? '#fff' : '#64748b',
+                      transition: 'all 0.15s',
+                    }}>
+                      {hatZeichen(name)
+                        ? <MarkenZeichen marke={name} groesse={19} />
+                        : <span style={{ fontSize: '9.5px', fontWeight: '800', letterSpacing: '-0.2px' }}>{abbr}</span>}
                     </div>
                     <span style={{ fontSize: '11px', fontWeight: '600', color: isSelected ? color : TS }}>{name.length > 9 ? name.slice(0, 8) + '.' : name}</span>
                   </button>
