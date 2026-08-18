@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import { createClient } from '../../../lib/supabase/server';
 import { berechneInserat } from '../../../lib/usageBilling';
+import { guthabenPruefen } from '../../../lib/emailAusloeser';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,6 +114,14 @@ export async function POST(req: Request) {
         bezeichnung:  [body.brand, body.title].find(Boolean) as string | undefined,
         studioImages: Number(body.studio_images ?? 0),
       });
+
+      /*
+       * Guthaben-Hinweis, wenn es knapp wird. Nach dem Anlegen und nicht
+       * davor, damit der Rest-Stand stimmt, den die Mail nennt.
+       */
+      if (user.email) {
+        await guthabenPruefen(user.id, user.email);
+      }
     }
 
     return NextResponse.json({ vehicle: data });

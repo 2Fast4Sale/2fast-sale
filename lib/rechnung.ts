@@ -15,6 +15,10 @@
  */
 
 import PDFDocument from 'pdfkit';
+import { huelle, kasten, knopf, esc, SCHRIFT, FARBE, type Aussteller } from './email';
+
+export type { Aussteller };
+export { ausstellerAusUmgebung } from './email';
 
 /* ────────────────────────── Datenmodell ────────────────────────── */
 
@@ -66,29 +70,6 @@ export interface Rechnung {
   stripePdfUrl?: string | null;
 }
 
-/** Angaben zum eigenen Unternehmen, aus der Umgebung. */
-export interface Aussteller {
-  name: string;
-  anschrift: string;
-  ustId?: string;
-  steuernummer?: string;
-  inhaber?: string;
-  email: string;
-  web?: string;
-}
-
-export function ausstellerAusUmgebung(): Aussteller {
-  return {
-    name: '2Fast4Sale',
-    anschrift: process.env.COMPANY_ADDRESS || '',
-    ustId: process.env.COMPANY_TAX_ID || '',
-    steuernummer: process.env.COMPANY_STEUERNUMMER || '',
-    inhaber: process.env.COMPANY_OWNER || '',
-    email: process.env.SUPPORT_EMAIL || 'support@2fast4sale.com',
-    web: process.env.NEXT_PUBLIC_SITE_URL?.replace(/^https?:\/\//, '') || '2fast4sale.com',
-  };
-}
-
 /* ────────────────────────── Beträge ────────────────────────── */
 
 export interface Summen {
@@ -122,19 +103,6 @@ export function betrag(cent: number): string {
 export function datum(d: Date): string {
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
-
-/* ────────────────────────── Farben ────────────────────────── */
-
-const FARBE = {
-  text: '#0f172a',
-  grau: '#64748b',
-  hell: '#94a3b8',
-  linie: '#e2e8f0',
-  flaeche: '#f8fafc',
-  akzent: '#4f46e5',
-  gutGrund: '#dcfce7',
-  gutText: '#166534',
-} as const;
 
 /* ────────────────────────── PDF ────────────────────────── */
 
@@ -333,8 +301,6 @@ export function rechnungPdf(r: Rechnung, a: Aussteller): Promise<Buffer> {
 
 /* ────────────────────────── E-Mail ────────────────────────── */
 
-const SCHRIFT = "-apple-system,'Segoe UI',Roboto,Arial,Helvetica,sans-serif";
-
 /**
  * Textfassung der Rechnungsmail.
  *
@@ -371,9 +337,6 @@ export function rechnungText(r: Rechnung, a: Aussteller): string {
   return zeilen.filter(z => z !== undefined).join('\n');
 }
 
-const esc = (t: string) =>
-  t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
 /**
  * HTML-Fassung der Rechnungsmail.
  *
@@ -400,119 +363,61 @@ export function rechnungEmail(r: Rechnung, a: Aussteller): string {
         </td>
       </tr>`).join('');
 
-  const pdfKnopf = r.stripePdfUrl ? `
-      <tr><td align="center" style="padding:4px 32px 0;">
-        <a href="${esc(r.stripePdfUrl)}" style="display:inline-block;padding:13px 30px;background-color:#4f46e5;color:#ffffff;font-family:${SCHRIFT};font-size:14px;font-weight:600;text-decoration:none;border-radius:8px;">Rechnung online ansehen</a>
-      </td></tr>` : '';
+  const pdfKnopf = r.stripePdfUrl ? knopf('Rechnung online ansehen', r.stripePdfUrl) : '';
 
   const empfaengerZeilen = [r.empfaenger.strasse, r.empfaenger.ort, r.empfaenger.land]
     .filter(Boolean).map(z => esc(z as string)).join('<br />');
 
-  return `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="color-scheme" content="light only" />
-<title>Rechnung ${esc(r.nummer)}</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f1f5f9;">
-
-<div style="display:none;font-size:1px;color:#f1f5f9;max-height:0;overflow:hidden;">${esc(vorschau)}</div>
-
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f5f9;">
-<tr><td align="center" style="padding:32px 16px;">
-
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background-color:#ffffff;border-radius:14px;border:1px solid #e2e8f0;">
-
-  <tr>
-    <td style="padding:26px 32px 0;font-family:${SCHRIFT};">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-0.3px;">${esc(a.name)}</td>
-        <td align="right" style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:2px;">RECHNUNG</td>
-      </tr></table>
-      <div style="height:2px;background-color:#0f172a;margin-top:14px;"></div>
-    </td>
-  </tr>
-
-  <tr>
-    <td style="padding:26px 32px 0;font-family:${SCHRIFT};">
-      <div style="font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.5px;">${betrag(s.bruttoCent)}&nbsp;&euro;</div>
-      <div style="font-size:14px;color:#64748b;margin-top:6px;">
+  const inhalt = `
+    <div style="font-family:${SCHRIFT};">
+      <div style="font-size:24px;font-weight:800;color:${FARBE.text};letter-spacing:-0.5px;">${betrag(s.bruttoCent)}&nbsp;&euro;</div>
+      <div style="font-size:14px;color:${FARBE.grau};margin-top:6px;">
         Rechnung ${esc(r.nummer)} &middot; ${datum(r.datum)}
-        ${r.bezahlt ? '<span style="display:inline-block;margin-left:6px;padding:3px 10px;background-color:#dcfce7;color:#166534;font-size:11px;font-weight:700;border-radius:5px;">Bezahlt</span>' : ''}
+        ${r.bezahlt ? `<span style="display:inline-block;margin-left:6px;padding:3px 10px;background-color:${FARBE.gutGrund};color:${FARBE.gutText};font-size:11px;font-weight:700;border-radius:5px;">Bezahlt</span>` : ''}
       </div>
-    </td>
-  </tr>
+    </div>
 
-  <tr>
-    <td style="padding:24px 32px 0;font-family:${SCHRIFT};">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td width="50%" valign="top" style="padding-right:14px;">
-          <div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1.5px;margin-bottom:7px;">RECHNUNGSSTELLER</div>
-          <div style="font-size:13px;color:#0f172a;line-height:1.7;">
-            <strong>${esc(a.name)}</strong>${a.anschrift ? '<br />' + esc(a.anschrift) : ''}${a.ustId ? '<br />USt-IdNr. ' + esc(a.ustId) : ''}
-          </div>
-        </td>
-        <td width="50%" valign="top">
-          <div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1.5px;margin-bottom:7px;">RECHNUNGSEMPF&Auml;NGER</div>
-          <div style="font-size:13px;color:#0f172a;line-height:1.7;">
-            <strong>${esc(r.empfaenger.name)}</strong>${empfaengerZeilen ? '<br />' + empfaengerZeilen : ''}${r.empfaenger.ustId ? '<br />USt-IdNr. ' + esc(r.empfaenger.ustId) : ''}
-          </div>
-        </td>
-      </tr></table>
-      <div style="font-size:12px;color:#64748b;margin-top:16px;">Leistungsdatum: ${datum(r.leistungsdatum)}</div>
-    </td>
-  </tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;font-family:${SCHRIFT};"><tr>
+      <td width="50%" valign="top" style="padding-right:14px;">
+        <div style="font-size:10px;font-weight:700;color:${FARBE.hell};letter-spacing:1.5px;margin-bottom:7px;">RECHNUNGSSTELLER</div>
+        <div style="font-size:13px;color:${FARBE.text};line-height:1.7;">
+          <strong>${esc(a.name)}</strong>${a.anschrift ? '<br />' + esc(a.anschrift) : ''}${a.ustId ? '<br />USt-IdNr. ' + esc(a.ustId) : ''}
+        </div>
+      </td>
+      <td width="50%" valign="top">
+        <div style="font-size:10px;font-weight:700;color:${FARBE.hell};letter-spacing:1.5px;margin-bottom:7px;">RECHNUNGSEMPF&Auml;NGER</div>
+        <div style="font-size:13px;color:${FARBE.text};line-height:1.7;">
+          <strong>${esc(r.empfaenger.name)}</strong>${empfaengerZeilen ? '<br />' + empfaengerZeilen : ''}${r.empfaenger.ustId ? '<br />USt-IdNr. ' + esc(r.empfaenger.ustId) : ''}
+        </div>
+      </td>
+    </tr></table>
+    <div style="font-family:${SCHRIFT};font-size:12px;color:${FARBE.grau};margin-top:16px;">Leistungsdatum: ${datum(r.leistungsdatum)}</div>
 
-  <tr>
-    <td style="padding:22px 32px 0;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;">
-        <tr>
-          <td style="padding:9px 20px;background-color:#f8fafc;font-family:${SCHRIFT};font-size:10px;font-weight:700;color:#64748b;letter-spacing:1.2px;border-bottom:1px solid #e2e8f0;border-radius:10px 0 0 0;">POSITION</td>
-          <td align="right" style="padding:9px 20px;background-color:#f8fafc;font-family:${SCHRIFT};font-size:10px;font-weight:700;color:#64748b;letter-spacing:1.2px;border-bottom:1px solid #e2e8f0;border-radius:0 10px 0 0;">BETRAG</td>
-        </tr>${positionsZeilen}
-        <tr>
-          <td style="padding:12px 20px;font-family:${SCHRIFT};font-size:13px;color:#64748b;">Nettobetrag</td>
-          <td align="right" style="padding:12px 20px;font-family:${SCHRIFT};font-size:13px;color:#64748b;white-space:nowrap;">${betrag(s.nettoCent)}&nbsp;&euro;</td>
-        </tr>
-        <tr>
-          <td style="padding:0 20px 12px;font-family:${SCHRIFT};font-size:13px;color:#64748b;">darin Umsatzsteuer ${r.steuersatz}&nbsp;%</td>
-          <td align="right" style="padding:0 20px 12px;font-family:${SCHRIFT};font-size:13px;color:#64748b;white-space:nowrap;">${betrag(s.steuerCent)}&nbsp;&euro;</td>
-        </tr>
-        <tr>
-          <td style="padding:14px 20px;background-color:#f8fafc;border-top:1px solid #e2e8f0;font-family:${SCHRIFT};font-size:15px;font-weight:800;color:#0f172a;border-radius:0 0 0 10px;">Gesamtbetrag</td>
-          <td align="right" style="padding:14px 20px;background-color:#f8fafc;border-top:1px solid #e2e8f0;font-family:${SCHRIFT};font-size:15px;font-weight:800;color:#4f46e5;white-space:nowrap;border-radius:0 0 10px 0;">${betrag(s.bruttoCent)}&nbsp;&euro;</td>
-        </tr>
-      </table>
-    </td>
-  </tr>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;border:1px solid ${FARBE.linie};border-radius:10px;">
+      <tr>
+        <td style="padding:9px 20px;background-color:${FARBE.flaeche};font-family:${SCHRIFT};font-size:10px;font-weight:700;color:${FARBE.grau};letter-spacing:1.2px;border-bottom:1px solid ${FARBE.linie};border-radius:10px 0 0 0;">POSITION</td>
+        <td align="right" style="padding:9px 20px;background-color:${FARBE.flaeche};font-family:${SCHRIFT};font-size:10px;font-weight:700;color:${FARBE.grau};letter-spacing:1.2px;border-bottom:1px solid ${FARBE.linie};border-radius:0 10px 0 0;">BETRAG</td>
+      </tr>${positionsZeilen}
+      <tr>
+        <td style="padding:12px 20px;font-family:${SCHRIFT};font-size:13px;color:${FARBE.grau};">Nettobetrag</td>
+        <td align="right" style="padding:12px 20px;font-family:${SCHRIFT};font-size:13px;color:${FARBE.grau};white-space:nowrap;">${betrag(s.nettoCent)}&nbsp;&euro;</td>
+      </tr>
+      <tr>
+        <td style="padding:0 20px 12px;font-family:${SCHRIFT};font-size:13px;color:${FARBE.grau};">darin Umsatzsteuer ${r.steuersatz}&nbsp;%</td>
+        <td align="right" style="padding:0 20px 12px;font-family:${SCHRIFT};font-size:13px;color:${FARBE.grau};white-space:nowrap;">${betrag(s.steuerCent)}&nbsp;&euro;</td>
+      </tr>
+      <tr>
+        <td style="padding:14px 20px;background-color:${FARBE.flaeche};border-top:1px solid ${FARBE.linie};font-family:${SCHRIFT};font-size:15px;font-weight:800;color:${FARBE.text};border-radius:0 0 0 10px;">Gesamtbetrag</td>
+        <td align="right" style="padding:14px 20px;background-color:${FARBE.flaeche};border-top:1px solid ${FARBE.linie};font-family:${SCHRIFT};font-size:15px;font-weight:800;color:${FARBE.akzent};white-space:nowrap;border-radius:0 0 10px 0;">${betrag(s.bruttoCent)}&nbsp;&euro;</td>
+      </tr>
+    </table>
 
-  <tr>
-    <td style="padding:20px 32px 0;font-family:${SCHRIFT};">
-      <div style="padding:14px 18px;background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;color:#64748b;line-height:1.7;">
-        ${r.bezahlt
-          ? 'Der Betrag wurde bereits bezahlt &ndash; eine &Uuml;berweisung ist nicht n&ouml;tig. Ihr Guthaben steht sofort zur Verf&uuml;gung.'
-          : `Bitte &uuml;berweisen Sie den Gesamtbetrag unter Angabe der Rechnungsnummer <strong>${esc(r.nummer)}</strong>.`}
-        <br /><br />Die Rechnung liegt dieser E-Mail als PDF bei.
-      </div>
-    </td>
-  </tr>
+    ${kasten(`${r.bezahlt
+      ? 'Der Betrag wurde bereits bezahlt &ndash; eine &Uuml;berweisung ist nicht n&ouml;tig. Ihr Guthaben steht sofort zur Verf&uuml;gung.'
+      : `Bitte &uuml;berweisen Sie den Gesamtbetrag unter Angabe der Rechnungsnummer <strong>${esc(r.nummer)}</strong>.`}<br /><br />Die Rechnung liegt dieser E-Mail als PDF bei.`)}
 
-  ${pdfKnopf}
+    ${pdfKnopf}
+  `;
 
-  <tr>
-    <td style="padding:26px 32px 30px;font-family:${SCHRIFT};">
-      <div style="border-top:1px solid #f1f5f9;padding-top:18px;font-size:11px;color:#94a3b8;line-height:1.8;">
-        ${esc(a.name)}${a.anschrift ? ' &middot; ' + esc(a.anschrift) : ''}${a.inhaber ? '<br />Inhaber: ' + esc(a.inhaber) : ''}${a.steuernummer ? ' &middot; Steuernummer: ' + esc(a.steuernummer) : ''}${a.ustId ? ' &middot; USt-IdNr.: ' + esc(a.ustId) : ''}
-        <br />Fragen zur Rechnung? <a href="mailto:${esc(a.email)}" style="color:#4f46e5;text-decoration:none;">${esc(a.email)}</a>
-      </div>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  return huelle(a, { marke: 'RECHNUNG', vorschau, titel: `Rechnung ${r.nummer}`, inhalt });
 }

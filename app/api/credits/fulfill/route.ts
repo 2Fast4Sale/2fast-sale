@@ -64,7 +64,15 @@ export async function POST(req: NextRequest) {
 
   const { error: updateErr } = await service
     .from('profiles')
-    .update({ listing_credits: current + quantity })
+    .update({
+      listing_credits: current + quantity,
+      /*
+       * Guthaben-Hinweis wieder scharf stellen. Ohne das Zuruecksetzen
+       * bekommt der Haendler die Warnung genau einmal im Leben und steht
+       * beim uebernaechsten Mal ohne Vorwarnung vor der Bezahlseite.
+       */
+      low_credit_email_at: null,
+    })
     .eq('id', userId);
 
   if (updateErr) {
