@@ -18,8 +18,18 @@
 import Stripe from 'stripe';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 
-/** Preis pro Inserat in Cent. Ueber Env aenderbar, ohne Deploy. */
-export const PREIS_PRO_INSERAT_CENT = Number(process.env.PREIS_PRO_INSERAT_CENT || '350');
+/*
+ * Der Preis pro Inserat steht nicht mehr hier, sondern in lib/preismodell
+ * — zusammen mit Grundgebuehr und Paketen. Vorher lag er als eigene
+ * Konstante hier und ein zweites Mal als Text auf der Website, und die
+ * beiden sind auseinandergelaufen.
+ *
+ * Der Mengenrabatt steckt in den Paketen, nicht im Einzelpreis. Ein
+ * Haendler mit Paket bekommt seine Inserate ueber das Kontingent
+ * abgedeckt; berechnet wird hier nur, was darueber hinausgeht.
+ */
+export { PREIS_PRO_INSERAT_CENT } from './preismodell';
+import { PREIS_PRO_INSERAT_CENT } from './preismodell';
 
 /*
  * Kontingent und Zusatzpreis kommen aus lib/studioQuota — dasselbe Modul, das
@@ -73,7 +83,6 @@ export async function berechneInserat(args: {
 }): Promise<BerechnungsErgebnis> {
   const { userId, vehicleId, bezeichnung } = args;
   const studioImages = Math.max(0, Math.round(args.studioImages ?? 0));
-  const posten = berechnePosten(studioImages);
 
   try {
     const supabase = admin();
@@ -87,6 +96,8 @@ export async function berechneInserat(args: {
     if (!profile?.usage_billing) {
       return { berechnet: false, grund: 'kein_usage_kunde' };
     }
+
+    const posten = berechnePosten(studioImages);
 
     // Posten zuerst in der eigenen Datenbank festhalten. Das unique auf
     // vehicle_id laesst den zweiten Versuch scheitern — genau so soll es sein.

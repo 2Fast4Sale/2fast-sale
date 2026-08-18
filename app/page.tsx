@@ -21,6 +21,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro } from '../lib/preismodell';
 import {
   ArrowRight, ScanLine, Camera, Sparkles, FileDown, Check, Menu, X,
   ShieldCheck, Clock, Layers, Gauge, ChevronDown,
@@ -63,11 +64,39 @@ const FUNKTIONEN = [
   { icon: <Clock size={20} />,      titel: 'Direktexport',          text: 'Übertragung zu mobile.de und AutoScout24 ist in Vorbereitung.', geplant: true },
 ];
 
+/*
+ * Die Beträge kommen aus lib/preismodell und stehen nicht mehr hier.
+ * Vorher warben diese Zeilen noch Monats-Abos zu 99,49 €, während
+ * längst pro Inserat abgerechnet wurde — die Website hat monatelang
+ * etwas anderes versprochen, als die Rechnung dann sagte.
+ */
 const PLAENE = [
-  { name: 'Starter',  preis: '0',      inserate: '3 Inserate im Monat',   merkmale: ['Studio-Hintergründe', 'Beschreibung und Titel', 'PDF und Fotopaket'], cta: 'Kostenlos testen', ziel: '/auth/register' },
-  { name: 'Basic',    preis: '99,49',  inserate: '30 Inserate im Monat',  merkmale: ['Alles aus Starter', 'Fahrzeugschein-Scan', 'Eigener Showroom als Hintergrund'], cta: 'Basic wählen', ziel: '/dashboard/pricing' },
-  { name: 'Premium',  preis: '249,99', inserate: '150 Inserate im Monat', merkmale: ['Alles aus Basic', 'Firmen-Wasserzeichen', 'Vorrangiger Support'], cta: 'Premium wählen', ziel: '/dashboard/pricing', beliebt: true },
-  { name: 'Business', preis: '699,99', inserate: '550 Inserate im Monat', merkmale: ['Alles aus Premium', 'Alle Hintergründe', 'Bis zu 10 Nutzerkonten'], cta: 'Business wählen', ziel: '/dashboard/pricing' },
+  {
+    name: 'Ohne Paket',
+    preisCent: GRUNDGEBUEHR_CENT,
+    zusatz: `+ ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
+    inserate: 'Beliebig viele, einzeln abgerechnet',
+    merkmale: ['Studio-Hintergründe', 'Beschreibung und Titel', 'Fahrzeugschein-Scan'],
+    cta: 'Kostenlos anlegen',
+    ziel: '/auth/register',
+    beliebt: false,
+  },
+  ...PAKETE.map((p, i) => ({
+    name: p.name,
+    preisCent: p.preisCent,
+    zusatz: `entspricht ${euro(Math.round(p.preisCent / p.inserate))} € je Inserat`,
+    inserate: `${p.inserate} Inserate im Monat enthalten`,
+    merkmale: i === 0
+      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', 'PDF und Fotopaket']
+      : i === 1
+        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', 'Vorrangiger Support']
+        : ['Alles aus Paket M', 'Alle Hintergründe', 'Bis zu 10 Nutzerkonten'],
+    cta: `${p.name} wählen`,
+    ziel: '/dashboard/pricing',
+    // Das mittlere Paket hervorheben: Es deckt die Menge ab, die ein
+    // Händler mit durchschnittlichem Bestand tatsächlich einstellt.
+    beliebt: i === 1,
+  })),
 ];
 
 const FRAGEN = [
@@ -169,8 +198,14 @@ export default function Startseite() {
             <a href="#ablauf" className="btn-hero-ghost">So funktioniert es</a>
           </div>
 
+          {/*
+            Hier stand "Drei Inserate im Starter-Tarif kostenlos" — den
+            Starter-Tarif gibt es im Paketmodell nicht mehr. Ein Versprechen
+            auf der Startseite, das im Konto nicht eingelöst wird, ist der
+            erste Eindruck, den ein Händler behält.
+          */}
           <p className="hero-note">
-            Drei Inserate im Starter-Tarif kostenlos · Keine Zahlungsdaten nötig
+            Konto kostenlos anlegen · Keine Zahlungsdaten nötig · Monatlich kündbar
           </p>
         </div>
 
@@ -249,9 +284,10 @@ export default function Startseite() {
                 {p.beliebt && <span className="popular-badge">Meist gewählt</span>}
                 <h3 className="pricing-name">{p.name}</h3>
                 <div className="pricing-price">
-                  <span className="price-value">{p.preis}</span>
+                  <span className="price-value">{euro(p.preisCent)}</span>
                   <span className="price-unit">€ / Monat</span>
                 </div>
+                <p className="pricing-extra">{p.zusatz}</p>
                 <p className="pricing-listings">{p.inserate}</p>
                 <ul className="pricing-features">
                   {p.merkmale.map(m => (
@@ -264,7 +300,9 @@ export default function Startseite() {
           </div>
 
           <p className="pricing-note">
-            Grössere Bestände? <Link href="/kontakt">Sprich uns an</Link> — dann finden wir eine passende Staffel.
+            Über dem Kontingent läuft es mit {euro(PREIS_PRO_INSERAT_CENT)} € je Inserat weiter — ab
+            der Menge, ab der sich das nächstgrössere Paket lohnt, weisen wir im Konto darauf hin.
+            Grössere Bestände? <Link href="/kontakt">Sprich uns an</Link>.
           </p>
         </div>
       </section>
