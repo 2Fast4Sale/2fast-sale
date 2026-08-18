@@ -1,33 +1,27 @@
 ﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../lib/supabase/server';
+import { preisIdLesen } from '../../../lib/stripePreise';
 
 export const dynamic = 'force-dynamic';
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-05-27.dahlia' });
 
-// Stripe Price IDs aus .env.local
-const PRICE_IDS: Record<string, Record<string, string>> = {
-  basic: {
-    monthly: process.env.STRIPE_BASIC_MONTHLY_PRICE_ID  || '',
-    yearly:  process.env.STRIPE_BASIC_YEARLY_PRICE_ID   || '',
-  },
-  premium: {
-    monthly: process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || '',
-    yearly:  process.env.STRIPE_PREMIUM_YEARLY_PRICE_ID  || '',
-  },
-  business: {
-    monthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID || '',
-    yearly:  process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID  || '',
-  },
-  enterprise: {
-    monthly: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID || '',
-    yearly:  process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID  || '',
-  },
-  professional: {
-    monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
-    yearly:  process.env.STRIPE_PRO_YEARLY_PRICE_ID  || '',
-  },
+/*
+ * Welcher Plan liegt in welcher Umgebungsvariable.
+ *
+ * Hier stehen absichtlich die Variablennamen und nicht ihre Werte: Die
+ * Werte wurden frueher beim Laden des Moduls eingelesen, sodass ein
+ * fehlender Eintrag zu einem leeren String wurde und nicht mehr von
+ * einem falschen zu unterscheiden war. So bleibt der Name erhalten und
+ * kann in der Fehlermeldung genannt werden.
+ */
+const PREIS_VARIABLEN: Record<string, Record<string, string>> = {
+  basic:        { monthly: 'STRIPE_BASIC_MONTHLY_PRICE_ID',      yearly: 'STRIPE_BASIC_YEARLY_PRICE_ID' },
+  premium:      { monthly: 'STRIPE_PREMIUM_MONTHLY_PRICE_ID',    yearly: 'STRIPE_PREMIUM_YEARLY_PRICE_ID' },
+  business:     { monthly: 'STRIPE_BUSINESS_MONTHLY_PRICE_ID',   yearly: 'STRIPE_BUSINESS_YEARLY_PRICE_ID' },
+  enterprise:   { monthly: 'STRIPE_ENTERPRISE_MONTHLY_PRICE_ID', yearly: 'STRIPE_ENTERPRISE_YEARLY_PRICE_ID' },
+  professional: { monthly: 'STRIPE_PRO_MONTHLY_PRICE_ID',        yearly: 'STRIPE_PRO_YEARLY_PRICE_ID' },
 };
 
 export async function POST(req: Request) {
@@ -38,12 +32,29 @@ export async function POST(req: Request) {
 
     const { plan, billing = 'monthly', successUrl, cancelUrl } = await req.json();
 
-    const priceId = PRICE_IDS[plan]?.[billing];
-    if (!priceId) {
-      return NextResponse.json({
-        error: `Kein Stripe Price-ID für Plan "${plan}" / "${billing}".\nBitte in .env.local eintragen: STRIPE_${plan.toUpperCase()}_${billing.toUpperCase()}_PRICE_ID=price_xxx`,
-      }, { status: 400 });
+    const variable = PREIS_VARIABLEN[plan]?.[billing];
+    if (!variable) {
+      return NextResponse.json(
+        { error: `Unbekannter Plan "${plan}" oder Abrechnungsart "${billing}".` },
+        { status: 400 },
+      );
     }
+
+    const preis = preisIdLesen(variable);
+    if ('fehler' in preis) {
+      /*
+       * Der Haendler kann hier nichts richten — es ist ein
+       * Konfigurationsfehler auf unserer Seite. Deshalb 503 statt 400,
+       * die Ursache in die Logs, und nach aussen ein Satz, der nicht
+       * nach kaputter Software klingt.
+       */
+      console.error(`[checkout] Plan "${plan}"/"${billing}" nicht buchbar: ${preis.fehler}`);
+      return NextResponse.json(
+        { error: 'Dieser Tarif lässt sich gerade nicht buchen. Bitte melden Sie sich kurz bei uns, wir schalten ihn frei.' },
+        { status: 503 },
+      );
+    }
+    const priceId = preis.id;
 
     const { data: profile } = await supabase
       .from('profiles')

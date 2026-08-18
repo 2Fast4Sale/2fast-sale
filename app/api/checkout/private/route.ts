@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '../../../../lib/supabase/server';
+import { preisIdLesen } from '../../../../lib/stripePreise';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,12 +32,15 @@ export async function POST(req: Request) {
       await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id);
     }
 
-    const priceId = process.env.STRIPE_PRIVATE_LISTING_PRICE_ID;
-    if (!priceId) {
-      return NextResponse.json({
-        error: 'STRIPE_PRIVATE_LISTING_PRICE_ID fehlt in .env.local',
-      }, { status: 400 });
+    const preis = preisIdLesen('STRIPE_PRIVATE_LISTING_PRICE_ID');
+    if ('fehler' in preis) {
+      console.error(`[checkout/private] nicht buchbar: ${preis.fehler}`);
+      return NextResponse.json(
+        { error: 'Das Einzelinserat lässt sich gerade nicht buchen. Bitte melden Sie sich kurz bei uns.' },
+        { status: 503 },
+      );
     }
+    const priceId = preis.id;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
