@@ -42,8 +42,44 @@ export interface Aussteller {
   seite: string;
 }
 
+/**
+ * Angaben, ohne die eine Rechnung nach § 14 UStG unvollständig ist.
+ *
+ * Sie kommen aus der Umgebung und können dort schlicht fehlen. Ohne
+ * Hinweis merkt das niemand: Die Rechnung wird trotzdem erzeugt, sieht
+ * auf den ersten Blick vollständig aus, und der Fehler fällt erst auf,
+ * wenn der Steuerberater des Händlers sie zurückweist.
+ */
+const PFLICHTANGABEN: [keyof Aussteller, string][] = [
+  ['anschrift', 'COMPANY_ADDRESS'],
+  ['steuernummer', 'COMPANY_STEUERNUMMER'],
+];
+
 export function ausstellerAusUmgebung(): Aussteller {
   const seite = process.env.NEXT_PUBLIC_SITE_URL || 'https://2fast4sale.com';
+  const a = bauen(seite);
+
+  const fehlend = PFLICHTANGABEN
+    .filter(([feld]) => !String(a[feld] ?? '').trim())
+    .map(([, variable]) => variable);
+
+  // USt-IdNr. ODER Steuernummer genügt; nur wenn beide fehlen, ist es ein Mangel.
+  if (a.ustId?.trim()) {
+    const i = fehlend.indexOf('COMPANY_STEUERNUMMER');
+    if (i >= 0) fehlend.splice(i, 1);
+  }
+
+  if (fehlend.length) {
+    console.warn(
+      `[email] Rechnung ohne Pflichtangaben: ${fehlend.join(', ')} nicht gesetzt. ` +
+      'Der Kunde kann die Rechnung so nicht verbuchen.'
+    );
+  }
+
+  return a;
+}
+
+function bauen(seite: string): Aussteller {
   return {
     name: '2Fast4Sale',
     anschrift: process.env.COMPANY_ADDRESS || '',
