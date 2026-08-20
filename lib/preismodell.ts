@@ -55,15 +55,21 @@ export const PAKETE: readonly Paket[] = [
   { id: 'l', name: 'Paket L', preisCent: 120000, inserate: 550 },
 ];
 
-export { STUDIO_INKLUSIVE, PREIS_EXTRA_BILD_CENT } from './studioQuota';
-import { STUDIO_INKLUSIVE, PREIS_EXTRA_BILD_CENT } from './studioQuota';
+export { STUDIO_INKLUSIVE, PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';
+import { PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';
 
 /* ────────────────────────── Berechnung ────────────────────────── */
 
-/** Kosten für Studio-Bilder über dem Inklusivkontingent, je Inserat. */
-export function studioExtraCent(bilderProInserat: number[]): number {
+/**
+ * Kosten für Studio-Bilder über dem Kontingent, je Inserat gerechnet.
+ *
+ * Das Kontingent gilt pro Inserat, nicht pro Monat — wer bei einem
+ * Fahrzeug sparsam war, kann das nicht auf das nächste übertragen.
+ */
+export function studioExtraCent(bilderProInserat: number[], paketId?: Paket['id'] | null): number {
+  const kontingent = studioInklusive(paketId);
   return bilderProInserat.reduce((summe, n) => {
-    const extra = Math.max(0, Math.round(n) - STUDIO_INKLUSIVE);
+    const extra = Math.max(0, Math.round(n) - kontingent);
     return summe + extra * PREIS_EXTRA_BILD_CENT;
   }, 0);
 }
@@ -117,7 +123,7 @@ export function monatsrechnung(o: {
     }
   }
 
-  const extra = studioExtraCent(o.studioBilder ?? []);
+  const extra = studioExtraCent(o.studioBilder ?? [], o.paketId);
   if (extra > 0) {
     posten.push({ bezeichnung: 'Zusätzliche Studio-Bilder', betragCent: extra });
   }

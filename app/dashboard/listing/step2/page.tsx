@@ -9,17 +9,28 @@ import {
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
-import { STUDIO_INKLUSIVE, studioAufteilung, centAlsEuro } from '../../../../lib/studioQuota';
+import { studioAufteilung, studioInklusive, centAlsEuro } from '../../../../lib/studioQuota';
 import Link from 'next/link';
 
-// Fotolimit je Plan
+/*
+ * Wie viele Fotos insgesamt hochgeladen werden duerfen — Studio und
+ * normale zusammen.
+ *
+ * Hier standen die Namen der abgeloesten Abos (free, basic, premium …).
+ * Mit den Paketen s/m/l traf keiner mehr zu, der Zugriff lief in den
+ * Standardwert und jeder Haendler waere auf 6 Fotos begrenzt gewesen —
+ * auch mit Paket L.
+ *
+ * Die Werte sind bewusst grosszuegig. Ein normales Foto kostet nur
+ * Speicher, teuer ist allein die Studio-Bearbeitung, und die begrenzt
+ * das Kontingent in studioQuota. Bei mobile.de haben teure Fahrzeuge bis
+ * zu 56 Fotos; wer die einstellen will, soll das hier auch koennen.
+ */
 const PHOTO_LIMITS: Record<string, number> = {
-  free:       6,
-  basic:      15,
-  premium:    20,
-  pro:        20,
-  business:   35,
-  enterprise: 35,
+  kein: 20,
+  s:    30,
+  m:    45,
+  l:    60,
 };
 
 const F    = '"Inter", -apple-system, sans-serif';
@@ -207,7 +218,15 @@ function Step2Inner() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const photoLimit = PHOTO_LIMITS[plan] ?? 6;
+  /*
+   * Welches Paket ist gebucht? Das Konto speichert den Plan als Text;
+   * die Pakete heissen s/m/l. Alles andere — auch der alte "free"-Wert
+   * aus dem abgeloesten Abo-Modell — gilt als "kein Paket" und bekommt
+   * das kleinste Kontingent.
+   */
+  const paketId = (['s', 'm', 'l'] as const).find(id => id === plan) ?? null;
+
+  const photoLimit = PHOTO_LIMITS[paketId ?? 'kein'] ?? PHOTO_LIMITS.kein;
 
   // Plan aus localStorage holen (wird vom Layout aktuell gehalten)
   useEffect(() => {
@@ -662,15 +681,23 @@ function Step2Inner() {
                 Tacho oder Motorraum wirkt ein Studio-Hintergrund unnatürlich.
                 Du kannst das pro Foto umschalten.
                 {(() => {
-                  const auf = studioAufteilung(photos.filter(p => p.studio).length);
+                  /*
+                   * Das Kontingent haengt am gebuchten Paket — 12 ohne Paket,
+                   * bis 30 bei Paket L. Vorher stand hier fest der kleinste
+                   * Wert; ein Haendler mit Paket L haette also 18 Bilder als
+                   * kostenpflichtig angezeigt bekommen, die er laengst bezahlt
+                   * hat, und sie aus Sparsamkeit weggelassen.
+                   */
+                  const auf = studioAufteilung(photos.filter(p => p.studio).length, paketId);
+                  const kontingent = studioInklusive(paketId);
                   return auf.extra > 0 ? (
                     <div style={{ marginTop: '6px', color: '#7c3aed', fontWeight: '600' }}>
-                      {STUDIO_INKLUSIVE} inklusive · {auf.extra} zusätzlich
+                      {kontingent} inklusive · {auf.extra} zusätzlich
                       {' '}= {centAlsEuro(auf.extraCent)} extra
                     </div>
                   ) : (
                     <div style={{ marginTop: '6px', color: '#64748b' }}>
-                      {STUDIO_INKLUSIVE} Studio-Bilder sind im Inseratspreis enthalten.
+                      {kontingent} Studio-Bilder sind im Inseratspreis enthalten.
                     </div>
                   );
                 })()}
