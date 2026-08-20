@@ -9,34 +9,34 @@ export default function UeberUnsPage() {
     <div style={{ background: '#07111f', minHeight: '100vh', color: '#e2e8f0', fontFamily: "'Inter',-apple-system,sans-serif", WebkitFontSmoothing: 'antialiased' }}>
 
       {/* Navbar */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 48px', height: '64px', display: 'flex', alignItems: 'center', background: 'rgba(7,17,31,0.92)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '0 48px', height: '64px', display: 'flex', alignItems: 'center', background: 'rgba(7,17,31,0.92)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }} className="uu-nav">
         <div style={{ maxWidth: '1320px', width: '100%', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '40px' }}>
           <Link href="/" style={{ fontSize: '18px', fontWeight: '800', color: '#f8fafc', textDecoration: 'none', letterSpacing: '-0.5px' }}>
             2Fast<span style={{ color: '#3b82f6' }}>4</span>Sale
           </Link>
-          <div style={{ flex: 1, display: 'flex', gap: '24px' }}>
+          <div style={{ flex: 1, display: 'flex', gap: '24px' }} className="uu-nav-links">
             {[['/', 'Home'], ['/features', 'Features'], ['/#pricing', 'Preise'], ['/ueber-uns', 'Über uns']].map(([href, label]) => (
               <Link key={href} href={href} style={{ color: href === '/ueber-uns' ? '#60a5fa' : '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '500' }}>{label}</Link>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Link href="/auth/login" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '500', padding: '7px 14px', borderRadius: '7px' }}>Einloggen</Link>
-            <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#60a5fa', textDecoration: 'none', fontSize: '13.5px', fontWeight: '600', padding: '7px 14px', borderRadius: '7px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.22)' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <Link href="/auth/login" style={{ color: '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '500', padding: '7px 14px', borderRadius: '7px' }} className="uu-nav-login">Einloggen</Link>
+            <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#60a5fa', textDecoration: 'none', fontSize: '13.5px', fontWeight: '600', padding: '7px 14px', borderRadius: '7px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.22)' }} className="uu-nav-dashboard">
               <BarChart3 size={13} /> Dashboard
             </Link>
-            <Link href="/auth/register" style={{ background: '#2563eb', color: '#fff', textDecoration: 'none', fontSize: '13.5px', fontWeight: '600', padding: '8px 18px', borderRadius: '7px' }}>Kostenlos starten</Link>
+            <Link href="/auth/register" style={{ background: '#2563eb', color: '#fff', textDecoration: 'none', fontSize: '13.5px', fontWeight: '600', padding: '8px 18px', borderRadius: '7px', whiteSpace: 'nowrap' }}>Kostenlos starten</Link>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section style={{ paddingTop: '130px', padding: '130px 48px 80px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ paddingTop: '130px', padding: '130px 48px 80px', textAlign: 'center', position: 'relative', overflow: 'hidden' }} className="uu-hero">
         <div style={{ position: 'absolute', top: '-200px', left: '50%', transform: 'translateX(-50%)', width: '800px', height: '600px', background: 'radial-gradient(circle, rgba(37,99,235,0.13), transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(59,130,246,0.28)', padding: '7px 18px', borderRadius: '100px', marginBottom: '28px', color: '#60a5fa', fontSize: '11.5px', fontWeight: '600', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             <Heart size={12} /> Unsere Geschichte
           </div>
-          <h1 style={{ fontSize: '3.6rem', fontWeight: '900', color: '#f8fafc', letterSpacing: '-2px', marginBottom: '20px', lineHeight: 1.06 }}>
+          <h1 style={{ fontSize: '3.6rem', fontWeight: '900', color: '#f8fafc', letterSpacing: '-2px', marginBottom: '20px', lineHeight: 1.06 }} className="uu-hero-title">
             Wir machen<br /><span style={{ background: 'linear-gradient(125deg,#3b82f6,#818cf8,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Autohandel einfacher</span>
           </h1>
           <p style={{ fontSize: '1.05rem', color: '#64748b', maxWidth: '620px', margin: '0 auto', lineHeight: 1.8 }}>
@@ -46,8 +46,8 @@ export default function UeberUnsPage() {
       </section>
 
       {/* Mission */}
-      <section style={{ padding: '0 48px 100px', maxWidth: '1100px', margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '48px' }}>
+      <section style={{ padding: '0 48px 100px', maxWidth: '1100px', margin: '0 auto' }} className="uu-section">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '48px' }} className="uu-mission-grid">
           {[
             { icon: <Target size={24} />, color: '#3b82f6', title: 'Unsere Mission', text: 'Jedem Autohändler — ob Einzelkämpfer oder großes Autohaus — die gleichen professionellen Werkzeuge zur Verfügung stellen, die bisher nur großen Ketten mit eigenem Fotostudio vorbehalten waren.' },
             { icon: <Zap size={24} />,    color: '#8b5cf6', title: 'Unsere Vision',  text: 'Die Zukunft des Autohandels ist digital, schnell und datengetrieben. 2fast4sale wird die Plattform sein, auf der jeder Händler in Deutschland sein Business aufbaut.' },
@@ -65,9 +65,9 @@ export default function UeberUnsPage() {
         </div>
 
         {/* Story */}
-        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '48px 56px', marginBottom: '48px' }}>
+        <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '48px 56px', marginBottom: '48px' }} className="uu-story">
           <div style={{ display: 'inline-block', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.22)', color: '#60a5fa', fontSize: '11px', fontWeight: '600', padding: '5px 14px', borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '24px' }}>Unsere Geschichte</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px' }} className="uu-story-grid">
             <div>
               <p style={{ color: '#94a3b8', fontSize: '15px', lineHeight: 1.9, marginBottom: '20px' }}>
                 2fast4sale wurde 2025 in Deutschland gegründet, nachdem wir gesehen haben, wie viel Zeit Autohändler täglich mit dem Erstellen von Inseraten verschwenden. Zwei Stunden pro Fahrzeug — Fotos bearbeiten, Daten eintippen, Beschreibung schreiben, auf jede Plattform einzeln hochladen.
@@ -93,7 +93,7 @@ export default function UeberUnsPage() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '48px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '48px' }} className="uu-stats-grid">
           {[
             { number: '2026', label: 'Gegründet', color: '#3b82f6' },
             { number: '500+', label: 'Händler vertrauen uns', color: '#8b5cf6' },
@@ -108,7 +108,7 @@ export default function UeberUnsPage() {
         </div>
 
         {/* Kontakt */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(29,78,216,0.15), rgba(109,40,217,0.1))', border: '1px solid rgba(59,130,246,0.22)', borderRadius: '20px', padding: '48px', textAlign: 'center' }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(29,78,216,0.15), rgba(109,40,217,0.1))', border: '1px solid rgba(59,130,246,0.22)', borderRadius: '20px', padding: '48px', textAlign: 'center' }} className="uu-cta">
           <h2 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#f8fafc', marginBottom: '12px', letterSpacing: '-0.8px' }}>Wir freuen uns von dir zu hören</h2>
           <p style={{ color: '#475569', fontSize: '14px', marginBottom: '28px', lineHeight: 1.7 }}>
             Feedback, Fragen, Partnerschaftsanfragen oder einfach Hallo sagen — wir antworten innerhalb von 24 Stunden.
@@ -125,7 +125,7 @@ export default function UeberUnsPage() {
       </section>
 
       {/* Footer mini */}
-      <footer style={{ background: '#04090f', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '32px 48px', textAlign: 'center', color: '#1e2d40', fontSize: '12.5px' }}>
+      <footer style={{ background: '#04090f', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '32px 48px', textAlign: 'center', color: '#1e2d40', fontSize: '12.5px' }} className="uu-footer">
         <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '12px', flexWrap: 'wrap' }}>
           {[['/', 'Home'], ['/features', 'Features'], ['/#pricing', 'Preise'], ['/kontakt', 'Kontakt'], ['/datenschutz', 'Datenschutz'], ['/impressum', 'Impressum']].map(([href, label]) => (
             <Link key={href} href={href} style={{ color: '#1e2d40', textDecoration: 'none', fontSize: '13px' }}>{label}</Link>
@@ -133,6 +133,22 @@ export default function UeberUnsPage() {
         </div>
         <p>© 2026 2fast4sale. Alle Rechte vorbehalten.</p>
       </footer>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .uu-nav { padding: 0 16px !important; }
+          .uu-nav-links, .uu-nav-login, .uu-nav-dashboard { display: none !important; }
+          .uu-hero { padding: 100px 20px 56px !important; }
+          .uu-hero-title { font-size: 2.2rem !important; letter-spacing: -1px !important; }
+          .uu-section { padding: 0 16px 64px !important; }
+          .uu-mission-grid { grid-template-columns: 1fr !important; }
+          .uu-story { padding: 28px 20px !important; }
+          .uu-story-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+          .uu-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .uu-cta { padding: 32px 20px !important; }
+          .uu-footer { padding: 24px 16px !important; }
+        }
+      `}</style>
     </div>
   );
 }
