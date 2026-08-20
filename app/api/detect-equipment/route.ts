@@ -22,7 +22,7 @@ function toImageBlock(img: string): Anthropic.ImageBlockParam {
 
 export async function POST(req: Request) {
   try {
-    const { images } = await req.json();
+    const { images, draftId } = await req.json();
 
     if (!Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ equipment: [] });
@@ -66,6 +66,7 @@ Maximal 12 Merkmale. Nur wirklich sichtbare Dinge.`,
 
     await logLlmCost({
       userId: await currentUserId(),
+      draftId: draftId ?? null,
       operation: 'detect-equipment',
       model: 'claude-opus-4-8',
       usage: response.usage,

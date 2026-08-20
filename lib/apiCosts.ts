@@ -68,6 +68,15 @@ export function imageCostMicros(service: CostService, calls = 1): number {
 interface LogInput {
   userId?: string | null;
   vehicleId?: string | null;
+  /**
+   * Entwurfs-Nummer des Formulars.
+   *
+   * Zum Zeitpunkt dieser Aufrufe existiert das Fahrzeug noch nicht — es
+   * entsteht erst beim Speichern in Schritt 4. Ohne diese Nummer bleibt
+   * der Posten unzuordenbar, und genau das war er: bei allen bisherigen
+   * Eintraegen ist vehicle_id leer.
+   */
+  draftId?: string | null;
   service: CostService;
   operation: string;
   unitsIn?: number;
@@ -91,6 +100,7 @@ export async function logApiCost(input: LogInput): Promise<void> {
     await supabase.from('api_costs').insert({
       user_id:     input.userId     ?? null,
       vehicle_id:  input.vehicleId  ?? null,
+      draft_id:    input.draftId    ?? null,
       service:     input.service,
       operation:   input.operation,
       units_in:    input.unitsIn    ?? 0,
@@ -110,6 +120,7 @@ export async function logApiCost(input: LogInput): Promise<void> {
 export async function logLlmCost(args: {
   userId?: string | null;
   vehicleId?: string | null;
+  draftId?: string | null;
   operation: string;
   model: string;
   usage?: { input_tokens?: number; output_tokens?: number } | null;
@@ -119,6 +130,7 @@ export async function logLlmCost(args: {
   await logApiCost({
     userId:     args.userId,
     vehicleId:  args.vehicleId,
+    draftId:    args.draftId,
     service:    'anthropic',
     operation:  args.operation,
     unitsIn:    inTok,

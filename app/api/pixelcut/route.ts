@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest) {
   try {
-    const { image, backgroundId, customBackgroundUrl } = await req.json();
+    const { image, backgroundId, customBackgroundUrl, draftId } = await req.json();
     if (!image) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
 
     /*
@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
 
     await logApiCost({
       userId:     await currentUserId(),
+      draftId:    draftId ?? null,
       service:    'photoroom',
       operation:  'remove-bg',
       unitsIn:    1,

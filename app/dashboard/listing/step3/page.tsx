@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles, CheckCircle2, Loader2, Zap, TrendingUp, Target, Search, Globe, FileText, Car } from 'lucide-react';
+import { entwurfId } from '../../../../lib/entwurf';
 
 const F = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
 
@@ -98,6 +99,7 @@ function Step3Inner() {
             dealerNotes:  (step1Data.dealerNotes as string)  || '',
             seats:        step1Data.seats        || '',
             displacement: step1Data.displacementCcm || '',
+            draftId:      entwurfId(),
           }),
         });
         if (!res.ok) throw new Error('API-Fehler');

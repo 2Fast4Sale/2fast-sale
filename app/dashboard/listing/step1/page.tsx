@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import EnvkvFields from '../../../components/EnvkvFields';
 import { validateEnvkv, type EnvkvData } from '../../../../lib/envkv';
+import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
 
 const F    = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
 const BG   = '#f0f2f5';
@@ -69,6 +70,20 @@ export default function Step1() {
   const docInputRef  = useRef<HTMLInputElement>(null);
   const brandRef     = useRef<HTMLDivElement>(null);
   const modelRef     = useRef<HTMLDivElement>(null);
+
+  /*
+   * Neuen Entwurf beginnen.
+   *
+   * Die Nummer verbindet die Kosten, die in den Schritten 1 bis 3
+   * entstehen, mit dem Fahrzeug, das erst in Schritt 4 angelegt wird.
+   * Hier und nicht erst beim Speichern, weil der erste Scan schon Geld
+   * kostet.
+   *
+   * Ohne den Neustart bekaeme das zweite Inserat im selben Tab die
+   * Nummer des ersten, und dessen Kosten wuerden dem falschen Fahrzeug
+   * zugeschrieben.
+   */
+  useEffect(() => { entwurfNeu(); }, []);
 
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -145,7 +160,7 @@ export default function Step1() {
       try {
         const res = await fetch('/api/scan-doc', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: compressed }),
+          body: JSON.stringify({ image: compressed, draftId: entwurfId() }),
         });
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || 'Scan fehlgeschlagen');
@@ -273,6 +288,7 @@ export default function Step1() {
           brand: data.brand, model: data.model,
           year: yr || '', fuel: data.fuelType, gearbox: data.gearbox,
           color: data.color, power: data.powerKw, equipment: data.equipment,
+          draftId: entwurfId(),
         }),
       });
       if (titleRes.ok) {

@@ -10,6 +10,7 @@ import {
   ChevronRight, ExternalLink, Globe, Star, Smartphone, Monitor,
   Phone, Check, BarChart2, Lock,
 } from 'lucide-react';
+import { entwurfId, entwurfBeenden } from '../../../../lib/entwurf';
 
 /* ─── Tokens ─────────────────────────────────────────────────────────────── */
 const F    = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
@@ -512,7 +513,9 @@ function Step4Inner() {
         // Bestimmt die Zusatzposten fuer Studio-Bilder ueber dem Kontingent
         studio_images: Number(
           (typeof window !== 'undefined' && sessionStorage.getItem('listing_studio_count')) || 0
-        ) };
+        ),
+        // Verbindet die Kosten aus den Schritten 1 bis 3 mit diesem Fahrzeug.
+        draft_id: entwurfId() };
       let id = savedId;
       if (!id) {
         const res = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -527,6 +530,9 @@ function Step4Inner() {
           throw new Error(e.error || 'Fehler');
         }
         const data = await res.json(); id = data.vehicle?.id || data.id; setSavedId(id!);
+        // Der Entwurf ist abgeschlossen. Ohne das Aufraeumen bekaeme das
+        // naechste Inserat im selben Tab dieselbe Nummer.
+        entwurfBeenden();
       }
       else { const res = await fetch(`/api/vehicles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Fehler'); } }
       setDone(true);

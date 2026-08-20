@@ -108,6 +108,28 @@ export async function POST(req: Request) {
      * fest, damit nichts verloren geht.
      */
     if (data?.id) {
+      /*
+       * Kosten aus den Schritten 1 bis 3 diesem Fahrzeug zuordnen.
+       *
+       * Sie sind entstanden, bevor es das Fahrzeug gab — Scan,
+       * Ausstattungserkennung, Freistellungen und Beschreibung laufen
+       * alle vorher. Ohne diesen Schritt bleibt api_costs.vehicle_id
+       * leer und man sieht nie, welches Inserat teuer war.
+       *
+       * Fehler hier duerfen das Inserat nicht kippen: Der Haendler hat
+       * sein Fahrzeug, die Zuordnung ist Buchhaltung.
+       */
+      if (body.draft_id) {
+        const { error: zuordnungsFehler } = await supabase.rpc('kosten_zuordnen', {
+          p_draft_id:   body.draft_id,
+          p_vehicle_id: data.id,
+          p_user_id:    user.id,
+        });
+        if (zuordnungsFehler) {
+          console.error('[vehicles] Kostenzuordnung fehlgeschlagen:', zuordnungsFehler.message);
+        }
+      }
+
       await berechneInserat({
         userId:       user.id,
         vehicleId:    data.id,

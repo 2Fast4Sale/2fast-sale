@@ -63,6 +63,7 @@ Kein Markdown, keine Erklärung, nur JSON.`,
 
     await logLlmCost({
       userId: await currentUserId(),
+      draftId: body?.draftId ?? null,
       operation: 'generate-title',
       model: 'claude-opus-4-8',
       usage: response.usage,

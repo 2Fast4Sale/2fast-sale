@@ -64,6 +64,7 @@ Schreibe 3–4 Sätze auf Deutsch. Überzeugend, kaufmotivierend, kein Marketing
     await logLlmCost({
       userId,
       vehicleId: body.vehicleId ?? null,
+      draftId: body.draftId ?? null,
       operation: 'generate-description',
       model: 'claude-opus-4-8',
       usage: response.usage,

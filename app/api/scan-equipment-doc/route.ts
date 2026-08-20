@@ -23,7 +23,7 @@ function toImageBlock(img: string): Anthropic.ImageBlockParam {
 
 export async function POST(req: Request) {
   try {
-    const { image } = await req.json();
+    const { image, draftId } = await req.json();
 
     const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
@@ -71,6 +71,7 @@ Gib so viele Merkmale wie möglich zurück. Lieber zu viel als zu wenig.`,
 
     await logLlmCost({
       userId: await currentUserId(),
+      draftId: draftId ?? null,
       operation: 'scan-equipment-doc',
       model: 'claude-opus-4-8',
       usage: response.usage,

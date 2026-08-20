@@ -135,7 +135,7 @@ const DB_LABELS = [
 
 export async function POST(req: Request) {
   try {
-    const { image } = await req.json();
+    const { image, draftId } = await req.json();
     if (!image) return NextResponse.json({ error: 'Kein Bild' }, { status: 400 });
 
     const response = await getAnthropic().messages.create({
@@ -153,6 +153,7 @@ export async function POST(req: Request) {
 
     await logLlmCost({
       userId: await currentUserId(),
+      draftId: draftId ?? null,
       operation: 'scan-doc',
       model: 'claude-opus-4-8',
       usage: response.usage,

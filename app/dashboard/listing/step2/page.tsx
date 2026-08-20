@@ -11,6 +11,7 @@ import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro } from '../../../../lib/studioQuota';
 import Link from 'next/link';
+import { entwurfId } from '../../../../lib/entwurf';
 
 /*
  * Wie viele Fotos insgesamt hochgeladen werden duerfen — Studio und
@@ -252,7 +253,7 @@ function Step2Inner() {
       const res = await fetch('/api/detect-equipment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: base64Images }),
+        body: JSON.stringify({ images: base64Images, draftId: entwurfId() }),
       });
       if (!res.ok) throw new Error('Fehler');
       const data = await res.json();
@@ -351,7 +352,7 @@ function Step2Inner() {
       const res = await fetch('/api/pixelcut', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: compressed, backgroundId, customBackgroundUrl }),
+        body: JSON.stringify({ image: compressed, backgroundId, customBackgroundUrl, draftId: entwurfId() }),
       });
       if (!res.ok) throw new Error('Verarbeitung fehlgeschlagen');
       const data = await res.json();
