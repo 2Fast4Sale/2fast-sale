@@ -5,6 +5,10 @@ import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../lib/supabase/client';
 import {
+  PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, paketLohntAb, euro,
+} from '../../../lib/preismodell';
+import { studioInklusive, PREIS_EXTRA_BILD_CENT } from '../../../lib/studioQuota';
+import {
   CheckCircle2, X, Zap, Crown, Building2, Sparkles,
   User, ShoppingCart, Loader2, AlertTriangle, ChevronDown,
   ArrowRight, Star, Shield, Clock,
@@ -13,95 +17,80 @@ import {
 const F = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
 
 /* ─── Plan data ─────────────────────────────────────────── */
+/*
+ * Die Pakete.
+ *
+ * Preise und Kontingente kommen aus lib/preismodell und lib/studioQuota,
+ * damit Startseite, diese Seite und die Rechnung nicht auseinanderlaufen.
+ * Genau das war passiert: Hier standen Starter, Basic, Premium, Business
+ * und Enterprise mit Betraegen aus dem abgeloesten Abo-Modell.
+ *
+ * Alle Merkmale sind gegen den Code geprueft. Die alte Fassung warb mit
+ * "mobile.de Direktexport", "AutoScout24 Direktexport", "API-Zugang",
+ * "White-Label" und "Bis zu 10 Nutzerkonten" — nichts davon existiert.
+ * Bei einem kostenpflichtigen Tarif ist das irrefuehrende Werbung nach
+ * § 5 UWG, und es ist der Punkt, an dem ein Haendler sein Geld
+ * zurueckverlangt.
+ */
 const PLANS = [
   {
-    id: 'free',
-    name: 'Starter',
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    listings: '3 Inserate',
-    listingsSub: 'einmalig',
-    desc: 'Kostenlos testen — ohne Abo.',
+    id: 'kein',
+    name: 'Ohne Paket',
+    monthlyPrice: GRUNDGEBUEHR_CENT / 100,
+    yearlyPrice: GRUNDGEBUEHR_CENT / 100,
+    listings: `+ ${euro(PREIS_PRO_INSERAT_CENT)} €`,
+    listingsSub: 'je Inserat',
+    desc: 'Grundgebühr plus Einzelpreis. Passend bei wenigen Fahrzeugen.',
     icon: Sparkles,
     color: '#64748b',
     bg: '#f8fafc',
-    features: ['3 Inserate (einmalig)', 'KI-Dokumentenscan', '2 Studio-Hintergründe', 'PDF Export', 'E-Mail Support'],
-    missing: ['KI-Inseratsbeschreibung', 'mobile.de & AutoScout24', 'KI-Ausstattungserkennung'],
+    features: [
+      `${studioInklusive(null)} Studio-Bilder je Inserat`,
+      'Fahrzeugschein-Scan und FIN-Abfrage',
+      'Geführte Aufnahme mit Silhouette',
+      'Titel und Beschreibung aus den Fahrzeugdaten',
+      'PDF-Datenblatt und Fotopaket',
+    ],
+    missing: ['Eigener Showroom als Hintergrund', 'Firmen-Wasserzeichen'],
     popular: false,
     contact: false,
   },
-  {
-    id: 'basic',
-    name: 'Basic',
-    monthlyPrice: 99.49,
-    yearlyPrice: 79,
-    listings: '30 Inserate',
-    listingsSub: 'pro Monat',
-    desc: 'Für kleine Händler mit regelmäßigem Verkauf.',
-    icon: Zap,
-    color: '#3b82f6',
-    bg: '#eff6ff',
-    features: ['30 Inserate / Monat', 'KI-Dokumentenscan', 'KI-Inseratsbeschreibung', 'KI-Ausstattungserkennung (VIN)', 'Alle Studio-Hintergründe', 'mobile.de Direktexport', 'AutoScout24 Direktexport', 'E-Mail Support'],
+  ...PAKETE.map((p, i) => ({
+    id: p.id,
+    name: p.name,
+    monthlyPrice: p.preisCent / 100,
+    yearlyPrice: p.preisCent / 100,
+    listings: `${p.inserate} Inserate`,
+    listingsSub: 'im Monat enthalten',
+    desc: [
+      'Für Händler mit regelmäßigem Verkauf.',
+      'Für aktive Gebrauchtwagenhändler.',
+      'Für Autohäuser mit großem Bestand.',
+    ][i],
+    icon: [Zap, Crown, Building2][i],
+    color: ['#3b82f6', '#7c3aed', '#d97706'][i],
+    bg: ['#eff6ff', '#f5f3ff', '#fffbeb'][i],
+    features: [
+      `${studioInklusive(p.id)} Studio-Bilder je Inserat`,
+      i === 0 ? 'Alles aus "Ohne Paket"' : `Alles aus ${PAKETE[i - 1].name}`,
+      'Eigener Showroom als Hintergrund',
+      ...(i >= 1 ? ['Firmen-Wasserzeichen', 'Statistiken zu deinen Inseraten'] : []),
+      `Darüber ${euro(PREIS_PRO_INSERAT_CENT)} € je weiteres Inserat`,
+    ],
     missing: [],
-    popular: false,
+    popular: i === 1,
     contact: false,
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    monthlyPrice: 249.99,
-    yearlyPrice: 199,
-    listings: '150 Inserate',
-    listingsSub: 'pro Monat',
-    desc: 'Der Standard für aktive Gebrauchtwagenhändler.',
-    icon: Crown,
-    color: '#7c3aed',
-    bg: '#f5f3ff',
-    features: ['150 Inserate / Monat', 'Alles aus Basic', 'Prioritäts-Support (< 24 h)', 'Erweiterte Statistiken', 'Frühzeitiger Zugang zu neuen Features'],
-    missing: [],
-    popular: true,
-    contact: false,
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    monthlyPrice: 699.99,
-    yearlyPrice: 559,
-    listings: '550 Inserate',
-    listingsSub: 'pro Monat',
-    desc: 'Für Autohäuser und Händlergruppen.',
-    icon: Building2,
-    color: '#d97706',
-    bg: '#fffbeb',
-    features: ['550 Inserate / Monat', 'Alles aus Premium', 'API-Zugang & Webhooks', 'White-Label & eigene Domain', 'Bis zu 10 Nutzerkonten', 'Dedizierter Account Manager', 'SLA & Onboarding-Schulung'],
-    missing: [],
-    popular: false,
-    contact: false,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    monthlyPrice: -1,
-    yearlyPrice: -1,
-    listings: 'Unbegrenzt',
-    listingsSub: '',
-    desc: 'Individuelle Lösung für große Händlernetze.',
-    icon: Star,
-    color: '#0891b2',
-    bg: '#ecfeff',
-    features: ['Unbegrenzte Inserate', 'Individuelle API-Integration', 'Eigenes Branding & White-Label', 'Dedizierter Account Manager', 'SLA Garantie', 'Onboarding & Schulungen'],
-    missing: [],
-    popular: false,
-    contact: true,
-  },
+  })),
 ];
 
 const FAQS = [
-  { q: 'Unterschied Privatperson vs. Händler-Abo?', a: 'Als Privatperson zahlst du 4,99 € pro Inserat — einmalig, kein Abo. Ideal für 1–2 Verkäufe im Jahr. Händler mit regelmäßigem Verkauf sparen mit dem Monats-Abo ab 99,49 €.' },
+  { q: 'Was kostet ein Inserat ohne Paket?', a: `${euro(GRUNDGEBUEHR_CENT)} € Grundgebühr im Monat plus ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat. Ab ${paketLohntAb('s')} Inseraten im Monat ist Paket S günstiger, ab ${paketLohntAb('m')} Paket M, ab ${paketLohntAb('l')} Paket L.` },
+  { q: 'Was passiert über dem Kontingent?', a: `Es läuft mit ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat weiter — nichts wird blockiert. Sobald sich das nächstgrößere Paket lohnt, weisen wir dich darauf hin.` },
+  { q: 'Was sind Studio-Bilder?', a: `Fotos, die freigestellt und vor einen Studio-Hintergrund gesetzt werden. Das brauchen nur die Außenansichten — Cockpit, Motorraum oder Serviceheft lädst du normal hoch, die zählen nicht aufs Kontingent und kosten nichts. Zusätzliche Studio-Bilder kosten ${PREIS_EXTRA_BILD_CENT} Cent.` },
+  { q: 'Unterschied Privatperson und Händler?', a: 'Als Privatperson zahlst du 4,99 € pro Inserat — einmalig, kein Abo. Für ein bis zwei Verkäufe im Jahr ist das richtig. Wer regelmäßig verkauft, fährt mit Grundgebühr oder Paket günstiger.' },
   { q: 'Wie lange gilt ein Inserat-Credit?', a: 'Gekaufte Credits verfallen nicht. Du kannst sie jederzeit einlösen, auch Monate später.' },
-  { q: 'Kann ich jederzeit kündigen?', a: 'Ja — monatliche Kündigung zum Ende des Abrechnungszeitraums. Keine Mindestlaufzeit, keine versteckten Gebühren.' },
-  { q: 'Was passiert beim Inserate-Limit?', a: 'Du erhältst eine E-Mail und kannst jederzeit upgraden. Bestehende Inserate bleiben vollständig erhalten.' },
-  { q: 'Gibt es eine Testphase?', a: 'Der Starter-Plan ist einmalig kostenlos. Abo-Pläne haben 1 Tag kostenlos zum Testen — danach automatische Abrechnung.' },
+  { q: 'Kann ich jederzeit kündigen?', a: 'Ja — monatliche Kündigung zum Ende des Abrechnungszeitraums. Keine Mindestlaufzeit.' },
+  { q: 'Stellt ihr direkt auf mobile.de ein?', a: 'Noch nicht. Du lädst Fotopaket und Text herunter und stellst damit selbst ein. Die direkte Übertragung ist in Vorbereitung — wir bewerben sie erst, wenn sie läuft.' },
 ];
 
 /* ─── Plan Card ─────────────────────────────────────────── */
@@ -377,26 +366,13 @@ function PricingContent() {
             ))}
           </div>
 
-          {/* Billing toggle */}
-          <div style={{ display: 'inline-flex', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '4px', gap: '4px' }}>
-            {(['monthly', 'yearly'] as const).map(b => (
-              <button key={b} onClick={() => setBilling(b)} style={{
-                padding: '8px 20px', borderRadius: '8px', border: 'none',
-                cursor: 'pointer', fontSize: '13px', fontWeight: '700',
-                background: billing === b ? '#0f172a' : 'transparent',
-                color: billing === b ? '#fff' : '#64748b',
-                transition: 'all 0.15s', fontFamily: F,
-                display: 'flex', alignItems: 'center', gap: '7px',
-              }}>
-                {b === 'monthly' ? 'Monatlich' : 'Jährlich'}
-                {b === 'yearly' && (
-                  <span style={{ fontSize: '9px', background: '#dcfce7', color: '#16a34a', padding: '2px 6px', borderRadius: '4px', fontWeight: '800' }}>
-                    BIS −20%
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          {/*
+            Hier stand ein Umschalter Monatlich/Jaehrlich mit dem Hinweis
+            "BIS -20%". Im Paketmodell gibt es keinen Jahrespreis — der
+            Rabatt haette nie gegriffen, der Umschalter haette denselben
+            Betrag zweimal gezeigt. Ein Rabattversprechen, das die Seite
+            selbst nicht einloest, faellt beim ersten Klick auf.
+          */}
         </div>
 
         {/* ── Privatperson Hero ── */}
@@ -537,20 +513,19 @@ function PricingContent() {
             ))}
           </div>
         ) : (
-          <>
-            {/* Desktop: Reihe 1: Starter, Basic, Premium */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
-              {PLANS.slice(0, 3).map(plan => (
-                <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
-              ))}
-            </div>
-            {/* Desktop: Reihe 2: Business, Enterprise */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', maxWidth: '780px', margin: '0 auto 48px' }}>
-              {PLANS.slice(3).map(plan => (
-                <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
-              ))}
-            </div>
-          </>
+          /*
+           * Alle vier nebeneinander.
+           *
+           * Vorher waren es fuenf Plaene in zwei Reihen zu 3 und 2. Mit
+           * vieren haette die zweite Reihe eine einzelne Karte enthalten,
+           * mittig und doppelt so breit wie die anderen — das liest sich
+           * wie ein Fehler, nicht wie ein Angebot.
+           */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '48px' }}>
+            {PLANS.map(plan => (
+              <PlanCard key={plan.id} plan={plan} billing={billing} currentPlan={currentPlan} onCheckout={checkoutLoading ? () => {} : handleCheckout} />
+            ))}
+          </div>
         )}
 
         {/* ── Vergleich Tabelle ── */}
@@ -563,22 +538,36 @@ function PricingContent() {
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', width: '30%' }}>Feature</th>
-                  {['Privat', 'Starter', 'Basic', 'Premium', 'Business'].map(n => (
-                    <th key={n} style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: n === 'Premium' ? '#7c3aed' : '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{n}</th>
+                  {['Privat', 'Ohne Paket', 'Paket S', 'Paket M', 'Paket L'].map(n => (
+                    <th key={n} style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: n === 'Paket M' ? '#7c3aed' : '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{n}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
+                {/*
+                  * Nur Zeilen, die es wirklich gibt.
+                  *
+                  * Hier standen "mobile.de Export", "AutoScout24 Export",
+                  * "API-Zugang" und "White-Label" mit gruenem Haken. Keines
+                  * davon existiert — der Direktexport ist in Vorbereitung,
+                  * die anderen beiden gar nicht. Ein Haken in einer
+                  * Vergleichstabelle ist eine Zusage.
+                  */}
                 {[
-                  ['Inserate', '1 / Credit', '3 einmalig', '30 / Monat', '150 / Monat', '550 / Monat'],
-                  ['KI-Dokumentenscan', true, true, true, true, true],
-                  ['KI-Inseratsbeschreibung', true, false, true, true, true],
-                  ['KI-Ausstattungserkennung', true, false, true, true, true],
-                  ['Studio-Hintergründe', '1', '2', 'Alle', 'Alle', 'Alle + Custom'],
-                  ['mobile.de Export', true, false, true, true, true],
-                  ['AutoScout24 Export', true, false, true, true, true],
-                  ['API-Zugang', false, false, false, false, true],
-                  ['White-Label', false, false, false, false, true],
+                  ['Inserate', '1 / Credit', `+ ${euro(PREIS_PRO_INSERAT_CENT)} € je Stück`, `${PAKETE[0].inserate} / Monat`, `${PAKETE[1].inserate} / Monat`, `${PAKETE[2].inserate} / Monat`],
+                  ['Studio-Bilder je Inserat', String(studioInklusive(null)), String(studioInklusive(null)), String(studioInklusive('s')), String(studioInklusive('m')), String(studioInklusive('l'))],
+                  ['Fotos je Inserat gesamt', '20', '20', '30', '45', '60'],
+                  ['Fahrzeugschein-Scan', true, true, true, true, true],
+                  ['FIN-Abfrage', true, true, true, true, true],
+                  ['Titel und Beschreibung', true, true, true, true, true],
+                  ['Geführte Aufnahme', true, true, true, true, true],
+                  ['EnVKV-Pflichtangaben', true, true, true, true, true],
+                  ['PDF und Fotopaket', true, true, true, true, true],
+                  ['Studio-Hintergründe', 'Alle', 'Alle', 'Alle', 'Alle', 'Alle'],
+                  ['Eigener Showroom als Hintergrund', false, false, true, true, true],
+                  ['Firmen-Wasserzeichen', false, false, false, true, true],
+                  ['Statistiken', false, false, false, true, true],
+                  ['Direktexport mobile.de', 'in Vorbereitung', 'in Vorbereitung', 'in Vorbereitung', 'in Vorbereitung', 'in Vorbereitung'],
                 ].map((row, i) => (
                   <tr key={i} style={{ borderTop: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '11px 20px', fontWeight: '600', color: '#374151' }}>{row[0] as string}</td>

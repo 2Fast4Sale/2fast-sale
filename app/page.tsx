@@ -86,11 +86,16 @@ const PLAENE = [
     preisCent: p.preisCent,
     zusatz: `entspricht ${euro(Math.round(p.preisCent / p.inserate))} € je Inserat`,
     inserate: `${p.inserate} Inserate im Monat enthalten`,
+    /*
+     * Nur Merkmale, die es gibt. Hier stand bei Paket L "Bis zu 10
+     * Nutzerkonten" — das habe ich aus der alten Preisseite uebernommen,
+     * ohne es zu pruefen. Es existiert nicht: keine Tabelle, kein Code.
+     */
     merkmale: i === 0
-      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', 'PDF und Fotopaket']
+      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', '15 Studio-Bilder je Inserat']
       : i === 1
-        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', 'Vorrangiger Support']
-        : ['Alles aus Paket M', 'Alle Hintergründe', 'Bis zu 10 Nutzerkonten'],
+        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', '20 Studio-Bilder je Inserat']
+        : ['Alles aus Paket M', 'Statistiken zu deinen Inseraten', '30 Studio-Bilder je Inserat'],
     cta: `${p.name} wählen`,
     ziel: '/dashboard/pricing',
     // Das mittlere Paket hervorheben: Es deckt die Menge ab, die ein
