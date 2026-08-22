@@ -1,35 +1,41 @@
 'use client';
 
 /**
- * Vorschau auf Schritt 1 ohne Anmeldung — mit Stilwahl.
+ * Vorschau auf Schritt 1 ohne Anmeldung.
  *
  * Die Formularseiten liegen unter /dashboard und werden zur Anmeldung
- * umgeleitet. Beim Umbauen der Oberfläche heisst das: Man sieht das
- * Ergebnis nicht. Diese Seite rendert dieselbe Komponente ausserhalb des
+ * umgeleitet — beim Umbauen der Oberfläche sieht man das Ergebnis sonst
+ * nicht. Diese Seite rendert dieselben Komponenten ausserhalb des
  * geschützten Bereichs.
  *
- * Die Umschaltung oben rechts dient dazu, drei Handschriften
- * nebeneinander zu beurteilen, ohne dass man sie beschreiben muss. Beim
- * Aussehen führt Zeigen schneller zum Ziel als Reden.
+ * Sie zeigt zuerst den Showroom, weil das der neue Entwurf ist. Die
+ * älteren bleiben zum Vergleich erreichbar: Beim Aussehen führt
+ * Nebeneinanderstellen schneller zum Ziel als Beschreiben.
  *
  * In der Produktion nicht erreichbar. Speichert nichts.
  */
 
 import { useState } from 'react';
+import Showroom from '../../dashboard/listing/step1/Showroom';
 import Formular, { STILE, type Stil } from '../../dashboard/listing/step1/Formular';
 
-const BESCHREIBUNG: Record<Stil, string> = {
+type Ansicht = 'showroom' | Stil;
+
+const BESCHREIBUNG: Record<Ansicht, string> = {
+  showroom:  'das Inserat entsteht sichtbar',
   werkstatt: 'hell, dicht, sachlich',
-  studio:    'dunkel wie Bildbearbeitung',
+  studio:    'dunkles Datenblatt',
   marke:     'grosse Zahlen, viel Luft',
 };
 
 export default function Vorschau() {
-  const [stil, setStil] = useState<Stil>('werkstatt');
+  const [ansicht, setAnsicht] = useState<Ansicht>('showroom');
 
   if (process.env.NODE_ENV === 'production') {
     return <p style={{ padding: 40, fontFamily: 'sans-serif' }}>Nicht verfügbar.</p>;
   }
+
+  const alle: Ansicht[] = ['showroom', ...(Object.keys(STILE) as Stil[])];
 
   return (
     <>
@@ -38,30 +44,33 @@ export default function Vorschau() {
         Werkzeug, nicht Teil des Entwurfs, den er zeigt.
       */}
       <div style={{
-        position: 'fixed', right: 14, bottom: 14, zIndex: 200,
-        display: 'flex', gap: 4, padding: 4,
-        background: 'rgba(15,23,42,0.9)', backdropFilter: 'blur(10px)',
-        borderRadius: 10, boxShadow: '0 8px 28px rgba(0,0,0,0.3)',
+        position: 'fixed', right: 14, bottom: 76, zIndex: 200,
+        display: 'flex', gap: 3, padding: 4,
+        background: 'rgba(30,35,48,0.94)', backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 10, boxShadow: '0 10px 34px rgba(0,0,0,0.45)',
         fontFamily: '"Inter", sans-serif',
       }}>
-        {(Object.keys(STILE) as Stil[]).map(s => (
+        {alle.map(a => (
           <button
-            key={s}
-            onClick={() => setStil(s)}
-            title={BESCHREIBUNG[s]}
+            key={a}
+            onClick={() => setAnsicht(a)}
+            title={BESCHREIBUNG[a]}
             style={{
-              padding: '7px 12px', borderRadius: 7, border: 'none', cursor: 'pointer',
-              background: stil === s ? '#ffffff' : 'transparent',
-              color: stil === s ? '#0f172a' : '#cbd5e1',
-              fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
+              padding: '7px 11px', borderRadius: 7, border: 'none', cursor: 'pointer',
+              background: ansicht === a ? '#ffffff' : 'transparent',
+              color: ansicht === a ? '#0f172a' : '#a8b3c5',
+              fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
               textTransform: 'capitalize',
             }}
-          >{s}</button>
+          >{a}</button>
         ))}
       </div>
 
-      {/* key erzwingt einen Neuaufbau, damit der Stil auch die Zustaende zuruecksetzt. */}
-      <Formular key={stil} stil={stil} />
+      {/* key erzwingt einen Neuaufbau, damit auch die Zustaende zuruecksetzen. */}
+      {ansicht === 'showroom'
+        ? <Showroom key="showroom" />
+        : <Formular key={ansicht} stil={ansicht} />}
     </>
   );
 }

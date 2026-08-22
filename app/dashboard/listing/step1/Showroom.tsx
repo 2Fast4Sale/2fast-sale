@@ -1,0 +1,698 @@
+'use client';
+
+/**
+ * Schritt 1 — als Showroom statt als Formular.
+ *
+ * Vier Entwürfe vorher haben nicht getroffen, und alle vier hatten
+ * denselben Denkfehler: Sie zeigten ein Formular. Mal dichter, mal
+ * dunkler, mal mit grösserer Schrift — aber immer eine Liste von
+ * Feldern, die abgearbeitet werden will. Feldlisten sehen nach Arbeit
+ * aus, egal wie gut sie gesetzt sind.
+ *
+ * Hier steht deshalb etwas anderes im Vordergrund: das Inserat, das
+ * gerade entsteht. Oben wächst der Titel mit jeder Eingabe, der Preis
+ * steht gross daneben, die Eckdaten als Kennzahlen darunter. Wer tippt,
+ * sieht nicht ein Formular voller Lücken, sondern ein Fahrzeug, das
+ * Gestalt annimmt.
+ *
+ * Das ist keine Spielerei, sondern das Versprechen des Produkts:
+ * Der Händler soll sehen, dass am Ende etwas Ansehnliches herauskommt.
+ * Ein Werkzeug, das aussieht wie ein Antragsformular, macht das
+ * unglaubwürdig — auch wenn die Fotos danach gut werden.
+ *
+ * Die Eingabe rutscht dafür nach unten und wird schmaler: eine ruhige
+ * Leiste, kein Bildschirm voller Kästen. Was der Scan geliefert hat,
+ * steht oben in der Zusammenfassung; nachtragen muss man nur die Lücken,
+ * und die sind markiert.
+ *
+ * Die Logik liegt in useEntwurf.ts und ist mit den anderen Fassungen
+ * geteilt — Scan, Marken-Zerlegung, EnVKV-Prüfung, Credit-Prüfung und
+ * Titelvorschlag verhalten sich identisch.
+ */
+
+import { useState } from 'react';
+import {
+  Camera, Loader2, ArrowRight, ChevronDown, Search, X, Plus, RotateCcw, AlertCircle,
+} from 'lucide-react';
+import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
+import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
+import EnvkvFields from '../../../components/EnvkvFields';
+import { type VehicleKind } from '../../../../lib/envkv';
+import {
+  useEntwurf, KRAFTSTOFFE, GETRIEBE, TOP_MARKEN, PFLICHT_NAME, type FormData,
+} from './useEntwurf';
+
+/* ────────────────────────── Gestaltung ────────────────────────── */
+
+const F = {
+  schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+  /** Tiefes Anthrazit, kein reines Schwarz — das wirkt auf Bildschirmen hart. */
+  grund:   '#0a0c11',
+  flaeche: '#12151d',
+  erhoben: '#191d27',
+  linie:   '#252b38',
+  text:    '#f8fafc',
+  gedämpft:'#c2cad8',
+  /** 5,9:1 gegen die Fläche — auf dunklem Grund muss Grau heller sein. */
+  leise:   '#8d99ad',
+  akzent:  '#7c8aff',
+  gut:     '#4ade80',
+  luecke:  '#fbbf24',
+  fehler:  '#fb7185',
+} as const;
+
+const ART_ANZEIGE: Record<VehicleKind, string> = {
+  gebrauchtwagen: 'Gebrauchtwagen',
+  neuwagen:       'Neuwagen',
+  tageszulassung: 'Tageszulassung',
+  vorfuehrwagen:  'Vorführwagen',
+  jahreswagen:    'Jahreswagen',
+};
+
+/* ────────────────────────── Bausteine ────────────────────────── */
+
+/*
+ * Ausserhalb der Formular-Komponente definiert.
+ *
+ * Innerhalb entsteht bei jeder Zustandsaenderung ein neuer
+ * Komponententyp. React kann ihn nicht mit dem vorherigen gleichsetzen,
+ * haengt den alten Baum ab und baut ihn neu auf — dabei verliert das
+ * Eingabefeld den Fokus. In der Praxis: ein Zeichen tippen, dann ist man
+ * draussen und muss neu hineinklicken. Der Fehler ist beim Lesen des
+ * Codes praktisch unsichtbar und beim Benutzen sofort unertraeglich.
+ */
+
+/** Eingabe ohne Kasten — nur eine Linie, die bei Fokus aufleuchtet. */
+function Eingabe({ wert, aendern, platzhalter, einheit, gross, erkannt }: {
+  wert: string; aendern: (v: string) => void; platzhalter: string;
+  einheit?: string; gross?: boolean; erkannt?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, borderBottom: `1px solid ${F.linie}`, paddingBottom: 5 }}>
+      <input
+        value={wert} onChange={ev => aendern(ev.target.value)} placeholder={platzhalter}
+        onFocus={ev => (ev.target.parentElement!.style.borderBottomColor = F.akzent)}
+        onBlur={ev => (ev.target.parentElement!.style.borderBottomColor = F.linie)}
+        style={{
+          width: '100%', boxSizing: 'border-box', background: 'transparent',
+          border: 'none', outline: 'none', padding: 0, color: F.text,
+          fontSize: gross ? 20 : 15, fontWeight: gross ? 600 : 400,
+          fontFamily: F.schrift,
+        }} />
+      {einheit && <span style={{ fontSize: 12.5, color: F.leise, flexShrink: 0 }}>{einheit}</span>}
+      {erkannt && (
+        <span title="aus dem Fahrzeugschein" style={{ fontSize: 10.5, color: F.gut, flexShrink: 0, fontWeight: 700 }}>●</span>
+      )}
+    </div>
+  );
+}
+
+function Beschriftung({ text, luecke }: { text: string; luecke?: boolean }) {
+  return (
+    <div style={{
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+      color: luecke ? F.luecke : F.leise, marginBottom: 7,
+    }}>{text}{luecke && ' ·  fehlt'}</div>
+  );
+}
+
+function Wahl({ optionen, wert, beiWahl }: {
+  optionen: string[]; wert: string; beiWahl: (v: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+      {optionen.map(o => {
+        const an = wert === o;
+        return (
+          <button key={o} type="button" onClick={() => beiWahl(o)}
+            style={{
+              padding: '6px 11px', borderRadius: 7, cursor: 'pointer', fontFamily: F.schrift,
+              fontSize: 12.5, fontWeight: an ? 600 : 500,
+              border: `1px solid ${an ? F.akzent : F.linie}`,
+              background: an ? 'rgba(124,138,255,0.13)' : 'transparent',
+              color: an ? F.akzent : F.gedämpft,
+            }}>{o}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Block({ titel, kinder, rechts }: { titel: string; kinder: React.ReactNode; rechts?: React.ReactNode }) {
+  return (
+    <section style={{ borderTop: `1px solid ${F.linie}`, padding: '20px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
+        <h2 style={{ margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: '0.09em',
+                     textTransform: 'uppercase', color: F.leise }}>{titel}</h2>
+        {rechts && <div style={{ marginLeft: 'auto' }}>{rechts}</div>}
+      </div>
+      {kinder}
+    </section>
+  );
+}
+
+
+export default function Showroom() {
+  const e = useEntwurf();
+  const { data, setzen, erkannt, schmal, offenePflicht } = e;
+
+  const [markeOffen, setMarkeOffen]       = useState(false);
+  const [markeSuche, setMarkeSuche]       = useState('');
+  const [ueberZone, setUeberZone]         = useState(false);
+  const [ausstattungSuche, setAusstattungSuche] = useState('');
+  const [ausstattungOffen, setAusstattungOffen] = useState(false);
+  const [envkvOffen, setEnvkvOffen]       = useState(false);
+  const [mehrOffen, setMehrOffen]         = useState(false);
+
+  const envkvSichtbar = e.envkvPflicht || envkvOffen;
+  const zahl = (v: string) => (v ? Number(v).toLocaleString('de-DE') : '');
+
+  /* ── Startbildschirm ── */
+
+  if (!e.blattOffen) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: F.grund, color: F.text, fontFamily: F.schrift,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 24, gap: 20,
+      }}>
+        {/*
+          Ein Lichtschein hinter dem Ganzen. Der einzige Effekt auf der
+          Seite — er soll andeuten, worum es geht: ein Fahrzeug im
+          Scheinwerferlicht, nicht ein Antrag auf einem Schreibtisch.
+        */}
+        <div style={{
+          position: 'fixed', top: '38%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: 620, height: 620, pointerEvents: 'none',
+          background: 'radial-gradient(circle, rgba(124,138,255,0.13) 0%, transparent 68%)',
+        }} />
+
+        <div style={{ textAlign: 'center', maxWidth: 460, position: 'relative' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.14em',
+                        textTransform: 'uppercase', color: F.akzent, marginBottom: 12 }}>
+            Neues Inserat
+          </div>
+          <h1 style={{ margin: '0 0 10px', fontSize: schmal ? 27 : 34, fontWeight: 700,
+                       letterSpacing: '-1px', lineHeight: 1.15 }}>
+            Schein fotografieren.<br />Den Rest machen wir.
+          </h1>
+          <p style={{ margin: 0, fontSize: 14.5, color: F.leise, lineHeight: 1.65 }}>
+            Marke, Modell, Erstzulassung, Leistung, Hubraum und Farbe werden ausgelesen.
+            Du trägst den Preis nach — fertig.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => e.dateiRef.current?.click()}
+          onDragOver={ev => { ev.preventDefault(); setUeberZone(true); }}
+          onDragLeave={() => setUeberZone(false)}
+          onDrop={ev => {
+            ev.preventDefault(); setUeberZone(false);
+            const f = ev.dataTransfer.files?.[0];
+            if (f?.type.startsWith('image/')) e.einlesen(f);
+          }}
+          disabled={e.scanZustand === 'laeuft'}
+          style={{
+            position: 'relative', width: '100%', maxWidth: 380, padding: '18px 26px',
+            borderRadius: 12, border: 'none', cursor: e.scanZustand === 'laeuft' ? 'wait' : 'pointer',
+            background: ueberZone ? '#98a4ff' : F.akzent, color: '#0a0c11',
+            fontFamily: F.schrift, fontSize: 15, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+            boxShadow: '0 10px 34px rgba(124,138,255,0.32)',
+          }}>
+          {e.scanZustand === 'laeuft'
+            ? <><Loader2 size={18} style={{ animation: 'drehen .8s linear infinite' }} /> Wird gelesen…</>
+            : <><Camera size={18} /> Fahrzeugschein aufnehmen</>}
+        </button>
+
+        <button type="button" onClick={() => e.setBlattOffen(true)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
+                   fontSize: 13, color: F.leise, position: 'relative' }}>
+          oder von Hand eintragen
+        </button>
+
+        <input ref={e.dateiRef} type="file" accept="image/*" hidden
+          onChange={ev => { const f = ev.target.files?.[0]; if (f) e.einlesen(f); }} />
+        <style>{`@keyframes drehen { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    );
+  }
+
+  /* ── Showroom ── */
+
+  return (
+    <div style={{ minHeight: '100vh', background: F.grund, color: F.text, fontFamily: F.schrift }}>
+
+      {/* ══ Das entstehende Inserat ══ */}
+      <div style={{
+        borderBottom: `1px solid ${F.linie}`,
+        background: `linear-gradient(180deg, ${F.flaeche} 0%, ${F.grund} 100%)`,
+      }}>
+        <div style={{ maxWidth: 880, margin: '0 auto', padding: schmal ? '26px 20px 22px' : '38px 24px 30px' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em',
+                           textTransform: 'uppercase', color: F.akzent }}>Schritt 1 von 4</span>
+            {e.scanZustand === 'fertig' && (
+              <span style={{ fontSize: 11.5, color: F.gut, fontWeight: 600 }}>
+                ● {erkannt.size} Felder aus dem Schein
+              </span>
+            )}
+            <button type="button" onClick={() => e.dateiRef.current?.click()}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+                       background: 'none', border: `1px solid ${F.linie}`, borderRadius: 7,
+                       padding: '5px 10px', cursor: 'pointer', fontFamily: F.schrift,
+                       fontSize: 12, color: F.gedämpft }}>
+              {e.scanBild ? <><RotateCcw size={11} /> Neu scannen</> : <><Camera size={11} /> Schein scannen</>}
+            </button>
+          </div>
+
+          {/*
+            Der Titel, wie er entsteht. Noch leere Bestandteile stehen als
+            blasse Platzhalter da — man sieht, was noch kommt, statt einer
+            leeren Zeile.
+          */}
+          <h1 style={{
+            margin: '0 0 4px', fontSize: schmal ? 26 : 38, fontWeight: 700,
+            letterSpacing: '-1.1px', lineHeight: 1.12, minHeight: schmal ? 32 : 46,
+          }}>
+            {e.titelBisher.length > 0
+              ? e.titelBisher.map((t, i) => (
+                  <span key={i}>
+                    {i > 0 && <span style={{ color: F.leise, fontWeight: 300 }}> · </span>}
+                    {t}
+                  </span>
+                ))
+              : <span style={{ color: F.linie }}>Noch kein Fahrzeug</span>}
+          </h1>
+
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
+            <div style={{
+              fontSize: schmal ? 30 : 40, fontWeight: 700, letterSpacing: '-1.4px',
+              color: data.price ? F.text : F.linie, lineHeight: 1,
+            }}>
+              {data.price ? `${zahl(data.price)} €` : '— €'}
+            </div>
+            {data.km && (
+              <div style={{ fontSize: 15, color: F.gedämpft }}>{zahl(data.km)} km</div>
+            )}
+            {data.equipment.length > 0 && (
+              <div style={{ fontSize: 13, color: F.leise }}>
+                {data.equipment.length} Ausstattungsmerkmale
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ══ Die Eingabe ══ */}
+      <div style={{ maxWidth: 880, margin: '0 auto', padding: `0 ${schmal ? 20 : 24}px 110px` }}>
+
+        {/* Was fehlt — ganz oben, sonst nirgends */}
+        {offenePflicht.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 9, marginTop: 18,
+            padding: '11px 14px', borderRadius: 9,
+            background: 'rgba(251,191,36,0.09)', border: '1px solid rgba(251,191,36,0.26)',
+          }}>
+            <AlertCircle size={15} color={F.luecke} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: F.luecke, fontWeight: 600 }}>
+              Fehlt noch: {offenePflicht.map(k => PFLICHT_NAME[k]).join(', ')}
+            </span>
+          </div>
+        )}
+
+        {/* Fahrzeug + Eckdaten nebeneinander */}
+        <Block titel="Fahrzeug" kinder={
+          <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr', gap: 20 }}>
+            <div style={{ position: 'relative' }}>
+              <Beschriftung text="Marke" luecke={!data.brand} />
+              <button type="button" onClick={() => setMarkeOffen(o => !o)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'transparent', border: 'none', borderBottom: `1px solid ${F.linie}`,
+                  padding: '0 0 5px', cursor: 'pointer', fontFamily: F.schrift,
+                  fontSize: 15, color: data.brand ? F.text : F.leise, textAlign: 'left',
+                }}>
+                {data.brand && hatZeichen(data.brand) && <MarkenZeichen marke={data.brand} groesse={17} farbe={F.gedämpft} />}
+                <span style={{ flex: 1 }}>{data.brand || 'wählen'}</span>
+                <ChevronDown size={15} color={F.leise} />
+              </button>
+
+              {markeOffen && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, marginTop: 6,
+                  background: F.erhoben, border: `1px solid ${F.linie}`, borderRadius: 11,
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.6)', maxHeight: 320, overflow: 'auto',
+                }}>
+                  <div style={{ padding: 8, position: 'sticky', top: 0, background: F.erhoben, borderBottom: `1px solid ${F.linie}` }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={13} color={F.leise} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input autoFocus value={markeSuche} onChange={ev => setMarkeSuche(ev.target.value)}
+                        placeholder="Marke suchen…"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 30px',
+                                 background: F.flaeche, border: `1px solid ${F.linie}`, borderRadius: 8,
+                                 color: F.text, fontSize: 13, fontFamily: F.schrift, outline: 'none' }} />
+                    </div>
+                  </div>
+                  {/* Entweder Schnellauswahl oder Liste, nie beides. */}
+                  {!markeSuche ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: 8 }}>
+                      {TOP_MARKEN.map(m => (
+                        <button key={m} type="button"
+                          onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); }}
+                          style={{
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                            padding: '11px 4px', borderRadius: 9, cursor: 'pointer',
+                            border: `1px solid ${data.brand === m ? F.akzent : F.linie}`,
+                            background: data.brand === m ? 'rgba(124,138,255,0.13)' : 'transparent',
+                            color: data.brand === m ? F.akzent : F.gedämpft,
+                            fontFamily: F.schrift, fontSize: 11, fontWeight: 600,
+                          }}>
+                          {/* Kein Kürzel neben dem Namen — "FOR" über "Ford" liest sich wie ein Fehler. */}
+                          {hatZeichen(m) && <MarkenZeichen marke={m} groesse={19} farbe={data.brand === m ? F.akzent : F.gedämpft} />}
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      {e.markenSuchen(markeSuche).slice(0, 60).map(m => (
+                        <button key={m} type="button"
+                          onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); setMarkeSuche(''); }}
+                          style={{ width: '100%', textAlign: 'left', padding: '9px 14px', border: 'none',
+                                   background: 'transparent', color: F.text, cursor: 'pointer',
+                                   fontFamily: F.schrift, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {hatZeichen(m) && <MarkenZeichen marke={m} groesse={14} farbe={F.leise} />}
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Beschriftung text="Modell" />
+              <Eingabe erkannt={erkannt.has('model')} wert={data.model} aendern={v => setzen('model', v)}
+                platzhalter={data.brand ? (e.modelle[0] ?? 'Modell') : 'erst Marke wählen'} />
+            </div>
+          </div>
+        } />
+
+        <Block titel="Eckdaten" kinder={
+          <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
+            <div>
+              <Beschriftung text="Preis" luecke={!data.price} />
+              <Eingabe erkannt={erkannt.has('price')} gross einheit="€" wert={zahl(data.price)}
+                aendern={v => setzen('price', v.replace(/\D/g, ''))} platzhalter="18.900" />
+            </div>
+            <div>
+              <Beschriftung text="Kilometerstand" luecke={!data.km} />
+              <Eingabe erkannt={erkannt.has('km')} gross einheit="km" wert={zahl(data.km)}
+                aendern={v => setzen('km', v.replace(/\D/g, ''))} platzhalter="84.500" />
+            </div>
+            <div>
+              <Beschriftung text="Erstzulassung" />
+              <Eingabe erkannt={erkannt.has('firstRegistration')} wert={data.firstRegistration}
+                aendern={v => setzen('firstRegistration', v)} platzhalter="03/2019" />
+            </div>
+          </div>
+        } />
+
+        <Block titel="Antrieb" kinder={
+          <div style={{ display: 'grid', gap: 18 }}>
+            <div>
+              <Beschriftung text="Kraftstoff" />
+              <Wahl optionen={KRAFTSTOFFE} wert={data.fuelType} beiWahl={v => setzen('fuelType', data.fuelType === v ? '' : v)} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
+              <div>
+                <Beschriftung text="Getriebe" />
+                <Wahl optionen={GETRIEBE} wert={data.gearbox} beiWahl={v => setzen('gearbox', data.gearbox === v ? '' : v)} />
+              </div>
+              <div>
+                <Beschriftung text="Leistung" />
+                <Eingabe erkannt={erkannt.has('powerKw')} einheit="PS" wert={data.powerKw}
+                  aendern={v => setzen('powerKw', v.replace(/\D/g, ''))} platzhalter="150" />
+              </div>
+              <div>
+                <Beschriftung text="Hubraum" />
+                <Eingabe erkannt={erkannt.has('displacementCcm')} einheit="ccm" wert={data.displacementCcm}
+                  aendern={v => setzen('displacementCcm', v.replace(/\D/g, ''))} platzhalter="1968" />
+              </div>
+            </div>
+          </div>
+        } />
+
+        {/* Selten Geändertes hinter einem Klick */}
+        <Block titel="Weitere Angaben"
+          rechts={
+            <button type="button" onClick={() => setMehrOffen(o => !o)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
+                       fontSize: 12.5, color: F.leise, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <ChevronDown size={13} style={{ transform: mehrOffen ? 'none' : 'rotate(-90deg)' }} />
+              {mehrOffen ? 'schliessen' : 'Farbe, Sitze, FIN'}
+            </button>
+          }
+          kinder={mehrOffen ? (
+            <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
+              <div>
+                <Beschriftung text="Farbe" />
+                <Eingabe erkannt={erkannt.has('color')} wert={data.color} aendern={v => setzen('color', v)} platzhalter="Tiefschwarz" />
+              </div>
+              <div>
+                <Beschriftung text="Sitzplätze" />
+                <Wahl optionen={['2', '4', '5', '7']} wert={data.seats} beiWahl={v => setzen('seats', data.seats === v ? '' : v)} />
+              </div>
+              <div>
+                <Beschriftung text="Fahrgestellnummer" />
+                <Eingabe erkannt={erkannt.has('vin')} wert={data.vin}
+                  aendern={v => setzen('vin', v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  platzhalter="WVWZZZ1JZW000001" />
+              </div>
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: 13, color: F.leise }}>
+              {[data.color, data.seats ? `${data.seats} Sitze` : '', data.vin].filter(Boolean).join(' · ')
+                || 'Nichts eingetragen — meist auch nicht nötig.'}
+            </p>
+          )}
+        />
+
+        {/* Verbrauch: bei Gebrauchtwagen eingeklappt */}
+        <Block titel="Verbrauch und Emissionen"
+          rechts={
+            <span style={{ fontSize: 11.5, color: e.envkvPflicht ? F.luecke : F.leise, fontWeight: e.envkvPflicht ? 600 : 500 }}>
+              {e.envkvPflicht ? 'Pflichtangaben' : 'bei Gebrauchtwagen freiwillig'}
+            </span>
+          }
+          kinder={
+            <div data-luecke={e.fehler.envkv ? 'true' : undefined}>
+              {!envkvSichtbar ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <Wahl
+                    optionen={Object.values(ART_ANZEIGE)}
+                    wert={ART_ANZEIGE[(data.envkv.vehicleKind as VehicleKind) ?? 'gebrauchtwagen']}
+                    beiWahl={anzeige => {
+                      const schluessel = (Object.keys(ART_ANZEIGE) as VehicleKind[])
+                        .find(k => ART_ANZEIGE[k] === anzeige) ?? 'gebrauchtwagen';
+                      e.setData(p => ({ ...p, envkv: { ...p.envkv, vehicleKind: schluessel } }));
+                      e.setFehler(p => ({ ...p, envkv: '' }));
+                    }} />
+                  <button type="button" onClick={() => setEnvkvOffen(true)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
+                             fontSize: 12.5, color: F.leise, textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                    freiwillig angeben
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/*
+                    EnvkvFields meldet nur die geänderten Felder — das Ergebnis
+                    muss auf den bestehenden Stand gelegt werden, sonst löscht
+                    jede Eingabe die anderen Werte.
+                  */}
+                  <EnvkvFields
+                    value={data.envkv} fuelType={data.fuelType} isMobile={schmal}
+                    onChange={teil => {
+                      e.setData(p => ({ ...p, envkv: { ...p.envkv, ...teil } }));
+                      e.setFehler(p => ({ ...p, envkv: '' }));
+                    }} />
+                  {e.fehler.envkv && (
+                    <p style={{ margin: '10px 0 0', fontSize: 12.5, color: F.fehler,
+                                display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <AlertCircle size={13} /> {e.fehler.envkv}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          }
+        />
+
+        {/* Ausstattung: kommt aus den Fotos */}
+        <Block titel="Ausstattung"
+          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>wird aus den Fotos ergänzt</span>}
+          kinder={
+            <div>
+              {data.equipment.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
+                  {data.equipment.map((m, i) => (
+                    <span key={`${m}-${i}`} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '4px 7px 4px 10px', borderRadius: 7,
+                      background: F.flaeche, border: `1px solid ${F.linie}`,
+                      fontSize: 12, color: F.gedämpft,
+                    }}>
+                      {m}
+                      <button type="button" onClick={() => setzen('equipment', data.equipment.filter((_, j) => j !== i))}
+                        style={{ display: 'flex', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: F.leise }}>
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <p style={{ margin: '0 0 12px', fontSize: 13, color: F.leise, lineHeight: 1.65 }}>
+                {/*
+                  Der Grund gehört sichtbar hin, sonst klickt sich der Händler
+                  durch eine Liste, die Schritt 2 gleich selbst füllt.
+                */}
+                Beim Hochladen der Fotos wird erkannt, was zu sehen ist. Hier lohnt sich
+                nur, was man <em>nicht</em> sieht: Scheckheft, Vorbesitzer, Standheizung.
+              </p>
+
+              <div style={{ position: 'relative', maxWidth: 420 }}>
+                <Plus size={14} color={F.leise} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  value={ausstattungSuche} onChange={ev => setAusstattungSuche(ev.target.value)}
+                  onKeyDown={ev => {
+                    if (ev.key === 'Enter' && ausstattungSuche.trim()) {
+                      ev.preventDefault();
+                      const v = ausstattungSuche.trim();
+                      if (!data.equipment.includes(v)) setzen('equipment', [...data.equipment, v]);
+                      setAusstattungSuche('');
+                    }
+                  }}
+                  placeholder="Eintippen und Enter"
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '9px 11px 9px 32px',
+                           background: F.flaeche, border: `1px solid ${F.linie}`, borderRadius: 8,
+                           color: F.text, fontSize: 13, fontFamily: F.schrift, outline: 'none' }} />
+              </div>
+
+              {e.ausstattungSuchen(ausstattungSuche).length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
+                  {e.ausstattungSuchen(ausstattungSuche).map(eintrag => {
+                    const t = eintrag.label;
+                    const drin = data.equipment.includes(t);
+                    return (
+                      <button key={eintrag.id} type="button" disabled={drin}
+                        onClick={() => { setzen('equipment', [...data.equipment, t]); setAusstattungSuche(''); }}
+                        style={{ padding: '5px 10px', borderRadius: 7, cursor: drin ? 'default' : 'pointer',
+                                 border: `1px solid ${F.linie}`, background: 'transparent',
+                                 color: drin ? F.leise : F.gedämpft, fontFamily: F.schrift, fontSize: 12 }}>
+                        {drin ? '✓ ' : '+ '}{t}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <button type="button" onClick={() => setAusstattungOffen(o => !o)}
+                style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer',
+                         fontFamily: F.schrift, fontSize: 12.5, color: F.leise,
+                         display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                <ChevronDown size={13} style={{ transform: ausstattungOffen ? 'none' : 'rotate(-90deg)' }} />
+                {ausstattungOffen ? 'Liste schliessen' : 'Alle Merkmale durchgehen'}
+              </button>
+
+              {ausstattungOffen && (
+                <div style={{ marginTop: 12, display: 'grid', gap: 14 }}>
+                  {EQUIPMENT_DB.map(gruppe => (
+                    <div key={gruppe.label}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.07em',
+                                    textTransform: 'uppercase', color: F.leise, marginBottom: 7 }}>
+                        {gruppe.label}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {gruppe.items.map(eintrag => {
+                          const m = eintrag.label;
+                          const drin = data.equipment.includes(m);
+                          return (
+                            <button key={eintrag.id} type="button"
+                              onClick={() => setzen('equipment', drin
+                                ? data.equipment.filter(x => x !== m)
+                                : [...data.equipment, m])}
+                              style={{ padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
+                                       border: `1px solid ${drin ? F.akzent : F.linie}`,
+                                       background: drin ? 'rgba(124,138,255,0.13)' : 'transparent',
+                                       color: drin ? F.akzent : F.gedämpft,
+                                       fontFamily: F.schrift, fontSize: 12 }}>{m}</button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          }
+        />
+
+        <Block titel="Notizen für die Beschreibung"
+          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>macht den Text besser</span>}
+          kinder={
+            <textarea value={data.dealerNotes} onChange={ev => setzen('dealerNotes', ev.target.value)} rows={2}
+              placeholder="Zwei Vorbesitzer, Winterreifen auf Alu dabei, kleiner Kratzer hinten rechts."
+              style={{ width: '100%', boxSizing: 'border-box', background: F.flaeche,
+                       border: `1px solid ${F.linie}`, borderRadius: 9, padding: 13,
+                       color: F.text, fontSize: 13.5, fontFamily: F.schrift,
+                       resize: 'vertical', lineHeight: 1.65, outline: 'none' }} />
+          }
+        />
+      </div>
+
+      <input ref={e.dateiRef} type="file" accept="image/*" hidden
+        onChange={ev => { const f = ev.target.files?.[0]; if (f) e.einlesen(f); }} />
+
+      {/* ══ Fussleiste ══ */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
+        background: 'rgba(10,12,17,0.93)', backdropFilter: 'blur(12px)',
+        borderTop: `1px solid ${F.linie}`,
+        // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px).
+        // Ohne diesen Abstand liegt der Weiter-Knopf darunter und ist nicht
+        // antippbar — der Fehler hat es schon einmal in die Anwendung geschafft.
+        paddingBottom: schmal ? 56 : 0,
+      }}>
+        <div style={{ maxWidth: 880, margin: '0 auto', padding: '11px 24px',
+                      display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: offenePflicht.length ? F.luecke : F.leise }}>
+            {offenePflicht.length > 0
+              ? `Fehlt noch: ${offenePflicht.map(k => PFLICHT_NAME[k]).join(', ')}`
+              : 'Weiter zu den Fotos'}
+          </span>
+          <button type="button" onClick={e.weiter} disabled={e.unterwegs}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '11px 22px',
+              borderRadius: 9, border: 'none', background: F.akzent, color: '#0a0c11',
+              fontFamily: F.schrift, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap',
+              cursor: e.unterwegs ? 'wait' : 'pointer', opacity: e.unterwegs ? 0.7 : 1,
+            }}>
+            {e.unterwegs && <Loader2 size={14} style={{ animation: 'drehen .8s linear infinite' }} />}
+            Weiter <ArrowRight size={14} />
+          </button>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes drehen { to { transform: rotate(360deg) } }
+        input::placeholder, textarea::placeholder { color: ${F.leise}; opacity: .75 }
+      `}</style>
+    </div>
+  );
+}
