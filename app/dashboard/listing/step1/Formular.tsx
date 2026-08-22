@@ -3,25 +3,33 @@
 /**
  * Schritt 1 — Fahrzeugdaten erfassen.
  *
- * Neu aufgebaut. Die vorherige Fassung war über Monate gewachsen und
- * hatte sich dabei drei Eigenschaften angewöhnt, die ein Werkzeug für
- * den täglichen Gebrauch nicht haben darf:
+ * Zweiter Anlauf. Der erste Umbau machte das Formular schöner, aber nicht
+ * kürzer: acht Abschnitte, zwölf Felder, achtundzwanzig Knöpfe, 3.722
+ * Pixel Höhe — zehn Bildschirme für ein Fahrzeug. Bessere Typografie an
+ * derselben Arbeit ist keine Erleichterung.
  *
- * Zu viel Farbe. Jede Marke hatte ihr eigenes Blau oder Rot, jeder
- * Kraftstoff eine eigene Farbe, dazu Verläufe auf Knöpfen und Karten.
- * Wer damit zwanzig Fahrzeuge am Tag einträgt, sieht irgendwann nur noch
- * Farbe und nicht mehr die Felder. Jetzt gibt es einen Akzent, sonst
- * Grautöne — Farbe bedeutet dann etwas: erkannt, fehlt, Pflichtangabe.
+ * Deshalb ein anderer Aufbau, kein anderer Anstrich:
  *
- * Keine Rangfolge. Der Fahrzeugschein-Scan füllt das halbe Formular, war
- * aber eine schmale Leiste zwischen anderen Kästen. Jetzt steht er oben
- * und allein: Es ist der Weg, den ein Händler nehmen soll.
+ * Zwei Zustände statt einer Strecke. Wer die Seite öffnet, sieht eine
+ * Sache — den Fahrzeugschein. Das Datenblatt erscheint erst, wenn es
+ * etwas anzuzeigen gibt. Vorher acht Abschnitte auf einmal auszubreiten
+ * heisst, dem Händler Arbeit zu zeigen, die der Scan ihm gerade abnehmen
+ * würde.
  *
- * Eine Vorschaukarte, die keine war. Rechts stand ein Nachbau eines
- * Inserats mit grauem Kasten statt Foto. Sie zeigte nichts, was das
- * Formular nicht auch zeigt, und nahm die halbe Breite. An ihrer Stelle
- * steht jetzt eine Leiste, die sagt, was noch fehlt — die einzige Frage,
- * die beim Ausfüllen wirklich aufkommt.
+ * Zeilen statt Kästen. Ein Fahrzeugdatenblatt ist eine Liste aus
+ * Beschriftung und Wert. Genau so sieht es jetzt aus: schmale Zeilen mit
+ * Trennlinien, Beschriftung links, Wert rechts. Das ist die Form, die
+ * jeder Händler von Fahrzeugschein, Bewertung und Rechnung kennt — und
+ * sie braucht ein Viertel der Höhe eines Kastenrasters.
+ *
+ * Lücken statt Vollständigkeit. Nach dem Scan sind die meisten Zeilen
+ * gefüllt. Hervorgehoben wird deshalb, was FEHLT — nicht was da ist. Der
+ * Händler soll seine drei Lücken sehen, nicht fünfzehn Felder prüfen.
+ *
+ * Die Ausstattungsliste ist eingeklappt. Die Fotoerkennung in Schritt 2
+ * schreibt gefundene Merkmale ohnehin dazu (step2/page.tsx). Wer sie hier
+ * von Hand anklickt, macht Arbeit doppelt. Sie bleibt erreichbar, aber
+ * sie drängt sich nicht mehr auf.
  *
  * Die Logik ist unverändert: Scan, Marken-Zerlegung, EnVKV-Prüfung,
  * Credit-Prüfung und Titelvorschlag arbeiten wie zuvor.
@@ -31,55 +39,55 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Camera, Loader2, CheckCircle2, X, AlertCircle, ArrowRight,
-  ChevronDown, Search, Plus, RotateCcw,
+  ChevronDown, Search, Plus, RotateCcw, Pencil,
 } from 'lucide-react';
 import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB, searchEquipment } from '../../../../lib/equipmentDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
-import { validateEnvkv, type EnvkvData } from '../../../../lib/envkv';
+import { validateEnvkv, isEnvkvRequired, type EnvkvData, type VehicleKind } from '../../../../lib/envkv';
 import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
 
 const T = {
   schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
-  grund:   '#f1f5f9',
-  karte:   '#ffffff',
-  rand:    '#e2e8f0',
-  randStark: '#cbd5e1',
+  ziffern: 'ui-monospace, "SF Mono", Menlo, monospace',
+  grund:   '#f8fafc',
+  blatt:   '#ffffff',
+  linie:   '#e8edf3',
+  linieStark: '#cbd5e1',
   text:    '#0f172a',
   gedämpft:'#475569',
-  /*
-   * 4,76:1 gegen Weiss. Vorher #94a3b8 mit 2,56:1 — das lag deutlich
-   * unter der Lesbarkeitsgrenze und trug ausgerechnet die Hinweise, die
-   * etwas erklaeren ("Pflicht bei Neuwagen…"). Fuer dekorative Flaechen
-   * waere es gegangen, fuer Text nicht.
-   */
+  // 4,76:1 gegen Weiss — heller wird Text unlesbar.
   leise:   '#64748b',
-  akzent:  '#4f46e5',
+  akzent:  '#4338ca',
   akzentHell: '#eef2ff',
-  // 5,48:1. #059669 kam auf 3,77 und reichte fuer 11px nicht.
   gut:     '#047857',
-  gutHell: '#ecfdf5',
-  fehler:  '#dc2626',
-  fehlerHell: '#fef2f2',
+  luecke:  '#b45309',
+  lueckeHell: '#fffbeb',
+  fehler:  '#b91c1c',
 } as const;
 
 const KRAFTSTOFFE = ['Benzin', 'Diesel', 'Hybrid', 'Plug-in Hybrid', 'Elektro', 'LPG', 'CNG'];
 const GETRIEBE    = ['Automatik', 'Manuell'];
-
 /**
- * Marken für die Schnellauswahl.
+ * Anzeigenamen der Fahrzeugarten.
  *
- * Ohne Markenfarben. Vorher hatte jede Kachel den Hausfarbton des
- * Herstellers — zwölf gesättigte Farben nebeneinander, die um
- * Aufmerksamkeit konkurrieren, obwohl es nur eine Auswahl ist.
+ * EnvkvFields fuehrt dieselbe Liste, aber intern. Fuer die eingeklappte
+ * Ansicht wird sie hier gebraucht — ohne sie kaeme niemand an die
+ * Pflichtangaben heran, der sie braucht.
  */
-const TOP_MARKEN = [
-  'BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Opel', 'Ford',
-  'Skoda', 'Seat', 'Hyundai', 'Kia', 'Toyota', 'Renault',
-];
+const ART_ANZEIGE: Record<VehicleKind, string> = {
+  gebrauchtwagen: 'Gebrauchtwagen',
+  neuwagen:       'Neuwagen',
+  tageszulassung: 'Tageszulassung',
+  vorfuehrwagen:  'Vorführwagen',
+  jahreswagen:    'Jahreswagen',
+};
+
+const TOP_MARKEN  = ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Opel', 'Ford',
+                     'Skoda', 'Seat', 'Hyundai', 'Kia', 'Toyota', 'Renault'];
 
 interface FormData {
   brand: string; model: string; vin: string;
@@ -99,107 +107,6 @@ const LEER_ENVKV: EnvkvData = {
   electricRangeKm: null,
 };
 
-/* ────────────────────────── Bausteine ────────────────────────── */
-
-/** Abschnitt mit Nummer und Titel. */
-function Abschnitt({ nummer, titel, hinweis, kinder, aktion }: {
-  nummer: number; titel: string; hinweis?: string;
-  kinder: React.ReactNode; aktion?: React.ReactNode;
-}) {
-  return (
-    <section style={{
-      background: T.karte, border: `1px solid ${T.rand}`,
-      borderRadius: 14, marginBottom: 14, overflow: 'hidden',
-    }}>
-      <header style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '16px 20px', borderBottom: `1px solid ${T.rand}`,
-      }}>
-        <span style={{
-          width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-          background: T.grund, color: T.gedämpft,
-          fontSize: 12, fontWeight: 700, lineHeight: '24px', textAlign: 'center',
-        }}>{nummer}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text, letterSpacing: '-0.2px' }}>{titel}</h2>
-          {hinweis && <p style={{ margin: '2px 0 0', fontSize: 12.5, color: T.leise }}>{hinweis}</p>}
-        </div>
-        {aktion}
-      </header>
-      <div style={{ padding: 20 }}>{kinder}</div>
-    </section>
-  );
-}
-
-/** Beschriftetes Eingabefeld. */
-function Feld({ label, pflicht, fehler, erkannt, einheit, hinweis, kinder }: {
-  label: string; pflicht?: boolean; fehler?: string; erkannt?: boolean;
-  einheit?: string; hinweis?: string; kinder: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label style={{
-        display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6,
-        fontSize: 12.5, fontWeight: 600, color: T.gedämpft,
-      }}>
-        {label}
-        {pflicht && <span style={{ color: T.fehler }}>*</span>}
-        {einheit && <span style={{ color: T.leise, fontWeight: 500 }}>({einheit})</span>}
-        {/*
-          Ein erkanntes Feld wird markiert, nicht eingefärbt. Der Händler
-          soll auf einen Blick sehen, was der Scan geliefert hat — und was
-          er selbst nachtragen muss.
-        */}
-        {erkannt && (
-          <span style={{
-            marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 3,
-            fontSize: 11, fontWeight: 700, color: T.gut,
-          }}>
-            <CheckCircle2 size={11} /> erkannt
-          </span>
-        )}
-      </label>
-      {kinder}
-      {hinweis && !fehler && <p style={{ margin: '5px 0 0', fontSize: 12, color: T.leise }}>{hinweis}</p>}
-      {fehler && (
-        <p style={{ margin: '5px 0 0', fontSize: 12, color: T.fehler, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <AlertCircle size={12} /> {fehler}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** Auswahl aus wenigen Möglichkeiten — ersetzt ein Aufklappmenü. */
-function Wahl({ optionen, wert, aufWahl, spalten }: {
-  optionen: string[]; wert: string; aufWahl: (v: string) => void; spalten?: number;
-}) {
-  return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: spalten ? `repeat(${spalten}, 1fr)` : 'repeat(auto-fit, minmax(92px, 1fr))',
-      gap: 6,
-    }}>
-      {optionen.map(o => {
-        const gewählt = wert === o;
-        return (
-          <button
-            key={o} type="button" onClick={() => aufWahl(gewählt ? '' : o)}
-            style={{
-              padding: '9px 8px', borderRadius: 9, cursor: 'pointer',
-              fontFamily: T.schrift, fontSize: 13, fontWeight: gewählt ? 700 : 500,
-              border: `1px solid ${gewählt ? T.akzent : T.rand}`,
-              background: gewählt ? T.akzentHell : T.karte,
-              color: gewählt ? T.akzent : T.gedämpft,
-              transition: 'border-color .12s, background .12s',
-            }}
-          >{o}</button>
-        );
-      })}
-    </div>
-  );
-}
-
 /* ────────────────────────── Formular ────────────────────────── */
 
 export default function Formular() {
@@ -208,10 +115,6 @@ export default function Formular() {
   const markeRef  = useRef<HTMLDivElement>(null);
   const modellRef = useRef<HTMLDivElement>(null);
 
-  /*
-   * Neuen Entwurf beginnen. Die Nummer verbindet die Kosten aus den
-   * Schritten 1 bis 3 mit dem Fahrzeug, das erst in Schritt 4 entsteht.
-   */
   useEffect(() => { entwurfNeu(); }, []);
 
   const [data, setData] = useState<FormData>({
@@ -221,6 +124,8 @@ export default function Formular() {
     envkv: LEER_ENVKV,
   });
 
+  /** Ist das Datenblatt schon sichtbar? Erst nach Scan oder auf Wunsch. */
+  const [blattOffen, setBlattOffen]   = useState(false);
   const [fehler, setFehler]           = useState<Record<string, string>>({});
   const [erkannt, setErkannt]         = useState<Set<string>>(new Set());
   const [scanZustand, setScanZustand] = useState<'ruhe' | 'laeuft' | 'fertig' | 'fehler'>('ruhe');
@@ -229,13 +134,15 @@ export default function Formular() {
   const [markeSuche, setMarkeSuche]   = useState('');
   const [markeOffen, setMarkeOffen]   = useState(false);
   const [modellOffen, setModellOffen] = useState(false);
+  const [ausstattungOffen, setAusstattungOffen] = useState(false);
+  const [envkvOffen, setEnvkvOffen]             = useState(false);
   const [ausstattungSuche, setAusstattungSuche] = useState('');
   const [kategorieOffen, setKategorieOffen]     = useState<string | null>(null);
   const [unterwegs, setUnterwegs]     = useState(false);
   const [schmal, setSchmal]           = useState(false);
 
   useEffect(() => {
-    const prüfen = () => setSchmal(window.innerWidth < 1000);
+    const prüfen = () => setSchmal(window.innerWidth < 940);
     prüfen();
     window.addEventListener('resize', prüfen);
     return () => window.removeEventListener('resize', prüfen);
@@ -253,18 +160,19 @@ export default function Formular() {
   const setzen = (k: keyof FormData, v: string | string[]) => {
     setData(p => ({ ...p, [k]: v }));
     setFehler(p => ({ ...p, [k]: '' }));
-    // Von Hand geändert heisst: nicht mehr „erkannt".
     setErkannt(p => { const n = new Set(p); n.delete(k as string); return n; });
   };
 
-  /* ── Vollständigkeit ── */
   const PFLICHT = ['brand', 'km', 'price'] as const;
-  const OPTIONAL = ['model', 'firstRegistration', 'fuelType', 'gearbox',
-                    'powerKw', 'displacementCcm', 'color', 'seats'] as const;
-
   const offenePflicht = PFLICHT.filter(k => !String(data[k]).trim());
-  const gefuellt = [...PFLICHT, ...OPTIONAL].filter(k => String(data[k]).trim()).length;
-  const anteil = Math.round((gefuellt / (PFLICHT.length + OPTIONAL.length)) * 100);
+  const pflichtName: Record<string, string> = { brand: 'Marke', km: 'Kilometerstand', price: 'Preis' };
+
+  /*
+   * Sind die Verbrauchsangaben vorgeschrieben? Bei Gebrauchtwagen nicht —
+   * und das ist der Normalfall. Der Block bleibt dann eingeklappt.
+   */
+  const envkvPflicht = isEnvkvRequired(data.envkv.vehicleKind);
+  const envkvSichtbar = envkvPflicht || envkvOffen;
 
   /* ── Fahrzeugschein einlesen ── */
 
@@ -299,31 +207,31 @@ export default function Formular() {
 
         /*
          * scan-doc liefert Marke, Modell und Variante in EINEM String
-         * ("Volkswagen Golf 2.0 TDI"). Das Formular hat dafür zwei Felder
-         * mit Auswahllisten — ohne Zerlegung landete alles im Markenfeld.
+         * ("Volkswagen Golf 2.0 TDI"). Ohne Zerlegung landet alles im
+         * Markenfeld und das Modell bleibt leer.
          */
         const zerlegt = d.brand ? splitBrandModel(String(d.brand)) : null;
         const neu = new Set<string>();
 
         setData(p => {
-          const übernehmen = <W,>(feld: string, wert: W, alt: W): W => {
-            if (wert === null || wert === undefined || wert === '') return alt;
+          const nimm = (feld: string, wert: string, alt: string): string => {
+            if (!wert) return alt;
             neu.add(feld);
             return wert;
           };
           return {
             ...p,
-            brand:  übernehmen('brand', zerlegt?.brand ?? '', p.brand),
-            model:  übernehmen('model', zerlegt?.model ?? '', p.model),
-            vin:    übernehmen('vin', d.vin ?? '', p.vin),
-            firstRegistration: übernehmen('firstRegistration', d.firstRegistration ?? '', p.firstRegistration),
-            km:     übernehmen('km', d.km != null ? String(d.km) : '', p.km),
-            fuelType: übernehmen('fuelType', d.fuelType ?? '', p.fuelType),
+            brand: nimm('brand', zerlegt?.brand ?? '', p.brand),
+            model: nimm('model', zerlegt?.model ?? '', p.model),
+            vin:   nimm('vin', d.vin ?? '', p.vin),
+            firstRegistration: nimm('firstRegistration', d.firstRegistration ?? '', p.firstRegistration),
+            km:    nimm('km', d.km != null ? String(d.km) : '', p.km),
+            fuelType: nimm('fuelType', d.fuelType ?? '', p.fuelType),
             // scan-doc liefert powerPs (bereits aus kW umgerechnet, ×1,3596)
-            powerKw: übernehmen('powerKw', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.powerKw),
-            displacementCcm: übernehmen('displacementCcm', d.displacementCcm != null ? String(d.displacementCcm) : '', p.displacementCcm),
-            color:  übernehmen('color', d.color ?? '', p.color),
-            seats:  übernehmen('seats', d.seats != null ? String(d.seats) : '', p.seats),
+            powerKw: nimm('powerKw', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.powerKw),
+            displacementCcm: nimm('displacementCcm', d.displacementCcm != null ? String(d.displacementCcm) : '', p.displacementCcm),
+            color: nimm('color', d.color ?? '', p.color),
+            seats: nimm('seats', d.seats != null ? String(d.seats) : '', p.seats),
             equipment: Array.isArray(d.equipment)
               ? [...new Set([...p.equipment, ...d.equipment])] : p.equipment,
           };
@@ -331,7 +239,12 @@ export default function Formular() {
 
         setErkannt(neu);
         setScanZustand('fertig');
-      } catch { setScanZustand('fehler'); }
+        setBlattOffen(true);
+      } catch {
+        setScanZustand('fehler');
+        // Auch bei einem gescheiterten Scan soll er weiterarbeiten können.
+        setBlattOffen(true);
+      }
     };
     leser.readAsDataURL(datei);
   };
@@ -340,27 +253,26 @@ export default function Formular() {
 
   const weiter = async () => {
     const e: Record<string, string> = {};
-    if (!data.brand.trim()) e.brand = 'Bitte Marke wählen';
-    if (!data.km.trim())    e.km    = 'Pflichtfeld';
-    if (!data.price.trim()) e.price = 'Pflichtfeld';
+    if (!data.brand.trim()) e.brand = 'fehlt';
+    if (!data.km.trim())    e.km    = 'fehlt';
+    if (!data.price.trim()) e.price = 'fehlt';
 
-    // Pkw-EnVKV: bei Neuwagen, Tageszulassung und Vorführwagen sind die
-    // Verbrauchsangaben gesetzlich vorgeschrieben.
     const envkv = validateEnvkv(data.envkv, data.fuelType);
     if (!envkv.complete) e.envkv = `EnVKV-Pflichtangaben fehlen: ${envkv.missing.join(', ')}`;
 
     setFehler(e);
     if (Object.keys(e).length > 0) {
-      document.querySelector('[data-fehler]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setBlattOffen(true);
+      requestAnimationFrame(() =>
+        document.querySelector('[data-luecke="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
       return;
     }
     setUnterwegs(true);
 
     /*
      * Nur prüfen, NICHT abbuchen — verbraucht wird der Credit beim
-     * tatsächlichen Anlegen in /api/vehicles. Hier geht es allein darum,
-     * früh zu informieren statt vier Schritte ausfüllen zu lassen und
-     * dann abzuweisen.
+     * Anlegen in /api/vehicles. Hier geht es darum, früh zu informieren
+     * statt vier Schritte ausfüllen zu lassen und dann abzuweisen.
      */
     const credit = await fetch('/api/credits/check');
     if (!credit.ok) {
@@ -411,432 +323,516 @@ export default function Formular() {
   );
   const modelle = useMemo(() => (data.brand ? getModels(data.brand) : []), [data.brand]);
   const ausstattungTreffer = useMemo(
-    () => (ausstattungSuche.trim() ? searchEquipment(ausstattungSuche).slice(0, 12) : []),
+    () => (ausstattungSuche.trim() ? searchEquipment(ausstattungSuche).slice(0, 10) : []),
     [ausstattungSuche],
   );
 
-  /* ── Feldgestaltung ── */
+  /* ── Bausteine des Datenblatts ── */
 
-  const EING = (hatFehler = false): React.CSSProperties => ({
+  /** Eine Zeile: Beschriftung links, Wert rechts. Die Grundform des Blatts. */
+  const Zeile = ({ name, pflicht, luecke, markiert, kinder }: {
+    name: string; pflicht?: boolean; luecke?: boolean; markiert?: boolean;
+    kinder: React.ReactNode;
+  }) => (
+    <div
+      data-luecke={luecke ? 'true' : undefined}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: schmal ? '1fr' : '150px 1fr',
+        gap: schmal ? 5 : 14,
+        alignItems: 'center',
+        padding: schmal ? '9px 14px' : '7px 16px',
+        borderBottom: `1px solid ${T.linie}`,
+        // Eine Lücke wird hinterlegt, kein Rahmen: Der Blick soll beim
+        // Überfliegen daran hängenbleiben, ohne dass es nach Fehler aussieht.
+        background: luecke ? T.lueckeHell : 'transparent',
+      }}
+    >
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        fontSize: 12.5, color: luecke ? T.luecke : T.leise,
+        fontWeight: luecke ? 600 : 500,
+      }}>
+        {name}
+        {pflicht && <span style={{ color: T.fehler }}>*</span>}
+        {markiert && <CheckCircle2 size={11} color={T.gut} style={{ marginLeft: 'auto' }} />}
+      </div>
+      <div style={{ minWidth: 0 }}>{kinder}</div>
+    </div>
+  );
+
+  /** Eingabefeld ohne Rahmen — das Blatt trägt die Struktur, nicht der Kasten. */
+  const EING: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
-    background: T.karte,
-    border: `1px solid ${hatFehler ? T.fehler : T.rand}`,
-    borderRadius: 9, padding: '10px 13px',
-    color: T.text, fontSize: 14, fontFamily: T.schrift,
-    outline: 'none', transition: 'border-color .12s',
-  });
+    background: 'transparent', border: 'none', outline: 'none',
+    padding: '5px 0', color: T.text, fontSize: 14, fontFamily: T.schrift,
+  };
+  const ZAHL: React.CSSProperties = { ...EING, fontFamily: T.ziffern, letterSpacing: '-0.01em' };
 
-  const zeile = (spalten: string): React.CSSProperties => ({
-    display: 'grid',
-    gridTemplateColumns: schmal ? '1fr' : spalten,
-    gap: 14,
-  });
+  /** Gruppe von Zeilen mit Überschrift. */
+  const Gruppe = ({ titel, kinder, rechts }: { titel: string; kinder: React.ReactNode; rechts?: React.ReactNode }) => (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '0 16px 7px', fontSize: 11, fontWeight: 700,
+        color: T.leise, letterSpacing: '0.07em', textTransform: 'uppercase',
+      }}>
+        {titel}
+        {rechts && <span style={{ marginLeft: 'auto', textTransform: 'none', letterSpacing: 0 }}>{rechts}</span>}
+      </div>
+      <div style={{
+        background: T.blatt, border: `1px solid ${T.linie}`,
+        borderRadius: 10, overflow: 'visible',
+      }}>{kinder}</div>
+    </div>
+  );
+
+  /** Reihe kleiner Schaltflächen statt Aufklappmenü. */
+  const Wahl = ({ optionen, wert, feld, beiWahl }: {
+    optionen: string[]; wert: string; feld?: keyof FormData; beiWahl?: (v: string) => void;
+  }) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '2px 0' }}>
+      {optionen.map(o => {
+        const an = wert === o;
+        return (
+          <button key={o} type="button"
+            onClick={() => (beiWahl ? beiWahl(o) : feld && setzen(feld, an ? '' : o))}
+            style={{
+              padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
+              fontFamily: T.schrift, fontSize: 12.5, fontWeight: an ? 600 : 500,
+              border: `1px solid ${an ? T.akzent : T.linie}`,
+              background: an ? T.akzentHell : T.blatt,
+              color: an ? T.akzent : T.gedämpft,
+            }}>{o}</button>
+        );
+      })}
+    </div>
+  );
+
+  const scanLaeuft = scanZustand === 'laeuft';
 
   /* ────────────────────────── Darstellung ────────────────────────── */
 
   return (
     <div style={{ minHeight: '100vh', background: T.grund, fontFamily: T.schrift, color: T.text }}>
 
-      {/* ══ Kopfleiste ══ */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 40,
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
-        borderBottom: `1px solid ${T.rand}`,
+      {/* ══ Kopf ══ */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 40, height: 48,
+        display: 'flex', alignItems: 'center',
+        background: T.blatt, borderBottom: `1px solid ${T.linie}`,
       }}>
-        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, height: 56 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.2px' }}>Neues Inserat</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: T.leise }}>
-              {['Fahrzeug', 'Fotos', 'Text', 'Fertig'].map((s, i) => (
-                <span key={s} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  color: i === 0 ? T.akzent : T.leise,
-                  fontWeight: i === 0 ? 700 : 500,
-                }}>
-                  {i > 0 && <span style={{ color: T.rand }}>›</span>}
-                  {s}
-                </span>
-              ))}
-            </div>
-            <span style={{ marginLeft: 'auto', fontSize: 12.5, color: T.leise, fontVariantNumeric: 'tabular-nums' }}>
-              {anteil}% ausgefüllt
+        <div style={{ maxWidth: 940, margin: '0 auto', padding: '0 20px', width: '100%', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 700 }}>Neues Inserat</span>
+          <span style={{ fontSize: 12.5, color: T.leise }}>Schritt 1 von 4 · Fahrzeugdaten</span>
+          {blattOffen && offenePflicht.length > 0 && (
+            <span style={{
+              marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: T.luecke,
+              background: T.lueckeHell, padding: '3px 9px', borderRadius: 6,
+            }}>
+              {offenePflicht.length} {offenePflicht.length === 1 ? 'Lücke' : 'Lücken'}
             </span>
-          </div>
-          {/* Fortschritt als Linie, nicht als Kasten — sie soll informieren, nicht drängen. */}
-          <div style={{ height: 2, background: T.rand, borderRadius: 2, marginBottom: -1 }}>
-            <div style={{ width: `${anteil}%`, height: '100%', background: T.akzent, borderRadius: 2, transition: 'width .3s' }} />
-          </div>
+          )}
         </div>
-      </div>
+      </header>
 
-      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 20px 120px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 280px', gap: 20, alignItems: 'start' }}>
+      <main style={{ maxWidth: 940, margin: '0 auto', padding: blattOffen ? '20px 20px 96px' : '0 20px' }}>
 
-          <main>
-            {/* ══ 1 · Fahrzeugschein ══ */}
-            <Abschnitt
-              nummer={1}
-              titel="Fahrzeugschein"
-              hinweis="Foto machen — die Felder darunter füllen sich von selbst."
-              aktion={scanZustand === 'fertig' ? (
-                <button type="button" onClick={() => { setScanBild(null); setScanZustand('ruhe'); setErkannt(new Set()); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: T.schrift, fontSize: 12.5, color: T.leise, fontWeight: 600 }}>
-                  <RotateCcw size={12} /> Neu
-                </button>
-              ) : undefined}
-              kinder={
-                scanZustand === 'fertig' && scanBild ? (
-                  <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <img src={scanBild} alt="Fahrzeugschein" style={{ width: 84, height: 60, objectFit: 'cover', borderRadius: 8, border: `1px solid ${T.rand}` }} />
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, fontWeight: 700, color: T.gut }}>
-                        <CheckCircle2 size={14} /> {erkannt.size} Felder übernommen
-                      </div>
-                      <p style={{ margin: '3px 0 0', fontSize: 12.5, color: T.leise }}>
-                        Bitte kurz prüfen — bei schlecht lesbaren Scheinen liegt der Scan auch mal daneben.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
+        {/* ══ Zustand A: nur der Fahrzeugschein ══ */}
+        {!blattOffen ? (
+          <div style={{
+            minHeight: 'calc(100vh - 48px)', display: 'flex',
+            flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+          }}>
+            <div style={{ textAlign: 'center', maxWidth: 420 }}>
+              <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700, letterSpacing: '-0.4px' }}>
+                Fahrzeugschein fotografieren
+              </h1>
+              <p style={{ margin: 0, fontSize: 14, color: T.leise, lineHeight: 1.6 }}>
+                Zulassungsbescheinigung Teil I. Marke, Modell, Erstzulassung, Leistung,
+                Hubraum und Farbe werden ausgelesen — du trägst nur noch den Preis nach.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => dateiRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setUeberZone(true); }}
+              onDragLeave={() => setUeberZone(false)}
+              onDrop={e => {
+                e.preventDefault(); setUeberZone(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f?.type.startsWith('image/')) einlesen(f);
+              }}
+              disabled={scanLaeuft}
+              style={{
+                width: '100%', maxWidth: 420, padding: '40px 24px', borderRadius: 14,
+                border: `1.5px dashed ${ueberZone ? T.akzent : T.linieStark}`,
+                background: ueberZone ? T.akzentHell : T.blatt,
+                cursor: scanLaeuft ? 'wait' : 'pointer', fontFamily: T.schrift,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+              }}>
+              {scanLaeuft ? (
+                <>
+                  <Loader2 size={26} color={T.akzent} style={{ animation: 'drehen .8s linear infinite' }} />
+                  <span style={{ fontSize: 14.5, fontWeight: 600 }}>Wird gelesen…</span>
+                  <span style={{ fontSize: 12.5, color: T.leise }}>Dauert ein paar Sekunden</span>
+                </>
+              ) : (
+                <>
+                  <Camera size={26} color={T.akzent} />
+                  <span style={{ fontSize: 14.5, fontWeight: 700 }}>Foto aufnehmen oder auswählen</span>
+                  <span style={{ fontSize: 12.5, color: T.leise }}>JPG, PNG, HEIC · oder hierher ziehen</span>
+                </>
+              )}
+            </button>
+
+            <button type="button" onClick={() => setBlattOffen(true)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontFamily: T.schrift,
+                fontSize: 13, color: T.leise, textDecoration: 'underline', textUnderlineOffset: 3,
+              }}>
+              Ohne Schein von Hand eintragen
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* ══ Zustand B: das Datenblatt ══ */}
+
+            {/* Kopfzeile des Blatts: was der Scan gebracht hat */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18,
+              padding: '10px 14px', borderRadius: 10,
+              background: scanZustand === 'fertig' ? T.blatt : T.lueckeHell,
+              border: `1px solid ${scanZustand === 'fertig' ? T.linie : '#fde68a'}`,
+            }}>
+              {scanBild && scanZustand === 'fertig' ? (
+                <img src={scanBild} alt="Fahrzeugschein" style={{ width: 52, height: 38, objectFit: 'cover', borderRadius: 6, border: `1px solid ${T.linie}` }} />
+              ) : (
+                <AlertCircle size={18} color={T.luecke} style={{ flexShrink: 0 }} />
+              )}
+              <div style={{ flex: 1, minWidth: 0, fontSize: 13 }}>
+                {scanZustand === 'fertig' ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => dateiRef.current?.click()}
-                      onDragOver={e => { e.preventDefault(); setUeberZone(true); }}
-                      onDragLeave={() => setUeberZone(false)}
-                      onDrop={e => {
-                        e.preventDefault(); setUeberZone(false);
-                        const f = e.dataTransfer.files?.[0];
-                        if (f?.type.startsWith('image/')) einlesen(f);
-                      }}
-                      disabled={scanZustand === 'laeuft'}
-                      style={{
-                        width: '100%', padding: '28px 20px', borderRadius: 12,
-                        border: `1.5px dashed ${ueberZone ? T.akzent : T.randStark}`,
-                        background: ueberZone ? T.akzentHell : T.grund,
-                        cursor: scanZustand === 'laeuft' ? 'wait' : 'pointer',
-                        fontFamily: T.schrift, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', gap: 8, transition: 'border-color .12s, background .12s',
-                      }}
-                    >
-                      {scanZustand === 'laeuft' ? (
-                        <>
-                          <Loader2 size={22} color={T.akzent} style={{ animation: 'drehen .8s linear infinite' }} />
-                          <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>Wird gelesen…</span>
-                        </>
-                      ) : (
-                        <>
-                          <Camera size={22} color={T.akzent} />
-                          <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Zulassungsbescheinigung Teil I fotografieren</span>
-                          <span style={{ fontSize: 12.5, color: T.leise }}>oder Datei hierher ziehen · JPG, PNG, HEIC</span>
-                        </>
-                      )}
-                    </button>
-                    {scanZustand === 'fehler' && (
-                      <p style={{ margin: '10px 0 0', fontSize: 12.5, color: T.fehler, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <AlertCircle size={13} /> Konnte nicht gelesen werden. Trag die Daten unten von Hand ein.
-                      </p>
-                    )}
+                    <strong style={{ color: T.gut }}>{erkannt.size} Felder aus dem Schein übernommen.</strong>
+                    <span style={{ color: T.leise }}> Hervorgehoben ist, was noch fehlt.</span>
                   </>
-                )
-              }
-            />
-            <input ref={dateiRef} type="file" accept="image/*" hidden
-              onChange={e => { const f = e.target.files?.[0]; if (f) einlesen(f); }} />
+                ) : scanZustand === 'fehler' ? (
+                  <span style={{ color: T.luecke }}>Der Schein konnte nicht gelesen werden — trag die Daten von Hand ein.</span>
+                ) : (
+                  <span style={{ color: T.luecke }}>Ohne Schein eingetragen. Ein Foto würde die meisten Zeilen füllen.</span>
+                )}
+              </div>
+              <button type="button" onClick={() => dateiRef.current?.click()}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                  padding: '6px 11px', borderRadius: 7, cursor: 'pointer',
+                  border: `1px solid ${T.linieStark}`, background: T.blatt,
+                  fontFamily: T.schrift, fontSize: 12.5, fontWeight: 600, color: T.gedämpft,
+                }}>
+                {scanZustand === 'fertig' ? <><RotateCcw size={12} /> Neu scannen</> : <><Camera size={12} /> Schein scannen</>}
+              </button>
+            </div>
 
-            {/* ══ 2 · Fahrzeug ══ */}
-            <Abschnitt nummer={2} titel="Fahrzeug" kinder={
-              <div style={{ display: 'grid', gap: 16 }}>
-                <div style={zeile('1fr 1fr')}>
-                  {/* Marke */}
-                  <div ref={markeRef} style={{ position: 'relative' }} data-fehler={fehler.brand || undefined}>
-                    <Feld label="Marke" pflicht fehler={fehler.brand} erkannt={erkannt.has('brand')} kinder={
-                      <>
-                        <button type="button" onClick={() => setMarkeOffen(o => !o)}
-                          style={{ ...EING(!!fehler.brand), textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {data.brand && hatZeichen(data.brand) && <MarkenZeichen marke={data.brand} groesse={18} farbe={T.gedämpft} />}
-                          <span style={{ color: data.brand ? T.text : T.leise, flex: 1 }}>{data.brand || 'Marke wählen'}</span>
-                          <ChevronDown size={15} color={T.leise} />
-                        </button>
-                        {markeOffen && (
-                          <div style={{
-                            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, marginTop: 4,
-                            background: T.karte, border: `1px solid ${T.rand}`, borderRadius: 10,
-                            boxShadow: '0 12px 32px rgba(15,23,42,0.12)', maxHeight: 320, overflow: 'auto',
-                          }}>
-                            <div style={{ padding: 8, borderBottom: `1px solid ${T.rand}`, position: 'sticky', top: 0, background: T.karte }}>
-                              <div style={{ position: 'relative' }}>
-                                <Search size={13} color={T.leise} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
-                                <input autoFocus value={markeSuche} onChange={e => setMarkeSuche(e.target.value)}
-                                  placeholder="Marke suchen…"
-                                  style={{ ...EING(), padding: '8px 10px 8px 30px', fontSize: 13 }} />
-                              </div>
-                            </div>
+            {/* ── Fahrzeug ── */}
+            <Gruppe titel="Fahrzeug" kinder={
+              <>
+                <Zeile name="Marke" pflicht luecke={!data.brand} markiert={erkannt.has('brand')} kinder={
+                  <div ref={markeRef} style={{ position: 'relative' }}>
+                    <button type="button" onClick={() => setMarkeOffen(o => !o)}
+                      style={{ ...EING, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                      {data.brand && hatZeichen(data.brand) && <MarkenZeichen marke={data.brand} groesse={16} farbe={T.gedämpft} />}
+                      <span style={{ color: data.brand ? T.text : T.leise, flex: 1 }}>{data.brand || 'wählen'}</span>
+                      <ChevronDown size={14} color={T.leise} />
+                    </button>
+                    {markeOffen && (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: -8, right: -8, zIndex: 30, marginTop: 2,
+                        background: T.blatt, border: `1px solid ${T.linieStark}`, borderRadius: 10,
+                        boxShadow: '0 14px 34px rgba(15,23,42,0.14)', maxHeight: 330, overflow: 'auto',
+                      }}>
+                        <div style={{ padding: 7, borderBottom: `1px solid ${T.linie}`, position: 'sticky', top: 0, background: T.blatt }}>
+                          <div style={{ position: 'relative' }}>
+                            <Search size={13} color={T.leise} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)' }} />
+                            <input autoFocus value={markeSuche} onChange={e => setMarkeSuche(e.target.value)}
+                              placeholder="Marke suchen…"
+                              style={{ width: '100%', boxSizing: 'border-box', padding: '7px 9px 7px 28px', fontSize: 13,
+                                       border: `1px solid ${T.linie}`, borderRadius: 7, outline: 'none', fontFamily: T.schrift }} />
+                          </div>
+                        </div>
+                        {!markeSuche ? (
+                          <>
                             {/*
-                              Entweder Schnellauswahl oder Liste, nie beides.
-                              Vorher standen die zwoelf haeufigen Marken als
-                              Kacheln UND direkt darunter dieselbe Marke noch
-                              einmal in der Gesamtliste — BMW zweimal
-                              untereinander sieht nach Fehler aus.
+                              Entweder Schnellauswahl oder Liste, nie beides —
+                              sonst steht jede häufige Marke zweimal untereinander.
                             */}
-                            {!markeSuche ? (
-                              <>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: 8 }}>
-                                  {TOP_MARKEN.map(m => (
-                                    <button key={m} type="button"
-                                      onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); setMarkeSuche(''); }}
-                                      style={{
-                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                                        padding: '11px 4px', borderRadius: 9, cursor: 'pointer',
-                                        border: `1px solid ${data.brand === m ? T.akzent : T.rand}`,
-                                        background: data.brand === m ? T.akzentHell : T.karte,
-                                        fontFamily: T.schrift, fontSize: 11.5, fontWeight: 600,
-                                        color: data.brand === m ? T.akzent : T.gedämpft,
-                                      }}>
-                                      {/*
-                                        Nur ein gezeichnetes Zeichen, sonst nichts.
-                                        Vorher stand bei Marken ohne Zeichen das
-                                        Kuerzel ueber dem Namen — "FOR" ueber
-                                        "Ford". Das liest sich wie ein Fehler.
-                                      */}
-                                      {hatZeichen(m) && (
-                                        <MarkenZeichen marke={m} groesse={20} farbe={data.brand === m ? T.akzent : T.gedämpft} />
-                                      )}
-                                      {m}
-                                    </button>
-                                  ))}
-                                </div>
-                                <p style={{ margin: 0, padding: '0 14px 10px', fontSize: 12, color: T.leise }}>
-                                  Andere Marke? Oben ins Suchfeld tippen.
-                                </p>
-                              </>
-                            ) : (
-                            <div>
-                              {markenGefiltert.slice(0, 60).map(m => (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5, padding: 7 }}>
+                              {TOP_MARKEN.map(m => (
                                 <button key={m} type="button"
-                                  onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); setMarkeSuche(''); }}
+                                  onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); }}
                                   style={{
-                                    width: '100%', textAlign: 'left', padding: '9px 14px', border: 'none',
-                                    background: data.brand === m ? T.akzentHell : 'transparent',
-                                    color: data.brand === m ? T.akzent : T.text,
-                                    cursor: 'pointer', fontFamily: T.schrift, fontSize: 13.5,
-                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                                    padding: '9px 3px', borderRadius: 8, cursor: 'pointer',
+                                    border: `1px solid ${data.brand === m ? T.akzent : T.linie}`,
+                                    background: data.brand === m ? T.akzentHell : T.blatt,
+                                    fontFamily: T.schrift, fontSize: 11, fontWeight: 600,
+                                    color: data.brand === m ? T.akzent : T.gedämpft,
                                   }}>
-                                  {hatZeichen(m) && <MarkenZeichen marke={m} groesse={15} farbe={T.leise} />}
+                                  {/* Kein Kürzel neben dem Namen — "FOR" über "Ford" liest sich wie ein Fehler. */}
+                                  {hatZeichen(m) && <MarkenZeichen marke={m} groesse={18} farbe={data.brand === m ? T.akzent : T.gedämpft} />}
                                   {m}
                                 </button>
                               ))}
-                              {markenGefiltert.length === 0 && (
-                                <p style={{ padding: '12px 14px', margin: 0, fontSize: 13, color: T.leise }}>
-                                  Keine Marke gefunden — du kannst sie unten von Hand eintragen.
-                                </p>
-                              )}
                             </div>
+                            <p style={{ margin: 0, padding: '0 12px 9px', fontSize: 11.5, color: T.leise }}>
+                              Andere Marke? Oben tippen.
+                            </p>
+                          </>
+                        ) : (
+                          <div>
+                            {markenGefiltert.slice(0, 60).map(m => (
+                              <button key={m} type="button"
+                                onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); setMarkeSuche(''); }}
+                                style={{
+                                  width: '100%', textAlign: 'left', padding: '8px 13px', border: 'none',
+                                  background: data.brand === m ? T.akzentHell : 'transparent',
+                                  color: data.brand === m ? T.akzent : T.text, cursor: 'pointer',
+                                  fontFamily: T.schrift, fontSize: 13, display: 'flex', alignItems: 'center', gap: 7,
+                                }}>
+                                {hatZeichen(m) && <MarkenZeichen marke={m} groesse={14} farbe={T.leise} />}
+                                {m}
+                              </button>
+                            ))}
+                            {markenGefiltert.length === 0 && (
+                              <p style={{ padding: '11px 13px', margin: 0, fontSize: 12.5, color: T.leise }}>
+                                Keine Marke gefunden.
+                              </p>
                             )}
                           </div>
                         )}
-                      </>
-                    } />
-                  </div>
-
-                  {/* Modell */}
-                  <div ref={modellRef} style={{ position: 'relative' }}>
-                    <Feld label="Modell" erkannt={erkannt.has('model')} kinder={
-                      <>
-                        <input
-                          value={data.model}
-                          onChange={e => setzen('model', e.target.value)}
-                          onFocus={() => modelle.length > 0 && setModellOffen(true)}
-                          /*
-                            Beispiel aus der gewaehlten Marke. Vorher stand
-                            hier fest "z.B. Golf VII" — auch wenn BMW
-                            ausgewaehlt war.
-                          */
-                          placeholder={
-                            data.brand
-                              ? (modelle[0] ? `z.B. ${modelle[0]}` : 'Modell eingeben')
-                              : 'Erst Marke wählen'
-                          }
-                          disabled={!data.brand}
-                          style={{ ...EING(), background: data.brand ? T.karte : T.grund }}
-                        />
-                        {modellOffen && modelle.length > 0 && (
-                          <div style={{
-                            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, marginTop: 4,
-                            background: T.karte, border: `1px solid ${T.rand}`, borderRadius: 10,
-                            boxShadow: '0 12px 32px rgba(15,23,42,0.12)', maxHeight: 240, overflow: 'auto',
-                          }}>
-                            {modelle
-                              .filter(m => m.toLowerCase().includes(data.model.toLowerCase()))
-                              .slice(0, 40)
-                              .map(m => (
-                                <button key={m} type="button"
-                                  onClick={() => { setzen('model', m); setModellOffen(false); }}
-                                  style={{
-                                    width: '100%', textAlign: 'left', padding: '9px 14px', border: 'none',
-                                    background: 'transparent', color: T.text, cursor: 'pointer',
-                                    fontFamily: T.schrift, fontSize: 13.5,
-                                  }}>{m}</button>
-                              ))}
-                          </div>
-                        )}
-                      </>
-                    } />
-                  </div>
-                </div>
-
-                <div style={zeile('1fr 1fr')}>
-                  <Feld
-                    label="Fahrgestellnummer"
-                    erkannt={erkannt.has('vin')}
-                    hinweis="Gehört ins Inserat. Die Ausstattung erkennen wir aus deinen Fotos."
-                    kinder={
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          value={data.vin}
-                          onChange={e => setzen('vin', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                          placeholder="WVWZZZ1JZW000001"
-                          maxLength={17}
-                          style={{ ...EING(), paddingRight: 46, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.06em' }}
-                        />
-                        <span style={{
-                          position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                          fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
-                          color: data.vin.length === 17 ? T.gut : T.leise,
-                        }}>{data.vin.length}/17</span>
                       </div>
-                    }
-                  />
-                </div>
-              </div>
+                    )}
+                  </div>
+                } />
+
+                <Zeile name="Modell" markiert={erkannt.has('model')} kinder={
+                  <div ref={modellRef} style={{ position: 'relative' }}>
+                    <input value={data.model}
+                      onChange={e => setzen('model', e.target.value)}
+                      onFocus={() => modelle.length > 0 && setModellOffen(true)}
+                      placeholder={data.brand ? (modelle[0] ? modelle[0] : 'Modell') : 'erst Marke wählen'}
+                      disabled={!data.brand}
+                      style={EING} />
+                    {modellOffen && modelle.length > 0 && (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: -8, right: -8, zIndex: 30, marginTop: 2,
+                        background: T.blatt, border: `1px solid ${T.linieStark}`, borderRadius: 10,
+                        boxShadow: '0 14px 34px rgba(15,23,42,0.14)', maxHeight: 230, overflow: 'auto',
+                      }}>
+                        {modelle.filter(m => m.toLowerCase().includes(data.model.toLowerCase())).slice(0, 40).map(m => (
+                          <button key={m} type="button" onClick={() => { setzen('model', m); setModellOffen(false); }}
+                            style={{ width: '100%', textAlign: 'left', padding: '8px 13px', border: 'none',
+                                     background: 'transparent', color: T.text, cursor: 'pointer',
+                                     fontFamily: T.schrift, fontSize: 13 }}>{m}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                } />
+
+                <Zeile name="Erstzulassung" markiert={erkannt.has('firstRegistration')} kinder={
+                  <input value={data.firstRegistration} onChange={e => setzen('firstRegistration', e.target.value)}
+                    placeholder="03/2019" style={ZAHL} />
+                } />
+
+                <Zeile name="Fahrgestellnummer" markiert={erkannt.has('vin')} kinder={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input value={data.vin}
+                      onChange={e => setzen('vin', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                      placeholder="WVWZZZ1JZW000001" maxLength={17}
+                      style={{ ...ZAHL, letterSpacing: '0.05em' }} />
+                    {data.vin.length > 0 && (
+                      <span style={{ fontSize: 11, fontFamily: T.ziffern, color: data.vin.length === 17 ? T.gut : T.leise }}>
+                        {data.vin.length}/17
+                      </span>
+                    )}
+                  </div>
+                } />
+              </>
             } />
 
-            {/* ══ 3 · Eckdaten ══ */}
-            <Abschnitt nummer={3} titel="Eckdaten" hinweis="Das, wonach Käufer filtern." kinder={
-              <div style={zeile('1fr 1fr 1fr')}>
-                <div data-fehler={fehler.km || undefined}>
-                  <Feld label="Kilometerstand" pflicht einheit="km" fehler={fehler.km} erkannt={erkannt.has('km')} kinder={
-                    <input inputMode="numeric" value={data.km}
+            {/* ── Eckdaten ── */}
+            <Gruppe titel="Eckdaten" kinder={
+              <>
+                <Zeile name="Kilometerstand" pflicht luecke={!data.km} markiert={erkannt.has('km')} kinder={
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <input inputMode="numeric" value={data.km ? Number(data.km).toLocaleString('de-DE') : ''}
                       onChange={e => setzen('km', e.target.value.replace(/\D/g, ''))}
-                      placeholder="84500" style={EING(!!fehler.km)} />
-                  } />
-                </div>
-                <div data-fehler={fehler.price || undefined}>
-                  <Feld label="Preis" pflicht einheit="€" fehler={fehler.price} kinder={
-                    <input inputMode="numeric" value={data.price}
-                      onChange={e => setzen('price', e.target.value.replace(/\D/g, ''))}
-                      placeholder="18900" style={EING(!!fehler.price)} />
-                  } />
-                </div>
-                <Feld label="Erstzulassung" erkannt={erkannt.has('firstRegistration')} kinder={
-                  <input value={data.firstRegistration}
-                    onChange={e => setzen('firstRegistration', e.target.value)}
-                    placeholder="03/2019" style={EING()} />
+                      placeholder="84.500" style={ZAHL} />
+                    <span style={{ fontSize: 12.5, color: T.leise, flexShrink: 0 }}>km</span>
+                  </div>
                 } />
-              </div>
+                <Zeile name="Preis" pflicht luecke={!data.price} kinder={
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <input inputMode="numeric" value={data.price ? Number(data.price).toLocaleString('de-DE') : ''}
+                      onChange={e => setzen('price', e.target.value.replace(/\D/g, ''))}
+                      placeholder="18.900" style={{ ...ZAHL, fontWeight: 600 }} />
+                    <span style={{ fontSize: 12.5, color: T.leise, flexShrink: 0 }}>€</span>
+                  </div>
+                } />
+              </>
             } />
 
-            {/* ══ 4 · Antrieb ══ */}
-            <Abschnitt nummer={4} titel="Antrieb" kinder={
-              <div style={{ display: 'grid', gap: 16 }}>
-                <Feld label="Kraftstoff" erkannt={erkannt.has('fuelType')} kinder={
-                  <Wahl optionen={KRAFTSTOFFE} wert={data.fuelType} aufWahl={v => setzen('fuelType', v)} />
+            {/* ── Technik ── */}
+            <Gruppe titel="Technik" kinder={
+              <>
+                <Zeile name="Kraftstoff" markiert={erkannt.has('fuelType')} kinder={
+                  <Wahl optionen={KRAFTSTOFFE} wert={data.fuelType} feld="fuelType" />
                 } />
-                <div style={zeile('1fr 1fr 1fr')}>
-                  <Feld label="Getriebe" kinder={
-                    <Wahl optionen={GETRIEBE} wert={data.gearbox} aufWahl={v => setzen('gearbox', v)} spalten={2} />
-                  } />
-                  <Feld label="Leistung" einheit="PS" erkannt={erkannt.has('powerKw')} kinder={
+                <Zeile name="Getriebe" kinder={
+                  <Wahl optionen={GETRIEBE} wert={data.gearbox} feld="gearbox" />
+                } />
+                <Zeile name="Leistung" markiert={erkannt.has('powerKw')} kinder={
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <input inputMode="numeric" value={data.powerKw}
                       onChange={e => setzen('powerKw', e.target.value.replace(/\D/g, ''))}
-                      placeholder="150" style={EING()} />
-                  } />
-                  <Feld label="Hubraum" einheit="ccm" erkannt={erkannt.has('displacementCcm')} kinder={
+                      placeholder="150" style={ZAHL} />
+                    <span style={{ fontSize: 12.5, color: T.leise, flexShrink: 0 }}>PS</span>
+                  </div>
+                } />
+                <Zeile name="Hubraum" markiert={erkannt.has('displacementCcm')} kinder={
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                     <input inputMode="numeric" value={data.displacementCcm}
                       onChange={e => setzen('displacementCcm', e.target.value.replace(/\D/g, ''))}
-                      placeholder="1968" style={EING()} />
-                  } />
-                </div>
-              </div>
-            } />
-
-            {/* ══ 5 · Weitere Angaben ══ */}
-            <Abschnitt nummer={5} titel="Weitere Angaben" kinder={
-              <div style={zeile('1fr 1fr')}>
-                <Feld label="Farbe" erkannt={erkannt.has('color')} kinder={
+                      placeholder="1968" style={ZAHL} />
+                    <span style={{ fontSize: 12.5, color: T.leise, flexShrink: 0 }}>ccm</span>
+                  </div>
+                } />
+                <Zeile name="Farbe" markiert={erkannt.has('color')} kinder={
                   <input value={data.color} onChange={e => setzen('color', e.target.value)}
-                    placeholder="Tiefschwarz Perleffekt" style={EING()} />
+                    placeholder="Tiefschwarz Perleffekt" style={EING} />
                 } />
-                <Feld label="Sitzplätze" erkannt={erkannt.has('seats')} kinder={
-                  <Wahl optionen={['2', '4', '5', '7']} wert={data.seats} aufWahl={v => setzen('seats', v)} spalten={4} />
+                <Zeile name="Sitzplätze" markiert={erkannt.has('seats')} kinder={
+                  <Wahl optionen={['2', '4', '5', '7']} wert={data.seats} feld="seats" />
                 } />
-              </div>
+              </>
             } />
 
-            {/* ══ 6 · Verbrauch ══ */}
-            <div data-fehler={fehler.envkv || undefined}>
-              <Abschnitt
-                nummer={6}
-                titel="Verbrauch und Emissionen"
-                hinweis="Pflicht bei Neuwagen, Tageszulassung und Vorführwagen. Bei Gebrauchtwagen freiwillig."
-                kinder={
-                  <>
-                    {/*
-                      EnvkvFields meldet nur die geaenderten Felder, nicht
-                      den ganzen Satz. Das Ergebnis muss deshalb auf den
-                      bestehenden Stand gelegt werden — wer es direkt
-                      einsetzt, loescht bei jeder Eingabe alle anderen Werte.
-                    */}
-                    <EnvkvFields
-                      value={data.envkv}
-                      fuelType={data.fuelType}
-                      isMobile={schmal}
-                      onChange={teil => {
-                        setData(p => ({ ...p, envkv: { ...p.envkv, ...teil } }));
+            {/* ── Verbrauch ── */}
+            <Gruppe titel="Verbrauch und Emissionen"
+              rechts={
+                envkvPflicht
+                  ? <span style={{ fontSize: 11.5, color: T.luecke, fontWeight: 600 }}>Pflichtangaben</span>
+                  : <span style={{ fontSize: 11.5, color: T.leise, fontWeight: 500 }}>bei Gebrauchtwagen freiwillig</span>
+              }
+              kinder={
+                <div style={{ padding: envkvSichtbar ? 16 : 0 }} data-luecke={fehler.envkv ? 'true' : undefined}>
+                {/*
+                  Bei Gebrauchtwagen eingeklappt.
+                  Dieser Block war mit 530 Pixeln der groesste der Seite —
+                  bei einem Gebrauchtwagen, also dem Normalfall, sind die
+                  Angaben aber gar nicht vorgeschrieben. Ein Drittel der
+                  Seitenhoehe fuer etwas, das die meisten Inserate nicht
+                  brauchen.
+
+                  Die Fahrzeugart bleibt trotzdem waehlbar, sonst kaeme
+                  niemand an die Pflichtangaben heran, der sie braucht.
+                */}
+                {!envkvSichtbar ? (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                    padding: '11px 16px',
+                  }}>
+                    <span style={{ fontSize: 12.5, color: T.leise }}>Fahrzeugart:</span>
+                    <Wahl
+                      optionen={['Gebrauchtwagen', 'Neuwagen', 'Tageszulassung', 'Vorführwagen', 'Jahreswagen']}
+                      wert={ART_ANZEIGE[(data.envkv.vehicleKind as VehicleKind) ?? 'gebrauchtwagen'] ?? 'Gebrauchtwagen'}
+                      beiWahl={anzeige => {
+                        const schluessel = (Object.keys(ART_ANZEIGE) as VehicleKind[])
+                          .find(k => ART_ANZEIGE[k] === anzeige) ?? 'gebrauchtwagen';
+                        setData(p => ({ ...p, envkv: { ...p.envkv, vehicleKind: schluessel } }));
                         setFehler(p => ({ ...p, envkv: '' }));
                       }}
                     />
-                    {fehler.envkv && (
-                      <p style={{ margin: '10px 0 0', fontSize: 12.5, color: T.fehler, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <AlertCircle size={13} /> {fehler.envkv}
-                      </p>
-                    )}
+                    <button type="button" onClick={() => setEnvkvOffen(true)}
+                      style={{
+                        marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
+                        fontFamily: T.schrift, fontSize: 12.5, color: T.leise,
+                        textDecoration: 'underline', textUnderlineOffset: 3, padding: 0,
+                      }}>
+                      Werte freiwillig angeben
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                  {/*
+                    EnvkvFields meldet nur die geänderten Felder, nicht den
+                    ganzen Satz — das Ergebnis muss auf den bestehenden Stand
+                    gelegt werden, sonst löscht jede Eingabe die anderen Werte.
+                  */}
+                  <EnvkvFields
+                    value={data.envkv}
+                    fuelType={data.fuelType}
+                    isMobile={schmal}
+                    onChange={teil => {
+                      setData(p => ({ ...p, envkv: { ...p.envkv, ...teil } }));
+                      setFehler(p => ({ ...p, envkv: '' }));
+                    }}
+                  />
+                  {fehler.envkv && (
+                    <p style={{ margin: '10px 0 0', fontSize: 12.5, color: T.fehler, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <AlertCircle size={13} /> {fehler.envkv}
+                    </p>
+                  )}
                   </>
-                }
-              />
-            </div>
+                )}
+                </div>
+              }
+            />
 
-            {/* ══ 7 · Ausstattung ══ */}
-            <Abschnitt
-              nummer={7}
+            {/* ── Ausstattung: eingeklappt ── */}
+            <Gruppe
               titel="Ausstattung"
-              hinweis="Beim Hochladen der Fotos wird sie ergänzt — was zu sehen ist, wird erkannt."
-              aktion={data.equipment.length > 0
-                ? <span style={{ fontSize: 12.5, fontWeight: 700, color: T.akzent }}>{data.equipment.length}</span>
-                : undefined}
+              rechts={
+                <span style={{ fontSize: 11.5, color: T.leise, fontWeight: 500 }}>
+                  {data.equipment.length > 0 ? `${data.equipment.length} erfasst · ` : ''}
+                  wird aus den Fotos ergänzt
+                </span>
+              }
               kinder={
-                <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{ padding: '12px 16px' }}>
                   {data.equipment.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
                       {data.equipment.map((e, i) => (
                         <span key={`${e}-${i}`} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '5px 8px 5px 11px', borderRadius: 7,
-                          background: T.grund, border: `1px solid ${T.rand}`,
-                          fontSize: 12.5, color: T.gedämpft,
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          padding: '3px 6px 3px 9px', borderRadius: 6,
+                          background: T.grund, border: `1px solid ${T.linie}`,
+                          fontSize: 12, color: T.gedämpft,
                         }}>
                           {e}
                           <button type="button" onClick={() => setzen('equipment', data.equipment.filter((_, j) => j !== i))}
                             style={{ display: 'flex', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: T.leise }}>
-                            <X size={12} />
+                            <X size={11} />
                           </button>
                         </span>
                       ))}
                     </div>
                   )}
 
-                  <div style={{ position: 'relative' }}>
-                    <Search size={14} color={T.leise} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                  <p style={{ margin: '0 0 10px', fontSize: 12.5, color: T.leise, lineHeight: 1.6 }}>
+                    {/*
+                      Der Grund fürs Einklappen gehört sichtbar hin: Sonst
+                      denkt der Händler, er müsse hier durch — und macht
+                      Arbeit, die Schritt 2 ihm gleich abnimmt.
+                    */}
+                    Beim Hochladen der Fotos wird erkannt, was zu sehen ist — Navi, Sitzheizung,
+                    Felgen, Assistenzsysteme. Hier lohnt sich nur, was man <em>nicht</em> sieht:
+                    Scheckheft, Vorbesitzer, Standheizung.
+                  </p>
+
+                  <div style={{ position: 'relative', marginBottom: ausstattungOffen ? 10 : 0 }}>
+                    <Plus size={14} color={T.leise} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
                     <input
                       value={ausstattungSuche}
                       onChange={e => setAusstattungSuche(e.target.value)}
@@ -848,13 +844,16 @@ export default function Formular() {
                           setAusstattungSuche('');
                         }
                       }}
-                      placeholder="Suchen oder eigene Ausstattung eintippen und Enter drücken"
-                      style={{ ...EING(), paddingLeft: 34 }}
-                    />
+                      placeholder="Eintippen und Enter — z.B. Scheckheftgepflegt"
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '8px 10px 8px 30px',
+                        border: `1px solid ${T.linie}`, borderRadius: 8, outline: 'none',
+                        fontSize: 13, fontFamily: T.schrift,
+                      }} />
                   </div>
 
                   {ausstattungTreffer.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
                       {ausstattungTreffer.map(eintrag => {
                         const t = eintrag.label;
                         const drin = data.equipment.includes(t);
@@ -862,166 +861,132 @@ export default function Formular() {
                           <button key={eintrag.id} type="button" disabled={drin}
                             onClick={() => { setzen('equipment', [...data.equipment, t]); setAusstattungSuche(''); }}
                             style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              padding: '5px 10px', borderRadius: 7, cursor: drin ? 'default' : 'pointer',
-                              border: `1px solid ${drin ? T.rand : T.randStark}`,
-                              background: drin ? T.grund : T.karte,
-                              color: drin ? T.leise : T.gedämpft,
-                              fontFamily: T.schrift, fontSize: 12.5,
-                            }}>
-                            {drin ? <CheckCircle2 size={11} /> : <Plus size={11} />} {t}
-                          </button>
+                              padding: '4px 9px', borderRadius: 6, cursor: drin ? 'default' : 'pointer',
+                              border: `1px solid ${T.linie}`, background: drin ? T.grund : T.blatt,
+                              color: drin ? T.leise : T.gedämpft, fontFamily: T.schrift, fontSize: 12,
+                            }}>{drin ? '✓ ' : '+ '}{t}</button>
                         );
                       })}
                     </div>
                   )}
 
-                  {/* Kategorien zum Durchblättern */}
-                  <div style={{ border: `1px solid ${T.rand}`, borderRadius: 10, overflow: 'hidden' }}>
-                    {EQUIPMENT_DB.map(gruppe => {
-                      const kategorie = gruppe.label;
-                      const eintraege = gruppe.items;
-                      const offen = kategorieOffen === kategorie;
-                      return (
-                        <div key={kategorie} style={{ borderBottom: `1px solid ${T.rand}` }}>
-                          <button type="button" onClick={() => setKategorieOffen(offen ? null : kategorie)}
-                            style={{
-                              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                              padding: '11px 14px', border: 'none', background: offen ? T.grund : T.karte,
-                              cursor: 'pointer', fontFamily: T.schrift, fontSize: 13, fontWeight: 600, color: T.gedämpft,
-                            }}>
-                            <ChevronDown size={14} style={{ transform: offen ? 'none' : 'rotate(-90deg)', transition: 'transform .15s' }} />
-                            {kategorie}
-                            <span style={{ marginLeft: 'auto', fontSize: 12, color: T.leise, fontWeight: 500 }}>
-                              {eintraege.length}
-                            </span>
-                          </button>
-                          {offen && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '4px 14px 14px' }}>
-                              {eintraege.map(eintrag => {
-                                const e = eintrag.label;
-                                const drin = data.equipment.includes(e);
-                                return (
-                                  <button key={eintrag.id} type="button"
-                                    onClick={() => setzen('equipment', drin
-                                      ? data.equipment.filter(x => x !== e)
-                                      : [...data.equipment, e])}
-                                    style={{
-                                      padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
-                                      border: `1px solid ${drin ? T.akzent : T.rand}`,
-                                      background: drin ? T.akzentHell : T.karte,
-                                      color: drin ? T.akzent : T.gedämpft,
-                                      fontFamily: T.schrift, fontSize: 12.5, fontWeight: drin ? 600 : 500,
-                                    }}>{e}</button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              }
-            />
-
-            {/* ══ 8 · Notizen ══ */}
-            <Abschnitt
-              nummer={8}
-              titel="Notizen für die Beschreibung"
-              hinweis="Was den Text besser macht: Vorbesitzer, Reifen, Reparaturen, Besonderheiten."
-              kinder={
-                <textarea
-                  value={data.dealerNotes}
-                  onChange={e => setzen('dealerNotes', e.target.value)}
-                  rows={3}
-                  placeholder="Scheckheftgepflegt, zwei Vorbesitzer, Winterreifen auf Alu dabei, kleiner Kratzer hinten rechts."
-                  style={{ ...EING(), resize: 'vertical', lineHeight: 1.6 }}
-                />
-              }
-            />
-          </main>
-
-          {/* ══ Seitenleiste: was noch fehlt ══ */}
-          {!schmal && (
-            <aside style={{ position: 'sticky', top: 76 }}>
-              <div style={{ background: T.karte, border: `1px solid ${T.rand}`, borderRadius: 14, padding: 18 }}>
-                <h3 style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 700 }}>
-                  {offenePflicht.length === 0 ? 'Bereit für Schritt 2' : 'Noch nötig'}
-                </h3>
-                <p style={{ margin: '0 0 14px', fontSize: 12.5, color: T.leise, lineHeight: 1.5 }}>
-                  {offenePflicht.length === 0
-                    ? 'Alles Nötige steht. Je mehr du ergänzt, desto besser wird die Beschreibung.'
-                    : 'Ohne diese Angaben geht es nicht weiter.'}
-                </p>
-
-                {[
-                  ['brand', 'Marke'], ['km', 'Kilometerstand'], ['price', 'Preis'],
-                ].map(([schluessel, name]) => {
-                  const da = String(data[schluessel as keyof FormData]).trim().length > 0;
-                  return (
-                    <div key={schluessel} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '6px 0', fontSize: 13,
-                      color: da ? T.gedämpft : T.text,
+                  <button type="button" onClick={() => setAusstattungOffen(o => !o)}
+                    style={{
+                      marginTop: 10, background: 'none', border: 'none', cursor: 'pointer',
+                      fontFamily: T.schrift, fontSize: 12.5, color: T.leise,
+                      display: 'flex', alignItems: 'center', gap: 5, padding: 0,
                     }}>
-                      {da
-                        ? <CheckCircle2 size={14} color={T.gut} />
-                        : <span style={{ width: 14, height: 14, borderRadius: 7, border: `1.5px solid ${T.randStark}` }} />}
-                      {name}
+                    <ChevronDown size={13} style={{ transform: ausstattungOffen ? 'none' : 'rotate(-90deg)', transition: 'transform .15s' }} />
+                    {ausstattungOffen ? 'Liste schliessen' : 'Alle Merkmale durchgehen'}
+                  </button>
+
+                  {ausstattungOffen && (
+                    <div style={{ marginTop: 10, border: `1px solid ${T.linie}`, borderRadius: 8, overflow: 'hidden' }}>
+                      {EQUIPMENT_DB.map(gruppe => {
+                        const offen = kategorieOffen === gruppe.label;
+                        return (
+                          <div key={gruppe.label} style={{ borderBottom: `1px solid ${T.linie}` }}>
+                            <button type="button" onClick={() => setKategorieOffen(offen ? null : gruppe.label)}
+                              style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: 7,
+                                padding: '9px 12px', border: 'none', background: offen ? T.grund : T.blatt,
+                                cursor: 'pointer', fontFamily: T.schrift, fontSize: 12.5, fontWeight: 600, color: T.gedämpft,
+                              }}>
+                              <ChevronDown size={12} style={{ transform: offen ? 'none' : 'rotate(-90deg)' }} />
+                              {gruppe.label}
+                              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: T.leise, fontWeight: 500 }}>{gruppe.items.length}</span>
+                            </button>
+                            {offen && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '2px 12px 12px' }}>
+                                {gruppe.items.map(eintrag => {
+                                  const e = eintrag.label;
+                                  const drin = data.equipment.includes(e);
+                                  return (
+                                    <button key={eintrag.id} type="button"
+                                      onClick={() => setzen('equipment', drin
+                                        ? data.equipment.filter(x => x !== e)
+                                        : [...data.equipment, e])}
+                                      style={{
+                                        padding: '4px 9px', borderRadius: 6, cursor: 'pointer',
+                                        border: `1px solid ${drin ? T.akzent : T.linie}`,
+                                        background: drin ? T.akzentHell : T.blatt,
+                                        color: drin ? T.akzent : T.gedämpft,
+                                        fontFamily: T.schrift, fontSize: 12, fontWeight: drin ? 600 : 500,
+                                      }}>{e}</button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-
-                <div style={{ height: 1, background: T.rand, margin: '14px 0' }} />
-
-                <div style={{ fontSize: 12.5, color: T.leise, lineHeight: 1.6 }}>
-                  {gefuellt} von {PFLICHT.length + OPTIONAL.length} Feldern ausgefüllt.
-                  {data.equipment.length > 0 && <> {data.equipment.length} Ausstattungsmerkmale.</>}
+                  )}
                 </div>
-              </div>
-            </aside>
-          )}
-        </div>
-      </div>
+              }
+            />
+
+            {/* ── Notizen ── */}
+            <Gruppe titel="Notizen für die Beschreibung"
+              rechts={<span style={{ fontSize: 11.5, color: T.leise, fontWeight: 500 }}>freiwillig, macht den Text besser</span>}
+              kinder={
+                <textarea value={data.dealerNotes} onChange={e => setzen('dealerNotes', e.target.value)} rows={2}
+                  placeholder="Zwei Vorbesitzer, Winterreifen auf Alu dabei, kleiner Kratzer hinten rechts."
+                  style={{
+                    width: '100%', boxSizing: 'border-box', border: 'none', outline: 'none',
+                    padding: 16, fontSize: 13.5, fontFamily: T.schrift, resize: 'vertical',
+                    lineHeight: 1.6, background: 'transparent', color: T.text,
+                  }} />
+              }
+            />
+          </>
+        )}
+      </main>
+
+      <input ref={dateiRef} type="file" accept="image/*" hidden
+        onChange={e => { const f = e.target.files?.[0]; if (f) einlesen(f); }} />
 
       {/* ══ Fussleiste ══ */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
-        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(8px)',
-        borderTop: `1px solid ${T.rand}`,
-        // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px).
-        // Ohne diesen Abstand liegt der Weiter-Knopf darunter und ist nicht
-        // antippbar — der Fehler hat es schon einmal in die Anwendung geschafft.
-        paddingBottom: schmal ? 56 : 0,
-      }}>
+      {blattOffen && (
         <div style={{
-          maxWidth: 1120, margin: '0 auto', padding: '12px 20px',
-          display: 'flex', alignItems: 'center', gap: 14,
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
+          background: T.blatt, borderTop: `1px solid ${T.linie}`,
+          // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px).
+          // Ohne diesen Abstand liegt der Weiter-Knopf darunter und ist nicht
+          // antippbar — der Fehler hat es schon einmal in die Anwendung geschafft.
+          paddingBottom: schmal ? 56 : 0,
         }}>
-          <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: T.leise }}>
-            {offenePflicht.length > 0
-              ? <span style={{ color: T.fehler, fontWeight: 600 }}>
-                  Es fehlt noch: {offenePflicht.map(k => ({ brand: 'Marke', km: 'Kilometerstand', price: 'Preis' })[k]).join(', ')}
-                </span>
-              : 'Weiter zu den Fotos'}
+          <div style={{ maxWidth: 940, margin: '0 auto', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
+              {offenePflicht.length > 0
+                ? <span style={{ color: T.luecke, fontWeight: 600 }}>
+                    Fehlt noch: {offenePflicht.map(k => pflichtName[k]).join(', ')}
+                  </span>
+                : <span style={{ color: T.leise }}>
+                    {[data.brand, data.model].filter(Boolean).join(' ')}
+                    {data.km && ` · ${Number(data.km).toLocaleString('de-DE')} km`}
+                    {data.price && ` · ${Number(data.price).toLocaleString('de-DE')} €`}
+                  </span>}
+            </div>
+            <button type="button" onClick={weiter} disabled={unterwegs}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '10px 20px', borderRadius: 9, border: 'none',
+                background: T.akzent, color: '#fff', fontFamily: T.schrift,
+                fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap',
+                cursor: unterwegs ? 'wait' : 'pointer', opacity: unterwegs ? 0.7 : 1,
+              }}>
+              {unterwegs && <Loader2 size={14} style={{ animation: 'drehen .8s linear infinite' }} />}
+              Weiter zu den Fotos <ArrowRight size={14} />
+            </button>
           </div>
-          <button type="button" onClick={weiter} disabled={unterwegs}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '11px 22px', borderRadius: 10, border: 'none',
-              background: T.akzent, color: '#fff',
-              fontFamily: T.schrift, fontSize: 14, fontWeight: 700,
-              cursor: unterwegs ? 'wait' : 'pointer', opacity: unterwegs ? 0.7 : 1,
-              whiteSpace: 'nowrap',
-            }}>
-            {unterwegs ? <Loader2 size={15} style={{ animation: 'drehen .8s linear infinite' }} /> : null}
-            Weiter <ArrowRight size={15} />
-          </button>
         </div>
-      </div>
+      )}
 
-      <style>{`@keyframes drehen { to { transform: rotate(360deg) } }`}</style>
+      <style>{`
+        @keyframes drehen { to { transform: rotate(360deg) } }
+        input::placeholder, textarea::placeholder { color: ${T.leise}; opacity: 1 }
+      `}</style>
     </div>
   );
 }
