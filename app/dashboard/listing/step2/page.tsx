@@ -5,34 +5,33 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Upload, X, ChevronRight, ChevronLeft, Camera,
   CheckCircle2, Image as ImageIcon, Sparkles, Loader2,
-  Wand2, Eye, AlertCircle, Droplets, Lock, Crown
+  Wand2, Eye, AlertCircle, Droplets, Lock,
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
-import { studioAufteilung, studioInklusive, centAlsEuro } from '../../../../lib/studioQuota';
+import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
 import Link from 'next/link';
 import { entwurfId } from '../../../../lib/entwurf';
 
 /*
- * Wie viele Fotos insgesamt hochgeladen werden duerfen — Studio und
- * normale zusammen.
+ * Obergrenze fuer Fotos je Inserat — Studio und normale zusammen.
  *
- * Hier standen die Namen der abgeloesten Abos (free, basic, premium …).
- * Mit den Paketen s/m/l traf keiner mehr zu, der Zugriff lief in den
- * Standardwert und jeder Haendler waere auf 6 Fotos begrenzt gewesen —
- * auch mit Paket L.
+ * Eine Zahl fuer alle, nicht je Paket gestaffelt. Zwei Gruende:
  *
- * Die Werte sind bewusst grosszuegig. Ein normales Foto kostet nur
- * Speicher, teuer ist allein die Studio-Bearbeitung, und die begrenzt
- * das Kontingent in studioQuota. Bei mobile.de haben teure Fahrzeuge bis
- * zu 56 Fotos; wer die einstellen will, soll das hier auch koennen.
+ * Ein normales Foto kostet nur Speicher. Teuer ist allein die
+ * Studio-Bearbeitung, und die begrenzt bereits das Kontingent in
+ * studioQuota — darueber kostet jedes Bild 4 Cent. Die Menge zweimal zu
+ * deckeln bringt nichts ein, sperrt aber den Haendler aus.
+ *
+ * Und beim groessten Paket gab es kein Upgrade mehr. Wer dort an die
+ * Grenze stiess, bekam "Upgrade fuer mehr Fotos" angezeigt und landete
+ * auf einer Seite, auf der nichts Groesseres steht — eine Sackgasse mit
+ * Aufforderung.
+ *
+ * 60, weil mobile.de bei etwa 56 Fotos liegt. Wer ein Fahrzeug dort
+ * vollstaendig einstellen will, soll es hier vorbereiten koennen.
  */
-const PHOTO_LIMITS: Record<string, number> = {
-  kein: 20,
-  s:    30,
-  m:    45,
-  l:    60,
-};
+const FOTO_OBERGRENZE = 60;
 
 const F    = '"Inter", -apple-system, sans-serif';
 const BG   = '#f0f2f5';
@@ -227,7 +226,17 @@ function Step2Inner() {
    */
   const paketId = (['s', 'm', 'l'] as const).find(id => id === plan) ?? null;
 
-  const photoLimit = PHOTO_LIMITS[paketId ?? 'kein'] ?? PHOTO_LIMITS.kein;
+  const photoLimit = FOTO_OBERGRENZE;
+
+  /*
+   * Stand der Studio-Bilder. An zwei Stellen gebraucht — in der
+   * Kopfzeile und im Hinweis unter dem Raster — und beide muessen
+   * dieselbe Zahl nennen.
+   */
+  const studioStand = (() => {
+    const gesamt = photos.filter(p => p.studio).length;
+    return { gesamt, ...studioAufteilung(gesamt, paketId) };
+  })();
 
   // Plan aus localStorage holen (wird vom Layout aktuell gehalten)
   useEffect(() => {
@@ -559,18 +568,39 @@ function Step2Inner() {
               <span style={{ fontWeight: '700', color: photos.length >= photoLimit ? '#ef4444' : '#0f172a', fontSize: '13px' }}>{photos.length}</span>
               <span style={{ color: '#94a3b8' }}> / </span>
               <span style={{ fontWeight: '700', color: '#0f172a' }}>{photoLimit} Fotos</span>
-              <span style={{ color: '#94a3b8', marginLeft: '8px' }}>({plan.charAt(0).toUpperCase() + plan.slice(1)}-Plan)</span>
+              {/*
+                Hier stand "({plan}-Plan)". Mit den Paketen ergab das
+                "S-Plan" oder "M-Plan". Und die Grenze haengt gar nicht
+                mehr am Paket, die Angabe war also doppelt falsch.
+              */}
+              <span style={{ color: '#94a3b8', marginLeft: '8px' }}>
+                davon {studioStand.gesamt} im Studio
+              </span>
             </div>
             {/* Fortschrittsbalken */}
             <div style={{ width: '120px', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
               <div style={{ width: `${Math.min((photos.length / photoLimit) * 100, 100)}%`, height: '100%', background: photos.length >= photoLimit ? '#ef4444' : 'linear-gradient(90deg,#3b82f6,#8b5cf6)', borderRadius: '3px', transition: 'width 0.3s' }} />
             </div>
           </div>
-          {photos.length >= photoLimit && (
-            <Link href="/dashboard/pricing" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
-              <Crown size={13} /> Upgrade für mehr Fotos
-            </Link>
-          )}
+          {/*
+            Vorher: "Upgrade fuer mehr Fotos" mit Link auf die Preisseite.
+            Beim groessten Paket gab es dort nichts Groesseres — eine
+            Sackgasse. Die Grenze ist jetzt fuer alle gleich und wird
+            schlicht benannt.
+
+            Stattdessen zeigen wir, was tatsaechlich Geld kostet: die
+            Studio-Bilder ueber dem Kontingent.
+          */}
+          {studioStand.extra > 0 ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', color: '#7c3aed', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
+              {studioStand.extra} Studio-Bilder über dem Kontingent
+              {' '}= {centAlsEuro(studioStand.extraCent)}
+            </span>
+          ) : photos.length >= photoLimit ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.25)', color: '#64748b', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
+              Mehr als {photoLimit} Fotos nimmt auch mobile.de nicht an
+            </span>
+          ) : null}
         </div>
 
         {/* ---- Geführte Aufnahme ---- */}
@@ -637,8 +667,14 @@ function Step2Inner() {
             {photos.length >= photoLimit ? `Limit erreicht (${photoLimit} Fotos)` : 'Fotos hier reinziehen oder klicken'}
           </div>
           <div style={{ fontSize: '13px', color: TS, marginBottom: '14px' }}>
+            {/*
+              Hier stand "Upgrade auf Pro oder Business fuer mehr Fotos".
+              Beide Plaene gibt es nicht mehr, und die Grenze haengt auch
+              nicht mehr am Paket — es gaebe also nichts zu buchen. Die
+              Grenze ist jetzt einfach die Grenze.
+            */}
             {photos.length >= photoLimit
-              ? <span>Upgrade auf <Link href="/dashboard/pricing" style={{ color: '#fbbf24', fontWeight: '700', textDecoration: 'none' }}>Pro oder Business</Link> für mehr Fotos</span>
+              ? `Mehr als ${photoLimit} Fotos nimmt auch mobile.de nicht an.`
               : `JPG, PNG, WEBP, HEIC · Mehrere gleichzeitig · Max. ${photoLimit} Fotos`
             }
           </div>
@@ -681,27 +717,28 @@ function Step2Inner() {
                 kommen ins Studio. Außenaufnahmen profitieren davon — bei Cockpit,
                 Tacho oder Motorraum wirkt ein Studio-Hintergrund unnatürlich.
                 Du kannst das pro Foto umschalten.
-                {(() => {
-                  /*
-                   * Das Kontingent haengt am gebuchten Paket — 12 ohne Paket,
-                   * bis 30 bei Paket L. Vorher stand hier fest der kleinste
-                   * Wert; ein Haendler mit Paket L haette also 18 Bilder als
-                   * kostenpflichtig angezeigt bekommen, die er laengst bezahlt
-                   * hat, und sie aus Sparsamkeit weggelassen.
-                   */
-                  const auf = studioAufteilung(photos.filter(p => p.studio).length, paketId);
-                  const kontingent = studioInklusive(paketId);
-                  return auf.extra > 0 ? (
-                    <div style={{ marginTop: '6px', color: '#7c3aed', fontWeight: '600' }}>
-                      {kontingent} inklusive · {auf.extra} zusätzlich
-                      {' '}= {centAlsEuro(auf.extraCent)} extra
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: '6px', color: '#64748b' }}>
-                      {kontingent} Studio-Bilder sind im Inseratspreis enthalten.
-                    </div>
-                  );
-                })()}
+                {/*
+                  * Das Kontingent haengt am gebuchten Paket — 12 ohne Paket,
+                  * bis 30 bei Paket L. Vorher stand hier fest der kleinste
+                  * Wert; ein Haendler mit Paket L haette also 18 Bilder als
+                  * kostenpflichtig angezeigt bekommen, die er laengst bezahlt
+                  * hat, und sie aus Sparsamkeit weggelassen.
+                  *
+                  * studioStand kommt von weiter oben, damit Kopfzeile und
+                  * dieser Hinweis nicht getrennt rechnen und verschiedene
+                  * Zahlen nennen koennen.
+                  */}
+                {studioStand.extra > 0 ? (
+                  <div style={{ marginTop: '6px', color: '#7c3aed', fontWeight: '600' }}>
+                    {studioInklusive(paketId)} inklusive · {studioStand.extra} zusätzlich
+                    {' '}= {centAlsEuro(studioStand.extraCent)} extra
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '6px', color: '#64748b' }}>
+                    {studioInklusive(paketId)} Studio-Bilder sind im Inseratspreis enthalten.
+                    {' '}Weitere kosten {PREIS_EXTRA_BILD_CENT} Cent.
+                  </div>
+                )}
               </div>
             </div>
 

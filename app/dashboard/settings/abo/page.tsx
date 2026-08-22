@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
+import { PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro } from '../../../../lib/preismodell';
+import { studioInklusive } from '../../../../lib/studioQuota';
 
 const F    = '"Inter", -apple-system, sans-serif';
 const BG   = '#f0f2f5';
@@ -24,33 +26,54 @@ interface Plan {
   notFeatures?: string[]; popular?: boolean;
 }
 
+/*
+ * Die Pakete — aus lib/preismodell, nicht von Hand eingetragen.
+ *
+ * Diese Seite war die dritte Stelle mit eigenen Preisen, und sie nannte
+ * wieder andere: Starter gratis, Basic 29 €, Premium 79 €, Business
+ * 199 €. Die Preisseite im Dashboard sagte gleichzeitig 99,49 €,
+ * 249,99 € und 699,99 €, die Startseite noch etwas anderes. Ein
+ * Haendler, der zwei davon sieht, glaubt keiner mehr.
+ *
+ * Die Merkmale sind gegen den Code geprueft. Entfernt wurden
+ * "Team-Accounts (bis 5)", "API-Zugang" und "mobile.de & AutoScout24" —
+ * nichts davon existiert.
+ */
 const PLANS: Plan[] = [
   {
-    id: 'free', label: 'Starter', color: '#64748b',
-    monthlyPrice: 0, yearlyPrice: 0, monthlyLimit: 3,
-    features: ['3 Inserate (einmalig)', 'KI Studio-Fotos', 'Dokumentenscan', 'PDF Export'],
-    notFeatures: ['KI-Beschreibungen', 'Studio-Hintergründe', 'Wasserzeichen', 'mobile.de & AutoScout24'],
+    id: 'kein', label: 'Ohne Paket', color: '#64748b',
+    monthlyPrice: GRUNDGEBUEHR_CENT / 100, yearlyPrice: GRUNDGEBUEHR_CENT / 100,
+    monthlyLimit: 0,
+    features: [
+      `Grundgebuehr + ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
+      `${studioInklusive(null)} Studio-Bilder je Inserat`,
+      'Fahrzeugschein-Scan und FIN-Abfrage',
+      'Titel und Beschreibung',
+      'PDF und Fotopaket',
+    ],
+    notFeatures: ['Eigener Showroom', 'Firmen-Wasserzeichen'],
   },
-  {
-    id: 'basic', label: 'Basic', color: '#6366f1',
-    monthlyPrice: 29, yearlyPrice: 290, monthlyLimit: 30,
-    features: ['30 Inserate / Monat', 'KI Studio-Fotos', 'KI-Beschreibungen', 'Studio-Hintergründe', 'PDF + ZIP Export', '7 Tage gratis testen'],
-    notFeatures: ['Wasserzeichen', 'mobile.de & AutoScout24'],
-  },
-  {
-    id: 'premium', label: 'Premium', color: '#8b5cf6',
-    monthlyPrice: 79, yearlyPrice: 790, monthlyLimit: 150,
-    popular: true,
-    features: ['150 Inserate / Monat', 'Alles aus Basic', 'Firmen-Wasserzeichen', 'Eigener Showroom', 'mobile.de & AutoScout24', 'Prioritäts-Support', '7 Tage gratis testen'],
-  },
-  {
-    id: 'business', label: 'Business', color: '#f59e0b',
-    monthlyPrice: 199, yearlyPrice: 1990, monthlyLimit: 550,
-    features: ['550 Inserate / Monat', 'Alles aus Premium', 'Team-Accounts (bis 5)', 'API-Zugang', 'Dedizierter Support', '7 Tage gratis testen'],
-  },
+  ...PAKETE.map((p, i) => ({
+    id: p.id,
+    label: p.name,
+    color: ['#6366f1', '#8b5cf6', '#f59e0b'][i],
+    monthlyPrice: p.preisCent / 100,
+    yearlyPrice: p.preisCent / 100,
+    monthlyLimit: p.inserate,
+    popular: i === 1,
+    features: [
+      `${p.inserate} Inserate im Monat enthalten`,
+      `${studioInklusive(p.id)} Studio-Bilder je Inserat`,
+      i === 0 ? 'Alles aus "Ohne Paket"' : `Alles aus ${PAKETE[i - 1].name}`,
+      'Eigener Showroom als Hintergrund',
+      ...(i >= 1 ? ['Firmen-Wasserzeichen', 'Statistiken'] : []),
+      `Darueber ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
+    ],
+    ...(i === 0 ? { notFeatures: ['Firmen-Wasserzeichen'] } : {}),
+  })),
 ];
 
-const PLAN_ORDER = ['free', 'basic', 'premium', 'business'];
+const PLAN_ORDER = ['kein', 's', 'm', 'l'];
 
 function AboInner() {
   const router       = useRouter();
@@ -238,22 +261,12 @@ function AboInner() {
           )}
         </div>
 
-        {/* Billing Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', background: CARD, border: `1px solid ${BORD}`, borderRadius: '10px', padding: '3px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-            {(['monthly', 'yearly'] as const).map(b => (
-              <button key={b} onClick={() => setBilling(b)}
-                style={{ padding: '7px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', background: billing === b ? '#6366f1' : 'none', color: billing === b ? '#fff' : TS, border: 'none', cursor: 'pointer', fontFamily: F, transition: 'all 0.15s' }}>
-                {b === 'monthly' ? 'Monatlich' : 'Jährlich'}
-              </button>
-            ))}
-          </div>
-          {billing === 'yearly' && (
-            <span style={{ fontSize: '12px', fontWeight: '700', color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '3px 8px', borderRadius: '6px' }}>
-              2 Monate gratis
-            </span>
-          )}
-        </div>
+        {/*
+          Hier stand ein Umschalter Monatlich/Jaehrlich mit dem Hinweis
+          "2 Monate gratis". Im Paketmodell gibt es keinen Jahrespreis —
+          der Umschalter haette zweimal denselben Betrag gezeigt und ein
+          Geschenk versprochen, das die Seite selbst nicht einloest.
+        */}
 
         {/* Plan Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', marginBottom: '24px' }}>
