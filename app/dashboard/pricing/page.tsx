@@ -46,7 +46,7 @@ const PLANS = [
     bg: '#f8fafc',
     features: [
       `${studioInklusive(null)} Studio-Bilder je Inserat`,
-      'Fahrzeugschein-Scan und FIN-Abfrage',
+      'Fahrzeugschein-Scan',
       'Geführte Aufnahme mit Silhouette',
       'Titel und Beschreibung aus den Fahrzeugdaten',
       'PDF-Datenblatt und Fotopaket',
@@ -558,7 +558,7 @@ function PricingContent() {
                   ['Studio-Bilder je Inserat', String(studioInklusive(null)), String(studioInklusive(null)), String(studioInklusive('s')), String(studioInklusive('m')), String(studioInklusive('l'))],
                   ['Fotos je Inserat gesamt', '20', '20', '30', '45', '60'],
                   ['Fahrzeugschein-Scan', true, true, true, true, true],
-                  ['FIN-Abfrage', true, true, true, true, true],
+                  ['Ausstattung aus Fotos erkennen', true, true, true, true, true],
                   ['Titel und Beschreibung', true, true, true, true, true],
                   ['Geführte Aufnahme', true, true, true, true, true],
                   ['EnVKV-Pflichtangaben', true, true, true, true, true],

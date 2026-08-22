@@ -106,8 +106,6 @@ export default function Step1() {
   const [errors, setErrors]               = useState<Record<string, string>>({});
   const [docImage, setDocImage]           = useState<string | null>(null);
   const [scanState, setScanState]         = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [vinState,  setVinState]          = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [vinHits,   setVinHits]           = useState<string[]>([]);
   const [equipInput, setEquipInput]       = useState('');
   const [equipSearch, setEquipSearch]     = useState('');
   const [openCategory, setOpenCategory]   = useState<string | null>('Komfort');
@@ -183,14 +181,13 @@ export default function Step1() {
           firstRegistration: d.firstRegistration ?? p.firstRegistration,
           km: d.km != null ? String(d.km) : p.km,
           fuelType: d.fuelType ?? p.fuelType,
-          // scan-doc returns powerPs (already converted from kW×1.3596); vin-decode returns powerKw (which also contains PS value)
+          // scan-doc liefert powerPs (bereits aus kW umgerechnet, ×1,3596)
           powerKw: (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : p.powerKw,
           displacementCcm: d.displacementCcm != null ? String(d.displacementCcm) : p.displacementCcm,
           color: d.color ?? p.color, seats: d.seats != null ? String(d.seats) : p.seats,
           equipment: Array.isArray(d.equipment) ? [...new Set([...p.equipment, ...d.equipment])] : p.equipment,
         }));
         setScanState('done');
-        if (d.vin && d.vin.length >= 11) decodeVin(d.vin);
       } catch { setScanState('error'); }
     };
     reader.readAsDataURL(file);
@@ -208,32 +205,6 @@ export default function Step1() {
     if (file && file.type.startsWith('image/')) processUpload(file);
   };
 
-  const decodeVin = async (vin: string) => {
-    if (vin.length < 11) return;
-    setVinState('loading');
-    try {
-      const res = await fetch('/api/vin-decode', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vin }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
-      // Auch der VIN-Decoder liefert Marke und Modell zusammen
-      const vinErkannt = d.brand ? splitBrandModel(String(d.brand)) : null;
-
-      setData(p => ({
-        ...p,
-        brand:           !p.brand && vinErkannt?.brand ? vinErkannt.brand : p.brand,
-        model:           !p.model && vinErkannt?.model ? vinErkannt.model : p.model,
-        fuelType:        !p.fuelType && d.fuelType ? d.fuelType : p.fuelType,
-        powerKw:         !p.powerKw && d.powerKw ? String(d.powerKw) : p.powerKw,
-        displacementCcm: !p.displacementCcm && d.displacementCcm ? String(d.displacementCcm) : p.displacementCcm,
-        equipment:       [...new Set([...p.equipment, ...(d.equipment || [])])],
-      }));
-      setVinHits(d.equipment || []);
-      setVinState('done');
-    } catch { setVinState('error'); }
-  };
 
   const addEquip = () => {
     const v = equipInput.trim();
@@ -319,7 +290,7 @@ export default function Step1() {
   const fmtPrice = (v: string) => v ? `€ ${Number(v.replace(/\D/g, '')).toLocaleString('de-DE')}` : '—';
   const fmtKm    = (v: string) => v ? `${Number(v.replace(/\D/g, '')).toLocaleString('de-DE')} km` : '—';
 
-  const aiRunning = scanState === 'loading' || vinState === 'loading';
+  const aiRunning = scanState === 'loading';
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: F, color: TH }}>
@@ -458,75 +429,47 @@ export default function Step1() {
                   </label>
                 </div>
 
-                {/* VIN Decoder */}
+                {/*
+                  Reines Eingabefeld, keine Abfrage mehr.
+
+                  Hier wurde die FIN an einen Decoder geschickt, der die
+                  Ausstattung zurueckgab — und die landete ungefragt in der
+                  Liste des Inserats. Ohne einen Datenanbieter, der echte
+                  Herstellerdaten liefert, ist das eine Schaetzung aus den
+                  ersten drei Zeichen der FIN.
+
+                  Eine geratene "Sitzheizung" im Inserat ist ein Sachmangel
+                  nach § 434 BGB. Haften muss der Haendler, nicht wir — aber
+                  er wird sich an uns halten, und zu Recht.
+
+                  Die FIN selbst bleibt: sie gehoert ins Inserat.
+                */}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: vinState === 'done' ? 'rgba(16,185,129,0.12)' : 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {vinState === 'loading' ? <Loader2 size={14} color="#8b5cf6" style={{ animation: 'spin 0.7s linear infinite' }} />
-                        : vinState === 'done' ? <CheckCircle2 size={14} color="#10b981" />
-                        : <Hash size={14} color="#8b5cf6" />}
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(139,92,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Hash size={14} color="#8b5cf6" />
                     </div>
                     <span style={{ fontSize: '14px', fontWeight: '700', color: TH }}>
-                      FIN / VIN dekodieren
-                      {vinState === 'done' && vinHits.length > 0 && (
-                        <span style={{ marginLeft: '8px', fontSize: '11px', background: 'rgba(16,185,129,0.1)', color: '#10b981', padding: '2px 7px', borderRadius: '10px', fontWeight: '700' }}>
-                          {vinHits.length} Merkmale
-                        </span>
-                      )}
+                      Fahrgestellnummer (FIN)
                     </span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        value={data.vin}
-                        onChange={e => {
-                          const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                          set('vin', v);
-                          if (v.length === 17 && vinState !== 'loading') decodeVin(v);
-                        }}
-                        placeholder="z.B. WVWZZZ1JZW000001"
-                        maxLength={17}
-                        style={{
-                          ...INP, paddingRight: '44px',
-                          letterSpacing: '0.08em', fontFamily: 'monospace',
-                          border: `1px solid ${vinState === 'done' ? 'rgba(16,185,129,0.4)' : vinState === 'error' ? '#fca5a5' : BORD}`,
-                        }}
-                        onFocus={e => (e.target.style.borderColor = '#8b5cf6')}
-                        onBlur={e => {
-                          e.target.style.borderColor = vinState === 'done' ? 'rgba(16,185,129,0.4)' : BORD;
-                          const v = e.target.value.trim();
-                          if (v.length >= 11 && vinState !== 'loading') decodeVin(v);
-                        }}
-                      />
-                      <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: '700', color: data.vin.length === 17 ? '#10b981' : TD }}>
-                        {data.vin.length}/17
-                      </span>
-                    </div>
-                    {vinState === 'loading' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'rgba(139,92,246,0.08)', borderRadius: '8px', fontSize: '13px', color: '#8b5cf6', fontWeight: '600' }}>
-                        <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> FIN wird dekodiert…
-                      </div>
-                    )}
-                    {vinState === 'done' && vinHits.length > 0 && (
-                      <div style={{ padding: '10px 12px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#16a34a', marginBottom: '6px' }}>✓ Ausstattung geladen</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {vinHits.slice(0, 5).map((item, i) => (
-                            <span key={i} style={{ fontSize: '11px', color: '#10b981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', padding: '2px 7px', borderRadius: '10px' }}>{item}</span>
-                          ))}
-                          {vinHits.length > 5 && <span style={{ fontSize: '11px', color: TS }}>+{vinHits.length - 5}</span>}
-                        </div>
-                      </div>
-                    )}
-                    {vinState === 'idle' && data.vin.length > 0 && data.vin.length < 17 && (
-                      <span style={{ fontSize: '12px', color: TD }}>{17 - data.vin.length} Zeichen fehlen — wird automatisch dekodiert</span>
-                    )}
-                    {vinState === 'error' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#ef4444' }}>
-                        <AlertCircle size={12} /> FIN nicht gefunden — manuell eingeben
-                      </div>
-                    )}
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      value={data.vin}
+                      onChange={e => set('vin', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                      placeholder="z.B. WVWZZZ1JZW000001"
+                      maxLength={17}
+                      style={{ ...INP, paddingRight: '44px', letterSpacing: '0.08em', fontFamily: 'monospace' }}
+                      onFocus={e => (e.target.style.borderColor = '#8b5cf6')}
+                      onBlur={e => (e.target.style.borderColor = BORD)}
+                    />
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: '700', color: data.vin.length === 17 ? '#10b981' : TD }}>
+                      {data.vin.length}/17
+                    </span>
                   </div>
+                  <span style={{ fontSize: '12px', color: TD, marginTop: '6px', display: 'block' }}>
+                    Die Ausstattung erkennen wir aus deinen Fotos — dort ist sie zu sehen, statt geraten.
+                  </span>
                 </div>
               </div>
             </div>

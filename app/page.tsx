@@ -55,7 +55,7 @@ const SCHRITTE = [
 
 const FUNKTIONEN = [
   { icon: <ScanLine size={20} />,   titel: 'Fahrzeugschein-Scan',   text: 'Erkennt die Felder der Zulassungsbescheinigung Teil I und die Schlüsselnummern. Unplausible Werte werden verworfen statt übernommen.' },
-  { icon: <Gauge size={20} />,      titel: 'FIN-Abfrage',           text: 'Ergänzt Ausstattung und technische Daten aus der Fahrgestellnummer.' },
+  { icon: <Gauge size={20} />,      titel: 'Ausstattungserkennung',  text: 'Erkennt Navi, Sitzheizung, Felgen und Assistenzsysteme auf deinen Fotos — an dem, was tatsächlich zu sehen ist, nicht an der Fahrgestellnummer geraten.' },
   { icon: <Camera size={20} />,     titel: 'Geführte Aufnahme',     text: 'Zwölf Winkel mit Silhouette zum Ausrichten. Die Aussenaufnahmen liegen in Rundum-Reihenfolge, dadurch entsteht die 360°-Ansicht von selbst.' },
   { icon: <Layers size={20} />,     titel: 'Studio-Hintergründe',   text: 'Zehn Räume von hellem Studio bis Industrieloft. Alle Fotos eines Fahrzeugs bekommen denselben Hintergrund.' },
   { icon: <Sparkles size={20} />,   titel: 'Beschreibung und Titel', text: 'Entstehen aus den erfassten Daten. Du kannst einen eigenen Beispieltitel hinterlegen, an dem sich die Formulierung orientiert.' },

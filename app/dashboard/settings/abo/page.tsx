@@ -53,7 +53,7 @@ const PLANS: Plan[] = [
     features: [
       `Grundgebühr + ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
       `${studioInklusive(null)} Studio-Bilder je Inserat`,
-      'Fahrzeugschein-Scan und FIN-Abfrage',
+      'Fahrzeugschein-Scan',
       'Titel und Beschreibung',
       'PDF und Fotopaket',
     ],

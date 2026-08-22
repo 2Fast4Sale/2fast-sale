@@ -48,8 +48,38 @@ const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
   piranha:   0.00,
 };
 
+/**
+ * Fahrzeugdaten aus der Fahrgestellnummer: Preis pro Abfrage in EUR.
+ *
+ * Aktuell gibt es keinen Anbieter. Vincario und Vindecoder wurden
+ * entfernt — sie lieferten keine belastbaren Herstellerdaten, und ohne
+ * belastbare Daten ist eine Ausstattungsliste geraten. Eine geratene
+ * Sitzheizung im Inserat ist ein Sachmangel nach § 434 BGB.
+ *
+ * DAT soll sie ersetzen. Der Preis ist noch nicht verhandelt und steht
+ * deshalb in einer Umgebungsvariablen.
+ */
+const VIN_PRICES_EUR_PER_CALL: Record<string, number> = {
+  // DAT: Preis eintragen, sobald er verhandelt ist. Wichtig fuer die
+  // Kalkulation: Ab etwa 1,92 EUR je Abfrage traegt sich Paket L nicht
+  // mehr, ab 2,40 EUR auch Paket M nicht.
+  dat: Number(process.env.PREIS_DAT_EUR || '0'),
+};
+
 export type CostService =
-  | 'anthropic' | 'removebg' | 'photoroom' | 'fal' | 'pixelcut' | 'piranha';
+  | 'anthropic' | 'removebg' | 'photoroom' | 'fal' | 'pixelcut' | 'piranha'
+  | 'dat';
+
+/**
+ * Kosten einer VIN-Abfrage in Mikro-Euro.
+ *
+ * Anders als bei Bildern und LLM-Aufrufen sind die Preise hier schon in
+ * Euro hinterlegt — sie werden in Euro abgerechnet, eine Umrechnung
+ * ueber den Dollar waere eine zusaetzliche Fehlerquelle.
+ */
+export function vinCostMicros(service: CostService, calls = 1): number {
+  return Math.round((VIN_PRICES_EUR_PER_CALL[service] ?? 0) * calls * MICROS);
+}
 
 /** Kosten eines LLM-Aufrufs in Mikro-Euro. */
 export function llmCostMicros(model: string, inputTokens: number, outputTokens: number): number {
