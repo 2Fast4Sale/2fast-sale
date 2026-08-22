@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
-import { PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro } from '../../../../lib/preismodell';
+import {
+  PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro,
+  bestesAngebot, monatsrechnung,
+} from '../../../../lib/preismodell';
 import { studioInklusive } from '../../../../lib/studioQuota';
 
 const F    = '"Inter", -apple-system, sans-serif';
@@ -43,9 +46,12 @@ const PLANS: Plan[] = [
   {
     id: 'kein', label: 'Ohne Paket', color: '#64748b',
     monthlyPrice: GRUNDGEBUEHR_CENT / 100, yearlyPrice: GRUNDGEBUEHR_CENT / 100,
-    monthlyLimit: 0,
+    // Ohne Paket gibt es kein Kontingent: Jedes Inserat wird einzeln
+    // berechnet, nichts laeuft voll. Mit 0 zeigte die Seite "1 / 0" in Rot
+    // und "Limit erreicht" — beim allerersten Inserat.
+    monthlyLimit: Infinity,
     features: [
-      `Grundgebuehr + ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
+      `Grundgebühr + ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
       `${studioInklusive(null)} Studio-Bilder je Inserat`,
       'Fahrzeugschein-Scan und FIN-Abfrage',
       'Titel und Beschreibung',
@@ -67,7 +73,7 @@ const PLANS: Plan[] = [
       i === 0 ? 'Alles aus "Ohne Paket"' : `Alles aus ${PAKETE[i - 1].name}`,
       'Eigener Showroom als Hintergrund',
       ...(i >= 1 ? ['Firmen-Wasserzeichen', 'Statistiken'] : []),
-      `Darueber ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
+      `Darüber ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat`,
     ],
     ...(i === 0 ? { notFeatures: ['Firmen-Wasserzeichen'] } : {}),
   })),
@@ -75,10 +81,32 @@ const PLANS: Plan[] = [
 
 const PLAN_ORDER = ['kein', 's', 'm', 'l'];
 
+/**
+ * Uebersetzt gespeicherte Planbezeichnungen in eine Paket-Kennung.
+ *
+ * In profiles.plan stehen noch die Werte aus dem abgeloesten Abo-Modell —
+ * "free", "basic", "premium", "business", "pro", "enterprise". Ohne
+ * Uebersetzung findet PLANS.find() keinen Treffer, die aktuelle Karte
+ * wird nicht als solche markiert und der Kuendigen-Knopf erscheint bei
+ * jemandem, der gar kein Abo hat.
+ *
+ * Die alten Bezeichnungen werden dem Paket zugeordnet, das ihrem
+ * Kontingent am naechsten kommt.
+ */
+function alsPaket(gespeichert: string): string {
+  const bekannt: Record<string, string> = {
+    free: 'kein', kein: 'kein',
+    basic: 's', s: 's',
+    premium: 'm', pro: 'm', m: 'm',
+    business: 'l', enterprise: 'l', l: 'l',
+  };
+  return bekannt[gespeichert] ?? 'kein';
+}
+
 function AboInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const [plan,        setPlan]       = useState('free');
+  const [plan,        setPlan]       = useState('kein');
   const [email,       setEmail]      = useState('');
   const [monthCount,  setMonthCount] = useState(0);
   const [totalCount,  setTotalCount] = useState(0);
@@ -113,7 +141,7 @@ function AboInner() {
         .from('profiles').select('plan, stripe_subscription_id, plan_expires_at')
         .eq('id', user.id).single();
 
-      setPlan(profile?.plan || 'free');
+      setPlan(alsPaket(profile?.plan || ''));
       setSubId(profile?.stripe_subscription_id || '');
       if (profile?.plan_expires_at) {
         setPlanExpires(new Date(profile.plan_expires_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' }));
@@ -173,9 +201,10 @@ function AboInner() {
 
   const currentPlanDef = PLANS.find(p => p.id === plan) || PLANS[0];
   const limit          = currentPlanDef.monthlyLimit;
-  const pct            = limit >= 9999 ? 5 : Math.min(100, (monthCount / limit) * 100);
+  const pct            = limit === Infinity ? 0 : Math.min(100, (monthCount / limit) * 100);
   const isNearLimit    = pct >= 80;
-  const isAtLimit      = monthCount >= limit;
+  // Ohne Kontingent kann nichts voll sein.
+  const isAtLimit      = limit !== Infinity && monthCount >= limit;
   const currentIdx     = PLAN_ORDER.indexOf(plan);
 
   return (
@@ -225,7 +254,7 @@ function AboInner() {
           <div style={{ marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ fontSize: '13px', fontWeight: '600', color: isAtLimit ? '#ef4444' : isNearLimit ? '#f59e0b' : TH }}>
-                {monthCount} / {limit >= 9999 ? '∞' : limit} Inserate diesen Monat
+                {limit === Infinity ? `${monthCount} Inserate diesen Monat — je ${euro(PREIS_PRO_INSERAT_CENT)} € berechnet` : `${monthCount} / ${limit} Inserate diesen Monat`}
               </span>
               <span style={{ fontSize: '12px', color: TD }}>{totalCount} gesamt</span>
             </div>
@@ -234,18 +263,40 @@ function AboInner() {
             </div>
           </div>
 
-          {isAtLimit && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
-              <AlertCircle size={14} /> Limit erreicht — upgrade für mehr Inserate
-            </div>
-          )}
+          {/*
+            Hier stand "Limit erreicht — upgrade fuer mehr Inserate" in Rot.
+            Im Paketmodell wird nichts blockiert: Ueber dem Kontingent
+            laeuft es zum Einzelpreis weiter. Eine rote Sperrmeldung fuer
+            etwas, das gar nicht sperrt, treibt den Haendler zu einem
+            Upgrade, das er vielleicht nicht braucht — und wenn er es
+            merkt, war es eine Falle.
+
+            Deshalb: sachlich sagen, was es kostet, und den Wechsel nur
+            dann empfehlen, wenn er tatsaechlich guenstiger ist.
+          */}
+          {isAtLimit && (() => {
+            const darueber = monthCount - limit;
+            const empfehlung = bestesAngebot(monthCount);
+            const lohntWechsel = empfehlung.paketId !== plan;
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', fontSize: '13px', color: '#92400e', fontWeight: '600' }}>
+                <AlertCircle size={14} />
+                <span>
+                  {darueber} Inserate über dem Kontingent, je {euro(PREIS_PRO_INSERAT_CENT)} €.
+                  {lohntWechsel && empfehlung.paketId && (
+                    <> Mit {PAKETE.find(p => p.id === empfehlung.paketId)?.name} zahlst du diesen Monat {euro(empfehlung.summeCent)} € statt {euro(monatsrechnung({ inserate: monthCount, paketId: plan as 's' | 'm' | 'l' }).summeCent)} €.</>
+                  )}
+                </span>
+              </div>
+            );
+          })()}
           {isNearLimit && !isAtLimit && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', fontSize: '13px', color: '#92400e', fontWeight: '600' }}>
-              <AlertCircle size={14} /> Fast aufgebraucht — noch {limit - monthCount} Inserate übrig
+              <AlertCircle size={14} /> Noch {limit - monthCount} Inserate im Kontingent — danach {euro(PREIS_PRO_INSERAT_CENT)} € je Inserat
             </div>
           )}
 
-          {plan !== 'free' && subId && !cancelDone && (
+          {plan !== 'kein' && subId && !cancelDone && (
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${BORD}` }}>
               <button onClick={cancelSubscription} disabled={cancelling}
                 style={{ fontSize: '13px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: F, display: 'flex', alignItems: 'center', gap: '6px', padding: 0 }}>
@@ -269,7 +320,13 @@ function AboInner() {
         */}
 
         {/* Plan Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+        {/*
+          160 statt 170 als Mindestbreite. Bei 170 ergeben vier Karten
+          plus drei Abstaende 716 px, der Container bietet aber nur 712 —
+          vier Pixel zu wenig, und Paket L rutschte allein in eine zweite
+          Reihe.
+        */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
           {PLANS.map(p => {
             const isCurrent  = p.id === plan;
             const isUpgrade  = PLAN_ORDER.indexOf(p.id) > currentIdx;
@@ -304,11 +361,11 @@ function AboInner() {
                   <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: '600', marginBottom: '8px' }}>≈ €{Math.round(price / 12)}/Monat</div>
                 )}
                 <div style={{ fontSize: '12px', color: TS, marginBottom: '10px', fontWeight: '600' }}>
-                  {p.monthlyLimit >= 9999 ? '∞ Inserate' : `${p.monthlyLimit}/Monat`}
+                  {p.monthlyLimit === Infinity ? 'ohne Kontingent' : `${p.monthlyLimit}/Monat`}
                 </div>
 
                 <div style={{ flex: 1, marginBottom: '12px' }}>
-                  {p.features.slice(0, 4).map(f => (
+                  {p.features.map(f => (
                     <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '4px', fontSize: '11px', color: TH }}>
                       <Check size={11} color={p.color} style={{ marginTop: '1px', flexShrink: 0 }} />{f}
                     </div>

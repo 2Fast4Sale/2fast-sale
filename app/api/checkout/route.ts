@@ -17,11 +17,22 @@ const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion:
  * kann in der Fehlermeldung genannt werden.
  */
 const PREIS_VARIABLEN: Record<string, Record<string, string>> = {
-  basic:        { monthly: 'STRIPE_BASIC_MONTHLY_PRICE_ID',      yearly: 'STRIPE_BASIC_YEARLY_PRICE_ID' },
-  premium:      { monthly: 'STRIPE_PREMIUM_MONTHLY_PRICE_ID',    yearly: 'STRIPE_PREMIUM_YEARLY_PRICE_ID' },
-  business:     { monthly: 'STRIPE_BUSINESS_MONTHLY_PRICE_ID',   yearly: 'STRIPE_BUSINESS_YEARLY_PRICE_ID' },
-  enterprise:   { monthly: 'STRIPE_ENTERPRISE_MONTHLY_PRICE_ID', yearly: 'STRIPE_ENTERPRISE_YEARLY_PRICE_ID' },
-  professional: { monthly: 'STRIPE_PRO_MONTHLY_PRICE_ID',        yearly: 'STRIPE_PRO_YEARLY_PRICE_ID' },
+  s: { monthly: 'STRIPE_PAKET_S_PRICE_ID', yearly: 'STRIPE_PAKET_S_PRICE_ID' },
+  m: { monthly: 'STRIPE_PAKET_M_PRICE_ID', yearly: 'STRIPE_PAKET_M_PRICE_ID' },
+  l: { monthly: 'STRIPE_PAKET_L_PRICE_ID', yearly: 'STRIPE_PAKET_L_PRICE_ID' },
+
+  /*
+   * Die Bezeichnungen aus dem abgeloesten Abo-Modell. Sie stehen noch in
+   * profiles.plan und koennen aus alten Links kommen; ohne sie liefe ein
+   * solcher Aufruf in "Unbekannter Plan".
+   *
+   * Jede zeigt auf das Paket, das ihrem Kontingent am naechsten kommt.
+   */
+  basic:        { monthly: 'STRIPE_PAKET_S_PRICE_ID', yearly: 'STRIPE_PAKET_S_PRICE_ID' },
+  premium:      { monthly: 'STRIPE_PAKET_M_PRICE_ID', yearly: 'STRIPE_PAKET_M_PRICE_ID' },
+  professional: { monthly: 'STRIPE_PAKET_M_PRICE_ID', yearly: 'STRIPE_PAKET_M_PRICE_ID' },
+  business:     { monthly: 'STRIPE_PAKET_L_PRICE_ID', yearly: 'STRIPE_PAKET_L_PRICE_ID' },
+  enterprise:   { monthly: 'STRIPE_PAKET_L_PRICE_ID', yearly: 'STRIPE_PAKET_L_PRICE_ID' },
 };
 
 export async function POST(req: Request) {
