@@ -81,9 +81,30 @@ span, div, p, button, label, td, th {
 /* Alle Inputs, Textareas: immer mindestens 14px, lesefreundlich */
 input, textarea, select {
   font-family: var(--font);
-  font-size: var(--text-base) !important;  /* 14px — verhindert Mini-Text in iOS/Chrome */
+  /*
+   * Ohne !important.
+   *
+   * Es stand hier, um "Mini-Text in iOS/Chrome" zu verhindern — hat aber
+   * jede eigene Schriftgroesse auf einem Eingabefeld unmoeglich gemacht,
+   * auch inline gesetzte. Eine Regel, die alles andere ueberstimmt, faellt
+   * erst auf, wenn man sich fragt, warum eine Aenderung nichts bewirkt.
+   *
+   * Und sie erreichte ihr Ziel nicht: iOS zoomt beim Antippen genau dann
+   * hinein, wenn die Schrift KLEINER als 16px ist. Mit fest 14px zoomte
+   * also jedes Feld — auf dem Handy am Fahrzeug bei jedem Antippen.
+   */
+  font-size: var(--text-base);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Auf schmalen Bildschirmen 16px. Das ist die Grenze, unterhalb derer
+ * iOS beim Fokussieren die Seite heranzoomt und der Nutzer sie danach
+ * von Hand zurueckschieben muss.
+ */
+@media (max-width: 768px) {
+  input, textarea, select { font-size: 16px; }
 }
 
 /* Buttons: konsistente Schrift */

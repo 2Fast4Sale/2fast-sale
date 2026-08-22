@@ -50,24 +50,77 @@ import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
 
-const T = {
-  schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
-  ziffern: 'ui-monospace, "SF Mono", Menlo, monospace',
-  grund:   '#f8fafc',
-  blatt:   '#ffffff',
-  linie:   '#e8edf3',
-  linieStark: '#cbd5e1',
-  text:    '#0f172a',
-  gedämpft:'#475569',
-  // 4,76:1 gegen Weiss — heller wird Text unlesbar.
-  leise:   '#64748b',
-  akzent:  '#4338ca',
-  akzentHell: '#eef2ff',
-  gut:     '#047857',
-  luecke:  '#b45309',
-  lueckeHell: '#fffbeb',
-  fehler:  '#b91c1c',
-} as const;
+/**
+ * Drei Handschriften für dieselbe Struktur.
+ *
+ * Der Aufbau — zwei Zustände, Datenblatt, hervorgehobene Lücken — bleibt
+ * in allen dreien gleich. Was sich unterscheidet, ist die Anmutung, und
+ * die ist bei diesem Produkt nicht nebensächlich: Es verkauft visuelle
+ * Qualität. Ein Werkzeug, das aussieht wie ein Buchhaltungsformular,
+ * macht unglaubwürdig, dass am Ende ein Studiofoto herauskommt.
+ *
+ *   werkstatt — hell, dicht, sachlich. Am nächsten an dem, was Händler
+ *               aus ihrer übrigen Software kennen.
+ *   studio    — dunkel wie Bildbearbeitungssoftware. Die Fahrzeugdaten
+ *               stehen auf schwarzem Grund, wie in Lightroom oder
+ *               DaVinci. Passt zu dem, was das Werkzeug tut.
+ *   marke     — hell, aber mit Haltung: grosse Zahlen, viel Weissraum,
+ *               starke Kontraste. Sieht nach Preisschild aus, nicht nach
+ *               Formular.
+ */
+export type Stil = 'werkstatt' | 'studio' | 'marke';
+
+interface Farbsatz {
+  schrift: string; ziffern: string;
+  grund: string; blatt: string; linie: string; linieStark: string;
+  text: string; gedämpft: string; leise: string;
+  akzent: string; akzentHell: string;
+  gut: string; luecke: string; lueckeHell: string; fehler: string;
+  /** Schriftgrad der Werte im Datenblatt. */
+  wertGroesse: number;
+  /** Höhe einer Zeile, über die senkrechte Polsterung. */
+  zeilenLuft: number;
+  /** Schatten der Gruppen — Tiefe oder Flächigkeit. */
+  schatten: string;
+  eckenGross: number;
+}
+
+export const STILE: Record<Stil, Farbsatz> = {
+  werkstatt: {
+    schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+    ziffern: 'ui-monospace, "SF Mono", Menlo, monospace',
+    grund: '#f8fafc', blatt: '#ffffff', linie: '#e8edf3', linieStark: '#cbd5e1',
+    text: '#0f172a', gedämpft: '#475569',
+    // 4,76:1 gegen Weiss — heller wird Text unlesbar.
+    leise: '#64748b',
+    akzent: '#4338ca', akzentHell: '#eef2ff',
+    gut: '#047857', luecke: '#b45309', lueckeHell: '#fffbeb', fehler: '#b91c1c',
+    wertGroesse: 14, zeilenLuft: 7, schatten: 'none', eckenGross: 10,
+  },
+
+  studio: {
+    schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+    ziffern: 'ui-monospace, "SF Mono", Menlo, monospace',
+    grund: '#0b0f17', blatt: '#151b26', linie: '#242c3a', linieStark: '#39445a',
+    text: '#f1f5f9', gedämpft: '#b6c2d4',
+    // 5,9:1 gegen #151b26 — auf dunklem Grund muss Grau heller sein als auf hellem.
+    leise: '#8b98ad',
+    akzent: '#8b93ff', akzentHell: '#1e2340',
+    gut: '#4ade80', luecke: '#fbbf24', lueckeHell: '#2a2113', fehler: '#f87171',
+    wertGroesse: 14.5, zeilenLuft: 9, schatten: '0 1px 0 rgba(255,255,255,0.03)', eckenGross: 12,
+  },
+
+  marke: {
+    schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+    ziffern: '"Inter", -apple-system, sans-serif',
+    grund: '#ffffff', blatt: '#ffffff', linie: '#eceff3', linieStark: '#0f172a',
+    text: '#08090c', gedämpft: '#3d4757',
+    leise: '#6b7688',
+    akzent: '#0f172a', akzentHell: '#f1f3f7',
+    gut: '#047857', luecke: '#a16207', lueckeHell: '#fefce8', fehler: '#b91c1c',
+    wertGroesse: 17, zeilenLuft: 13, schatten: '0 1px 2px rgba(15,23,42,0.04)', eckenGross: 4,
+  },
+};
 
 const KRAFTSTOFFE = ['Benzin', 'Diesel', 'Hybrid', 'Plug-in Hybrid', 'Elektro', 'LPG', 'CNG'];
 const GETRIEBE    = ['Automatik', 'Manuell'];
@@ -109,13 +162,30 @@ const LEER_ENVKV: EnvkvData = {
 
 /* ────────────────────────── Formular ────────────────────────── */
 
-export default function Formular() {
+export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
+  /* Alle Farb- und Massangaben kommen aus dem gewaehlten Stil. */
+  const T = STILE[stil];
+
   const router = useRouter();
   const dateiRef  = useRef<HTMLInputElement>(null);
   const markeRef  = useRef<HTMLDivElement>(null);
   const modellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { entwurfNeu(); }, []);
+
+  /*
+   * Seitenhintergrund mitziehen.
+   *
+   * Die Wurzel dieser Komponente ist nur 100vh hoch — dahinter liegt der
+   * Grundton aus globals.css. Beim hellen Stil faellt das nicht auf, beim
+   * dunklen schon: ueber und unter dem Inhalt bliebe ein heller Streifen,
+   * und beim Ueberscrollen leuchtet er auf.
+   */
+  useEffect(() => {
+    const vorher = document.body.style.background;
+    document.body.style.background = STILE[stil].grund;
+    return () => { document.body.style.background = vorher; };
+  }, [stil]);
 
   const [data, setData] = useState<FormData>({
     brand: '', model: '', vin: '', firstRegistration: '', km: '', price: '',
@@ -341,7 +411,7 @@ export default function Formular() {
         gridTemplateColumns: schmal ? '1fr' : '150px 1fr',
         gap: schmal ? 5 : 14,
         alignItems: 'center',
-        padding: schmal ? '9px 14px' : '7px 16px',
+        padding: schmal ? `${T.zeilenLuft + 2}px 14px` : `${T.zeilenLuft}px 16px`,
         borderBottom: `1px solid ${T.linie}`,
         // Eine Lücke wird hinterlegt, kein Rahmen: Der Blick soll beim
         // Überfliegen daran hängenbleiben, ohne dass es nach Fehler aussieht.
@@ -365,7 +435,7 @@ export default function Formular() {
   const EING: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
     background: 'transparent', border: 'none', outline: 'none',
-    padding: '5px 0', color: T.text, fontSize: 14, fontFamily: T.schrift,
+    padding: '5px 0', color: T.text, fontSize: T.wertGroesse, fontFamily: T.schrift,
   };
   const ZAHL: React.CSSProperties = { ...EING, fontFamily: T.ziffern, letterSpacing: '-0.01em' };
 
@@ -382,7 +452,7 @@ export default function Formular() {
       </div>
       <div style={{
         background: T.blatt, border: `1px solid ${T.linie}`,
-        borderRadius: 10, overflow: 'visible',
+        borderRadius: T.eckenGross, boxShadow: T.schatten, overflow: 'visible',
       }}>{kinder}</div>
     </div>
   );
