@@ -518,6 +518,56 @@ export const CAR_DATABASE: CarBrand[] = [
       'XC40', 'XC60', 'XC70', 'XC90',
     ],
   },
+  {
+    name: 'Polestar',
+    country: 'SE',
+    models: ['1', '2', '3', '4', '5'],
+  },
+  {
+    name: 'BYD',
+    country: 'CN',
+    models: ['Atto 3', 'Dolphin', 'Han', 'Seal', 'Seal U', 'Sealion 7', 'Tang'],
+  },
+  {
+    name: 'Isuzu',
+    country: 'JP',
+    models: ['D-Max', 'Trooper'],
+  },
+  {
+    name: 'Lynk & Co',
+    country: 'CN',
+    models: ['01', '02', '03'],
+  },
+  {
+    name: 'Maxus',
+    country: 'CN',
+    models: ['Deliver 9', 'eDeliver 3', 'eDeliver 9', 'Euniq 5', 'Euniq 6', 'T90'],
+  },
+  {
+    name: 'Aiways',
+    country: 'CN',
+    models: ['U5', 'U6'],
+  },
+  {
+    name: 'Ora',
+    country: 'CN',
+    models: ['Funky Cat', '03'],
+  },
+  {
+    name: 'Xpeng',
+    country: 'CN',
+    models: ['G6', 'G9', 'P7'],
+  },
+  {
+    name: 'Nio',
+    country: 'CN',
+    models: ['EL6', 'EL7', 'ET5', 'ET7'],
+  },
+  {
+    name: 'Leapmotor',
+    country: 'CN',
+    models: ['C10', 'T03'],
+  },
 ];
 
 /** Nur die Markennamen als sortierte Liste */

@@ -162,9 +162,28 @@ export default function Showroom() {
   const [ausstattungSuche, setAusstattungSuche] = useState('');
   const [ausstattungOffen, setAusstattungOffen] = useState(false);
   const [envkvOffen, setEnvkvOffen]       = useState(false);
-  const [mehrOffen, setMehrOffen]         = useState(false);
+  /*
+   * Zugeklappt wird nur, was ERLEDIGT ist — nicht, was lang ist.
+   *
+   * Vorher war "Weitere Angaben" immer zu. Damit verschwanden genau die
+   * Felder, die von Hand nachgetragen werden muessen, wenn der Scan sie
+   * nicht gefunden hat. Wer nichts sieht, traegt nichts nach.
+   *
+   * null heisst: nach Datenlage entscheiden. true/false heisst: der
+   * Haendler hat selbst geklappt, und das gilt dann.
+   */
+  const [mehrGeklappt, setMehrGeklappt] = useState<boolean | null>(null);
 
+  /*
+   * Verbrauchsangaben: Pflicht zeigt sie immer. Freiwillig geoeffnet
+   * laesst sich wieder schliessen — vorher setzte der Knopf nur auf
+   * "offen", und danach gab es keinen Weg zurueck.
+   */
   const envkvSichtbar = e.envkvPflicht || envkvOffen;
+
+  /* Farbe, Sitze und FIN — offen, solange eines davon leer ist. */
+  const mehrLuecken = [data.color, data.seats, data.vin].filter(x => !String(x).trim()).length;
+  const mehrOffen = mehrGeklappt ?? mehrLuecken > 0;
   const zahl = (v: string) => (v ? Number(v).toLocaleString('de-DE') : '');
 
   /* ── Startbildschirm ── */
@@ -388,6 +407,35 @@ export default function Showroom() {
                           {m}
                         </button>
                       ))}
+
+                      {/*
+                        Freie Eingabe, wenn die Liste nichts Passendes hat.
+                        Ohne sie war die Marke die einzige Sackgasse im
+                        Formular: Modelle kann man tippen, Marken nicht —
+                        wer einen Polestar hereinbekam, kam schlicht nicht
+                        weiter.
+
+                        Keine Liste bleibt vollstaendig. Gerade bei den
+                        chinesischen Herstellern kommt jedes Jahr eine Marke
+                        dazu, und der Haendler soll nicht auf ein Update
+                        warten muessen, um sein Fahrzeug einzustellen.
+                      */}
+                      {!e.markenSuchen(markeSuche).some(m => m.toLowerCase() === markeSuche.trim().toLowerCase()) && (
+                        <button type="button"
+                          onClick={() => {
+                            setzen('brand', markeSuche.trim());
+                            setzen('model', '');
+                            setMarkeOffen(false); setMarkeSuche('');
+                          }}
+                          style={{ width: '100%', textAlign: 'left', padding: '11px 14px',
+                                   border: 'none', borderTop: `1px solid ${F.linie}`,
+                                   background: 'transparent', color: F.akzent, cursor: 'pointer',
+                                   fontFamily: F.schrift, fontSize: 13, fontWeight: 600,
+                                   display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <Plus size={13} />
+                          „{markeSuche.trim()}" übernehmen
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -422,6 +470,34 @@ export default function Showroom() {
           </div>
         } />
 
+        {/*
+          Steht bewusst weit oben.
+          Vorher war dieser Block der letzte der Seite — dabei ist er das
+          Einzige, was der Scan NICHT liefern kann und was die Qualitaet
+          der spaeteren Beschreibung wirklich bestimmt. Eingeklappt oder
+          ganz unten heisst: wird uebersehen, und der Text wird
+          entsprechend blass.
+        */}
+        <Block titel="Was der Scan nicht weiss"
+          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>bestimmt, wie gut die Beschreibung wird</span>}
+          kinder={
+            <>
+              <textarea value={data.dealerNotes} onChange={ev => setzen('dealerNotes', ev.target.value)} rows={3}
+                placeholder="Zwei Vorbesitzer · scheckheftgepflegt · Winterreifen auf Alu dabei · Zahnriemen bei 120.000 gemacht · kleiner Kratzer hinten rechts"
+                style={{ width: '100%', boxSizing: 'border-box', background: F.flaeche,
+                         border: `1px solid ${data.dealerNotes ? F.linie : 'rgba(124,138,255,0.32)'}`,
+                         borderRadius: 9, padding: 13,
+                         color: F.text, fontSize: 14, fontFamily: F.schrift,
+                         resize: 'vertical', lineHeight: 1.7, outline: 'none' }} />
+              <p style={{ margin: '9px 0 0', fontSize: 12.5, color: F.leise, lineHeight: 1.6 }}>
+                Historie, Reifen, Reparaturen, Macken. Steht nichts hier, bleibt die
+                Beschreibung bei dem, was auf dem Schein steht — und liest sich wie
+                jedes andere Inserat.
+              </p>
+            </>
+          }
+        />
+
         <Block titel="Antrieb" kinder={
           <div style={{ display: 'grid', gap: 18 }}>
             <div>
@@ -450,11 +526,11 @@ export default function Showroom() {
         {/* Selten Geändertes hinter einem Klick */}
         <Block titel="Weitere Angaben"
           rechts={
-            <button type="button" onClick={() => setMehrOffen(o => !o)}
+            <button type="button" onClick={() => setMehrGeklappt(!mehrOffen)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
                        fontSize: 12.5, color: F.leise, display: 'flex', alignItems: 'center', gap: 5 }}>
               <ChevronDown size={13} style={{ transform: mehrOffen ? 'none' : 'rotate(-90deg)' }} />
-              {mehrOffen ? 'schliessen' : 'Farbe, Sitze, FIN'}
+              {mehrOffen ? 'schliessen' : `Farbe, Sitze, FIN${mehrLuecken > 0 ? ` · ${mehrLuecken} offen` : ''}`}
             </button>
           }
           kinder={mehrOffen ? (
@@ -505,7 +581,7 @@ export default function Showroom() {
                   <button type="button" onClick={() => setEnvkvOffen(true)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
                              fontSize: 12.5, color: F.leise, textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                    freiwillig angeben
+                    Verbrauchswerte angeben
                   </button>
                 </div>
               ) : (
@@ -526,6 +602,22 @@ export default function Showroom() {
                                 display: 'flex', alignItems: 'center', gap: 5 }}>
                       <AlertCircle size={13} /> {e.fehler.envkv}
                     </p>
+                  )}
+                  {/*
+                    Weg zurueck. Vorher setzte "freiwillig angeben" den Block
+                    dauerhaft auf offen — wer sich vertippt hatte, wurde ihn
+                    nicht mehr los. Bei Pflichtangaben gibt es den Knopf
+                    nicht: dort waere Zuklappen keine Hilfe, sondern eine
+                    Falle.
+                  */}
+                  {!e.envkvPflicht && (
+                    <button type="button" onClick={() => setEnvkvOffen(false)}
+                      style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer',
+                               fontFamily: F.schrift, fontSize: 12.5, color: F.leise,
+                               display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                      <ChevronDown size={13} style={{ transform: 'rotate(180deg)' }} />
+                      Verbrauchswerte ausblenden
+                    </button>
                   )}
                 </>
               )}
@@ -643,17 +735,6 @@ export default function Showroom() {
           }
         />
 
-        <Block titel="Notizen für die Beschreibung"
-          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>macht den Text besser</span>}
-          kinder={
-            <textarea value={data.dealerNotes} onChange={ev => setzen('dealerNotes', ev.target.value)} rows={2}
-              placeholder="Zwei Vorbesitzer, Winterreifen auf Alu dabei, kleiner Kratzer hinten rechts."
-              style={{ width: '100%', boxSizing: 'border-box', background: F.flaeche,
-                       border: `1px solid ${F.linie}`, borderRadius: 9, padding: 13,
-                       color: F.text, fontSize: 13.5, fontFamily: F.schrift,
-                       resize: 'vertical', lineHeight: 1.65, outline: 'none' }} />
-          }
-        />
       </div>
 
       <input ref={e.dateiRef} type="file" accept="image/*" hidden
