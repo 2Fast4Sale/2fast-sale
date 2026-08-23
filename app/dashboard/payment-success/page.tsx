@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 
 function Confetti() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,11 +52,46 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
   const credits = searchParams.get('credits_added');
+  const istProbelauf = searchParams.get('probelauf') === '1';
+  const sessionId = searchParams.get('session_id');
   const [countdown, setCountdown] = useState(5);
   const [show, setShow] = useState(false);
+  const [probeFehler, setProbeFehler] = useState('');
+  const [probeLaeuft, setProbeLaeuft] = useState(istProbelauf);
+
+  /*
+   * Probelauf einloesen.
+   *
+   * Stripe leitet nach der Zahlung hierher zurueck; die Gutschrift
+   * passiert erst jetzt. Hier greift auch die Kartensperre — sie ist erst
+   * moeglich, seit die Karte eingegeben wurde.
+   *
+   * Der Zaehler unten wird angehalten, solange das laeuft: Wer nach fuenf
+   * Sekunden weitergeleitet wird, bekaeme die Meldung nie zu sehen, dass
+   * seine Karte den Probelauf schon hatte.
+   */
+  useEffect(() => {
+    if (!istProbelauf || !sessionId) return;
+    let abgebrochen = false;
+    fetch('/api/probelauf/einloesen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    })
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!abgebrochen && !r.ok) setProbeFehler(d.error || 'Der Probelauf konnte nicht gutgeschrieben werden.');
+      })
+      .catch(() => { if (!abgebrochen) setProbeFehler('Netzwerkfehler beim Gutschreiben.'); })
+      .finally(() => { if (!abgebrochen) setProbeLaeuft(false); });
+    return () => { abgebrochen = true; };
+  }, [istProbelauf, sessionId]);
 
   useEffect(() => {
     setTimeout(() => setShow(true), 100);
+    // Nicht weiterleiten, solange das Einloesen laeuft oder etwas
+    // schiefging — sonst verschwindet die Meldung ungelesen.
+    if (probeLaeuft || probeFehler) return;
     const interval = setInterval(() => {
       setCountdown(c => {
         if (c <= 1) {
@@ -67,7 +103,7 @@ function SuccessContent() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, probeLaeuft, probeFehler]);
 
   const isCredit = !!credits;
 
@@ -80,7 +116,10 @@ function SuccessContent() {
       padding: '20px',
       position: 'relative',
     }}>
-      <Confetti />
+      {/* Kein Konfetti, wenn gerade nichts gutgeschrieben wurde. */}
+      {!probeFehler && <Confetti />}
+      {/* Ohne diese Regel steht der Ladekreis still — spin ist hier nirgends definiert. */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
 
       <div style={{
         position: 'relative', zIndex: 20,
@@ -106,7 +145,7 @@ function SuccessContent() {
           fontSize: '32px', fontWeight: '900', color: '#f8fafc',
           margin: '0 0 12px', letterSpacing: '-1px', lineHeight: 1.1,
         }}>
-          Vielen Dank!
+          {probeFehler ? 'Da ist etwas schiefgegangen' : 'Vielen Dank!'}
         </h1>
 
         <p style={{ fontSize: '18px', color: '#10b981', fontWeight: '700', margin: '0 0 20px' }}>
@@ -123,19 +162,47 @@ function SuccessContent() {
             : 'Dein Account wurde erfolgreich aufgewertet. Alle Features sind sofort verfügbar.'}
         </p>
 
-        {/* Countdown */}
-        <div style={{
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '16px', padding: '20px', marginBottom: '24px',
-        }}>
-          <div style={{ fontSize: '13px', color: '#475569', marginBottom: '10px' }}>
-            Weiterleitung in
+        {/*
+          Der Zähler weicht dem, was gerade wirklich passiert. Eine
+          Weiterleitung in fünf Sekunden anzukündigen, während im
+          Hintergrund noch gebucht wird — oder während eine Fehlermeldung
+          ansteht —, verwirrt genau dann, wenn es darauf ankommt.
+        */}
+        {probeLaeuft ? (
+          <div style={{
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px', padding: '24px', marginBottom: '24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+          }}>
+            <Loader2 size={18} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+            <span style={{ fontSize: '14px', color: '#94a3b8' }}>Probelauf wird gutgeschrieben…</span>
           </div>
-          <div style={{ fontSize: '48px', fontWeight: '900', color: '#6366f1', lineHeight: 1 }}>
-            {countdown}
+        ) : probeFehler ? (
+          <div style={{
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.28)',
+            borderRadius: '16px', padding: '20px', marginBottom: '24px', textAlign: 'left',
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#fca5a5', marginBottom: '6px' }}>
+              Probelauf nicht gutgeschrieben
+            </div>
+            <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.65 }}>
+              {probeFehler}
+            </div>
           </div>
-          <div style={{ fontSize: '12px', color: '#334155', marginTop: '4px' }}>Sekunden</div>
-        </div>
+        ) : (
+          <div style={{
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px', padding: '20px', marginBottom: '24px',
+          }}>
+            <div style={{ fontSize: '13px', color: '#475569', marginBottom: '10px' }}>
+              Weiterleitung in
+            </div>
+            <div style={{ fontSize: '48px', fontWeight: '900', color: '#6366f1', lineHeight: 1 }}>
+              {countdown}
+            </div>
+            <div style={{ fontSize: '12px', color: '#334155', marginTop: '4px' }}>Sekunden</div>
+          </div>
+        )}
 
         {/* Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
