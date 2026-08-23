@@ -40,7 +40,8 @@ import EnvkvFields from '../../../components/EnvkvFields';
 import { type VehicleKind } from '../../../../lib/envkv';
 import { G } from '../gestaltung';
 import {
-  useEntwurf, KRAFTSTOFFE, GETRIEBE, KAROSSERIE, TOP_MARKEN, PFLICHT_NAME, type FormData,
+  useEntwurf, KRAFTSTOFFE, GETRIEBE, KAROSSERIE, POLSTERUNG, INNENFARBE,
+  ANTRIEB, EURONORM, SELBST_FELDER, TOP_MARKEN, PFLICHT_NAME, type FormData,
 } from './useEntwurf';
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
@@ -248,6 +249,12 @@ export default function Showroom() {
    * "offen", und danach gab es keinen Weg zurueck.
    */
   const envkvSichtbar = e.envkvPflicht || envkvOffen;
+
+  /*
+   * Wie viele der vier Angaben fehlen noch, die nur der Händler machen
+   * kann. Wird in der Überschrift des Blocks angezeigt.
+   */
+  const offeneSelbst = SELBST_FELDER.filter(f => !String(data[f]).trim()).length;
 
   /* Farbe, Sitze und FIN — offen, solange eines davon leer ist. */
   const mehrLuecken = [data.color, data.seats, data.vin].filter(x => !String(x).trim()).length;
@@ -647,6 +654,84 @@ export default function Showroom() {
                 <div>
                   <Beschriftung text="Garantie" />
                   <JaNein wert={data.warranty} beiWahl={v => setzen('warranty', v)} />
+                </div>
+              </div>
+            </div>
+          }
+        />
+
+        {/*
+          Was Käufer suchen.
+          Nicht Pflicht bei mobile.de, aber Filterkriterien: Wer nach
+          "HU neu" oder "1 Vorbesitzer" sucht, findet ein Inserat ohne
+          diese Angaben gar nicht erst.
+
+          Die Überschrift zählt mit. "Noch 2 von 4" beantwortet die Frage,
+          die vor einem neuen Block im Kopf steht — ob das jetzt viel
+          wird. Eine stumme Liste beantwortet sie nicht, und der Händler
+          nimmt im Zweifel an: viel.
+        */}
+        <Block titel="Wonach Käufer filtern"
+          rechts={
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: offeneSelbst === 0 ? F.gut : F.leise }}>
+              {offeneSelbst === 0
+                ? 'vollständig'
+                : `noch ${offeneSelbst} von ${SELBST_FELDER.length}`}
+            </span>
+          }
+          kinder={
+            <div style={{ display: 'grid', gap: 18 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr', gap: 20 }}>
+                <div>
+                  <Beschriftung text="HU gültig bis" selbst erledigt={!!data.huUntil} />
+                  <Eingabe wert={data.huUntil} aendern={v => setzen('huUntil', v)} platzhalter="09/2026" />
+                </div>
+                <div>
+                  <Beschriftung text="Vorbesitzer" selbst erledigt={!!data.previousOwners} />
+                  <Wahl optionen={['1', '2', '3', '4+']} wert={data.previousOwners}
+                    beiWahl={v => setzen('previousOwners', data.previousOwners === v ? '' : v)} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr', gap: 20 }}>
+                <div>
+                  <Beschriftung text="Polsterung" selbst erledigt={!!data.interiorType} />
+                  <Wahl optionen={POLSTERUNG} wert={data.interiorType}
+                    beiWahl={v => setzen('interiorType', data.interiorType === v ? '' : v)} />
+                </div>
+                <div>
+                  <Beschriftung text="Innenfarbe" selbst erledigt={!!data.interiorColor} />
+                  <Wahl optionen={INNENFARBE} wert={data.interiorColor}
+                    beiWahl={v => setzen('interiorColor', data.interiorColor === v ? '' : v)} />
+                </div>
+              </div>
+
+              {/*
+                Aus dem Schein. Steht darunter und leiser, weil der Scan
+                sie liefert — der Händler prüft sie nur. Sie hier gleich
+                gross wie die vier oben zu zeigen, liesse den Block nach
+                sieben Aufgaben aussehen statt nach vier.
+              */}
+              <div style={{ borderTop: `1px solid ${F.linieLeise}`, paddingTop: 16 }}>
+                <div style={{ fontSize: 11.5, color: F.leise, marginBottom: 12 }}>
+                  Aus dem Fahrzeugschein — bitte nur prüfen:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
+                  <div>
+                    <Beschriftung text="Türen" />
+                    <Wahl optionen={['2', '3', '4', '5']} wert={data.doors}
+                      beiWahl={v => setzen('doors', data.doors === v ? '' : v)} />
+                  </div>
+                  <div>
+                    <Beschriftung text="Schadstoffklasse" />
+                    <Wahl optionen={EURONORM} wert={data.emissionClass}
+                      beiWahl={v => setzen('emissionClass', data.emissionClass === v ? '' : v)} />
+                  </div>
+                  <div>
+                    <Beschriftung text="Antrieb" />
+                    <Wahl optionen={ANTRIEB} wert={data.driveType}
+                      beiWahl={v => setzen('driveType', data.driveType === v ? '' : v)} />
+                  </div>
                 </div>
               </div>
             </div>

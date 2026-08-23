@@ -68,7 +68,12 @@ export async function POST(req: Request) {
      * zurueckfaellt: Wer die Migration noch nicht eingespielt hat, legt
      * das Inserat trotzdem an — nur ohne diese Angaben.
      */
-    const MOBILE_COLS = ['body_type', 'vat_type', 'damaged', 'metallic', 'warranty'];
+    const MOBILE_COLS = [
+      'body_type', 'vat_type', 'damaged', 'metallic', 'warranty',
+      // Migration 023
+      'hu_until', 'previous_owners', 'interior_type', 'interior_color',
+      'doors', 'emission_class', 'drive_type',
+    ];
     /* Pkw-EnVKV Spalten aus Migration 012 */
     const ENVKV_COLS = [
       'vehicle_kind', 'consumption_combined', 'power_consumption_combined',

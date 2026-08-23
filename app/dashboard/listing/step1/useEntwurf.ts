@@ -42,6 +42,21 @@ export interface FormData {
   damaged: boolean;
   metallic: boolean;
   warranty: boolean;
+
+  /*
+   * Weitere mobile.de-Felder. Nicht Pflicht, aber auf jedem ernsthaften
+   * Inserat vorhanden — Käufer filtern nach HU und Vorbesitzern, und ein
+   * Inserat ohne diese Angaben wird bei der Suche nicht gefunden.
+   */
+  /** MM/JJJJ. Als Text: Der Schein nennt Monat und Jahr, keinen Tag. */
+  huUntil: string;
+  previousOwners: string;
+  interiorType: string;
+  interiorColor: string;
+  /** Vom Schein: Türen, Euronorm, Antriebsart. */
+  doors: string;
+  emissionClass: string;
+  driveType: string;
 }
 
 export const LEER_ENVKV: EnvkvData = {
@@ -63,6 +78,20 @@ export const GETRIEBE    = ['Automatik', 'Manuell'];
  * "Car.Limousine" gehoert in die Exportschicht — sonst muesste man bei
  * einem zweiten Portal jede Zeile anfassen.
  */
+export const POLSTERUNG   = ['Stoff', 'Teilleder', 'Leder', 'Velour', 'Alcantara'];
+export const INNENFARBE   = ['Schwarz', 'Grau', 'Beige', 'Braun', 'Andere'];
+export const ANTRIEB      = ['Frontantrieb', 'Heckantrieb', 'Allrad'];
+export const EURONORM     = ['Euro 4', 'Euro 5', 'Euro 6', 'Euro 6d-Temp', 'Euro 6d'];
+
+/**
+ * Die vier Angaben, die der Händler je Fahrzeug selbst machen muss.
+ *
+ * Als Liste, damit die Oberfläche zählen kann, wie viele noch offen
+ * sind. "Noch 2 von 4" beantwortet die Frage, die vor einem neuen Block
+ * im Kopf steht — nämlich ob das jetzt viel wird.
+ */
+export const SELBST_FELDER = ['huUntil', 'previousOwners', 'interiorType', 'interiorColor'] as const;
+
 export const KAROSSERIE = [
   'Limousine', 'Kombi', 'SUV / Geländewagen', 'Kleinwagen',
   'Cabrio / Roadster', 'Coupé', 'Van / Kleinbus', 'Transporter',
@@ -87,6 +116,8 @@ export function useEntwurf() {
     color: '', seats: '', equipment: [], dealerNotes: '',
     envkv: LEER_ENVKV,
     bodyType: '', vatType: '', damaged: false, metallic: false, warranty: false,
+    huUntil: '', previousOwners: '', interiorType: '', interiorColor: '',
+    doors: '', emissionClass: '', driveType: '',
   });
 
   const [blattOffen, setBlattOffen]   = useState(false);
@@ -204,6 +235,10 @@ export function useEntwurf() {
             displacementCcm: nimm('displacementCcm', d.displacementCcm != null ? String(d.displacementCcm) : '', p.displacementCcm),
             color: nimm('color', d.color ?? '', p.color),
             seats: nimm('seats', d.seats != null ? String(d.seats) : '', p.seats),
+            // Stehen ebenfalls auf der Zulassungsbescheinigung Teil I.
+            doors: nimm('doors', d.doors != null ? String(d.doors) : '', p.doors),
+            emissionClass: nimm('emissionClass', d.emissionClass ?? '', p.emissionClass),
+            driveType: nimm('driveType', d.driveType ?? '', p.driveType),
             equipment: Array.isArray(d.equipment)
               ? [...new Set([...p.equipment, ...d.equipment])] : p.equipment,
           };

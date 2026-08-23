@@ -43,6 +43,9 @@ PFLICHTFELDER (immer ausfüllen):
 • R: Farbe des Fahrzeugs (auf Deutsch, z.B. "Schwarz", "Silber Metallic", "Perlweiß")
 • S.1: Anzahl Sitzplätze gesamt (inkl. Fahrer)
 • G: Leermasse in kg
+• Feld 22 oder Zeile "Anzahl der Türen": Anzahl Türen (2, 3, 4 oder 5)
+• Feld 14.1 oder "Emissionsklasse": Schadstoffklasse → "Euro 4" | "Euro 5" | "Euro 6" | "Euro 6d-Temp" | "Euro 6d"
+• Antriebsart, falls erkennbar → "Frontantrieb" | "Heckantrieb" | "Allrad"
 
 ZUSATZFELDER (wenn sichtbar):
 • T: Höchstgeschwindigkeit km/h
@@ -92,6 +95,12 @@ Füge ALLE erkannten Merkmale ein. Lieber 5 zu viel als 1 zu wenig.
 powerKw = der Wert aus Feld P.2, unveraendert. Fuehrende Nullen weglassen (0081 wird zu 81).
 Rechne NICHT in PS um — das macht die Anwendung.
 
+WICHTIG zu doors, emissionClass und driveType: Diese drei stehen NICHT auf
+jedem Fahrzeugschein. Wenn du sie nicht ablesen kannst, gib null zurück.
+NICHT raten und NICHT aus dem Modell ableiten — eine erfundene
+Schadstoffklasse im Inserat ist eine falsche Zusicherung, und der
+Händler haftet dafür.
+
 Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
 {
   "brand": "Marke Modell Variante",
@@ -103,6 +112,9 @@ Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
   "color": "Farbe",
   "seats": 5,
   "grossWeightKg": 2100,
+  "doors": 5,
+  "emissionClass": "Euro 6d",
+  "driveType": "Frontantrieb",
   "equipment": ["alle erkannten Merkmale auf Deutsch, mind. 15 wenn irgendwie möglich"]
 }`;
 

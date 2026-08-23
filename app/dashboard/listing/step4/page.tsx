@@ -510,6 +510,14 @@ function Step4Inner() {
         damaged:   step1.damaged === true,
         metallic:  step1.metallic === true,
         warranty:  step1.warranty === true,
+        // Weitere mobile.de-Felder aus Migration 023
+        hu_until:        (step1.huUntil as string) || undefined,
+        previous_owners: step1.previousOwners ? Number(step1.previousOwners) : undefined,
+        interior_type:   (step1.interiorType as string) || undefined,
+        interior_color:  (step1.interiorColor as string) || undefined,
+        doors:           step1.doors ? Number(step1.doors) : undefined,
+        emission_class:  (step1.emissionClass as string) || undefined,
+        drive_type:      (step1.driveType as string) || undefined,
         // Pkw-EnVKV Pflichtangaben aus Schritt 1
         vehicle_kind:               step1.envkv?.vehicleKind || 'gebrauchtwagen',
         consumption_combined:       step1.envkv?.consumptionCombined ?? undefined,
