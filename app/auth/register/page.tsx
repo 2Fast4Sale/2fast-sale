@@ -9,6 +9,19 @@ import { createClient } from '../../../lib/supabase/client';
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: '', company: '', email: '', password: '', confirm: '' });
+
+  /*
+   * Privat oder gewerblich.
+   *
+   * Wer als Privatperson ein einzelnes Auto verkauft, hat keine Firma —
+   * das Feld "Autohaus / Firma" war fuer ihn eine Pflichtangabe-Optik
+   * ohne Inhalt und liess ihn zweifeln, ob er hier ueberhaupt richtig
+   * ist. Er kauft Credits einzeln, er bucht kein Haendlerpaket.
+   *
+   * Die Angabe entscheidet ausserdem, was er spaeter zu sehen bekommt:
+   * Pakete und Monatsrechnung ergeben nur fuer Haendler Sinn.
+   */
+  const [kontoArt, setKontoArt] = useState<'privat' | 'haendler'>('haendler');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -34,6 +47,10 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     if (!form.name || !form.email || !form.password) { setError('Bitte alle Pflichtfelder ausfüllen.'); return; }
+    if (kontoArt === 'haendler' && !form.company.trim()) {
+      setError('Bitte den Namen des Autohauses eintragen — oder oben auf „Privat“ wechseln.');
+      return;
+    }
     if (form.password !== form.confirm) { setError('Passwörter stimmen nicht überein.'); return; }
     if (form.password.length < 6) { setError('Passwort muss mindestens 6 Zeichen haben.'); return; }
     if (!agreed) { setError('Bitte stimme den AGB zu.'); return; }
@@ -44,7 +61,13 @@ export default function RegisterPage() {
       email: form.email,
       password: form.password,
       options: {
-        data: { full_name: form.name, company: form.company },
+        data: {
+          full_name: form.name,
+          // Privatkonten bekommen keine Firma — auch nicht als leeren String,
+          // damit spaeter nicht "" als Firmenname auf einer Rechnung landet.
+          company: kontoArt === 'haendler' ? form.company : null,
+          konto_art: kontoArt,
+        },
       },
     });
 
@@ -123,19 +146,53 @@ export default function RegisterPage() {
         <div style={{ backgroundColor: '#0a1628', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '36px 40px' }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            {/*
+              Die Wahl steht vor allen Feldern, nicht dazwischen: Sie
+              bestimmt, welche Felder ueberhaupt kommen. Wer sie uebersieht,
+              fuellt das Falsche aus.
+            */}
+            <div>
+              <label style={labelStyle}>Ich verkaufe *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {([
+                  { id: 'haendler', titel: 'Als Händler', text: 'Autohaus oder Gewerbe · Pakete ab 50 €' },
+                  { id: 'privat',   titel: 'Privat',      text: 'Einzelnes Fahrzeug · 4,99 € je Inserat' },
+                ] as const).map(w => {
+                  const an = kontoArt === w.id;
+                  return (
+                    <button key={w.id} type="button" onClick={() => setKontoArt(w.id)}
+                      style={{
+                        textAlign: 'left', padding: '13px 15px', borderRadius: '10px',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        border: `1px solid ${an ? 'rgba(59,130,246,0.65)' : 'rgba(255,255,255,0.08)'}`,
+                        background: an ? 'rgba(59,130,246,0.1)' : 'transparent',
+                      }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: an ? '#93b4ff' : '#e2e8f0', marginBottom: '3px' }}>
+                        {w.titel}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#7a8ba3', lineHeight: 1.45 }}>{w.text}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: kontoArt === 'haendler' ? '1fr 1fr' : '1fr', gap: '14px' }}>
               <div>
                 <label style={labelStyle}>Name *</label>
                 <input style={inputStyle} placeholder="Max Mustermann" value={form.name} onChange={set('name')}
                   onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.5)')}
                   onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')} />
               </div>
-              <div>
-                <label style={labelStyle}>Autohaus / Firma</label>
-                <input style={inputStyle} placeholder="Autohaus GmbH" value={form.company} onChange={set('company')}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.5)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')} />
-              </div>
+              {/* Firma nur beim Haendler — und dann als Pflichtfeld, weil sie auf der Rechnung steht. */}
+              {kontoArt === 'haendler' && (
+                <div>
+                  <label style={labelStyle}>Autohaus / Firma *</label>
+                  <input style={inputStyle} placeholder="Autohaus GmbH" value={form.company} onChange={set('company')}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.5)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')} />
+                </div>
+              )}
             </div>
 
             <div>

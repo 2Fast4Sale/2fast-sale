@@ -11,6 +11,7 @@ import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
 import Link from 'next/link';
+import VorherNachher from '../../../components/VorherNachher';
 import { entwurfId } from '../../../../lib/entwurf';
 
 /*
@@ -759,7 +760,18 @@ function Step2Inner() {
                 }}
                   onClick={() => setLightbox(p.processed || p.preview)}
                 >
-                  <img src={p.processed || p.preview} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hasIssues && !p.processed ? 'brightness(0.75)' : 'none' }} alt="" />
+                  {/*
+                    Bearbeitete Fotos zeigen den Vergleich, nicht nur das
+                    Ergebnis. Der Unterschied zwischen Hoffoto und Studiobild
+                    ist das, wofuer der Haendler zahlt — er war bisher
+                    nirgends zu sehen, weil das Original nach der Bearbeitung
+                    einfach verschwand.
+                  */}
+                  {p.processed ? (
+                    <VorherNachher vorher={p.preview} nachher={p.processed} />
+                  ) : (
+                    <img src={p.preview} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hasIssues ? 'brightness(0.75)' : 'none' }} alt="" />
+                  )}
 
                   {/* Analysiere... */}
                   {p.analyzing && (

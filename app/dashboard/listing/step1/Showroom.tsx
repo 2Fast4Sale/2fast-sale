@@ -107,12 +107,44 @@ function Eingabe({ wert, aendern, platzhalter, einheit, gross, erkannt }: {
   );
 }
 
-function Beschriftung({ text, luecke }: { text: string; luecke?: boolean }) {
+/**
+ * Feldbeschriftung mit Herkunftshinweis.
+ *
+ * Drei Zustaende, weil der Haendler drei verschiedene Dinge wissen muss:
+ *
+ *   luecke  — Pflichtangabe, ohne die es nicht weitergeht.
+ *   selbst  — Der Scan liefert das nie. Getriebe steht auf keinem
+ *             Fahrzeugschein, also muss es von Hand kommen — es sah aber
+ *             aus wie jedes andere Feld und wurde uebersehen.
+ *   sonst   — Kommt aus dem Schein oder ist entbehrlich.
+ *
+ * Ohne diese Unterscheidung sieht ein leeres Feld, das der Scan gleich
+ * fuellt, genauso aus wie eines, auf das der Haendler ewig wartet.
+ */
+function Beschriftung({ text, luecke, selbst, erledigt }: {
+  text: string; luecke?: boolean; selbst?: boolean; erledigt?: boolean;
+}) {
+  const zeigeSelbst = selbst && !erledigt;
   return (
     <div style={{
+      display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7,
       fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
-      color: luecke ? F.luecke : F.leise, marginBottom: 7,
-    }}>{text}{luecke && ' ·  fehlt'}</div>
+      color: luecke ? F.luecke : zeigeSelbst ? F.akzent : F.leise,
+    }}>
+      {text}
+      {luecke && (
+        <span style={{
+          padding: '1px 6px', borderRadius: 4, letterSpacing: 0, textTransform: 'none',
+          fontSize: 10.5, background: 'rgba(251,191,36,0.16)', color: F.luecke,
+        }}>Pflicht</span>
+      )}
+      {zeigeSelbst && !luecke && (
+        <span style={{
+          padding: '1px 6px', borderRadius: 4, letterSpacing: 0, textTransform: 'none',
+          fontSize: 10.5, background: 'rgba(124,138,255,0.16)', color: F.akzent,
+        }}>trägst du ein</span>
+      )}
+    </div>
   );
 }
 
@@ -142,8 +174,17 @@ function Block({ titel, kinder, rechts }: { titel: string; kinder: React.ReactNo
   return (
     <section style={{ borderTop: `1px solid ${F.linie}`, padding: '20px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-        <h2 style={{ margin: 0, fontSize: 12, fontWeight: 700, letterSpacing: '0.09em',
-                     textTransform: 'uppercase', color: F.leise }}>{titel}</h2>
+        {/*
+          Deutlicher als vorher: 15px in Textfarbe statt 12px in Grau, mit
+          einem Akzentstrich davor. Die Ueberschriften waren so leise, dass
+          die Seite wie eine einzige lange Liste wirkte und man beim
+          Scrollen nicht merkte, in welchem Abschnitt man ist.
+        */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ width: 3, height: 15, borderRadius: 2, background: F.akzent }} />
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
+                       color: F.text }}>{titel}</h2>
+        </div>
         {rechts && <div style={{ marginLeft: 'auto' }}>{rechts}</div>}
       </div>
       {kinder}
@@ -453,7 +494,8 @@ export default function Showroom() {
         <Block titel="Eckdaten" kinder={
           <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
             <div>
-              <Beschriftung text="Preis" luecke={!data.price} />
+              {/* Steht auf keinem Fahrzeugschein: der Preis ist eine Entscheidung. */}
+              <Beschriftung text="Preis" luecke={!data.price} selbst erledigt={!!data.price} />
               <Eingabe erkannt={erkannt.has('price')} gross einheit="€" wert={zahl(data.price)}
                 aendern={v => setzen('price', v.replace(/\D/g, ''))} platzhalter="18.900" />
             </div>
@@ -506,7 +548,8 @@ export default function Showroom() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
               <div>
-                <Beschriftung text="Getriebe" />
+                {/* Der Fahrzeugschein nennt kein Getriebe — das kommt immer von Hand. */}
+                <Beschriftung text="Getriebe" selbst erledigt={!!data.gearbox} />
                 <Wahl optionen={GETRIEBE} wert={data.gearbox} beiWahl={v => setzen('gearbox', data.gearbox === v ? '' : v)} />
               </div>
               <div>
