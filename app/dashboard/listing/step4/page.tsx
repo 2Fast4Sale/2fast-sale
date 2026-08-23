@@ -11,16 +11,22 @@ import {
   Phone, Check, BarChart2, Lock,
 } from 'lucide-react';
 import { entwurfId, entwurfBeenden } from '../../../../lib/entwurf';
+import { G } from '../gestaltung';
 
 /* ─── Tokens ─────────────────────────────────────────────────────────────── */
-const F    = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
-const BG   = '#f0f2f5';
-const CARD = '#ffffff';
-const SURF = '#f8fafc';
-const BORD = '#e2e8f0';
-const TH   = '#0f172a';
-const TS   = '#64748b';
-const TD   = '#94a3b8';
+/*
+ * Farben aus ../gestaltung. Die alten Namen bleiben als Zuweisung
+ * stehen: Sie kommen in dieser Datei hundertfach vor, und ein
+ * Umbenennen brauchte niemand.
+ */
+const F    = G.schrift;
+const BG   = G.grund;
+const CARD = G.flaeche;
+const SURF = G.flaeche;
+const BORD = G.linieLeise;
+const TH   = G.text;
+const TS   = G.leise;
+const TD   = G.blass;
 const IND  = '#6366f1';
 
 type Platform = 'mobile' | 'autoscout';
@@ -66,7 +72,7 @@ function Ring({ score, size = 96 }: { score: number; size?: number }) {
   const color = score >= 80 ? '#10b981' : score >= 55 ? '#f59e0b' : '#ef4444';
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f1f5f9" strokeWidth={sw} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={G.linieLeise} strokeWidth={sw} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={sw}
         strokeDasharray={`${(score/100)*c} ${c}`} strokeLinecap="round"
         style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)' }} />
@@ -303,18 +309,18 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
       <div style={{ padding: '14px 16px 0', borderBottom: '1px solid #f0f3f8' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
           <div>
-            <h1 style={{ fontSize: '19px', fontWeight: '700', color: '#1b2437', margin: '0 0 5px', lineHeight: 1.3 }}>
+            <h1 style={{ fontSize: '19px', fontWeight: '700', color: TH, margin: '0 0 5px', lineHeight: 1.3 }}>
               {title || `${brand} Gebrauchtwagen`}
             </h1>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
               {[km && fmtKm, year && `EZ ${year}`, fuel, gearbox, power && `${power} PS`].filter(Boolean).map((v, i) => (
-                <span key={i} style={{ fontSize: '12px', background: '#f0f4fb', border: '1px solid #d8e3f0', borderRadius: '3px', padding: '2px 8px', color: '#3d5068', fontWeight: '600' }}>{v}</span>
+                <span key={i} style={{ fontSize: '12px', background: '#f0f4fb', border: '1px solid #d8e3f0', borderRadius: '3px', padding: '2px 8px', color: TS, fontWeight: '600' }}>{v}</span>
               ))}
             </div>
           </div>
           {/* Price (top right) */}
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontSize: '26px', fontWeight: '900', color: '#1b2437', letterSpacing: '-1px', lineHeight: 1 }}>{fmtPrice}</div>
+            <div style={{ fontSize: '26px', fontWeight: '900', color: TH, letterSpacing: '-1px', lineHeight: 1 }}>{fmtPrice}</div>
             {monthlyRate && <div style={{ fontSize: '11px', color: '#7a8fa6', marginTop: '2px' }}>ca. {monthlyRate}*</div>}
             <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: '3px', padding: '2px 8px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#43a047' }} />
@@ -359,7 +365,7 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
 
           {/* Fahrzeugdaten */}
           <div style={{ marginBottom: '18px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1b2437', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>Fahrzeugdaten</div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>Fahrzeugdaten</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
               {[
                 ['Kilometerstand', fmtKm],
@@ -371,7 +377,7 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
               ].map(([k, v], i) => (
                 <div key={k} style={{ display: 'flex', flexDirection: 'column', padding: '8px 10px', background: i % 4 < 2 ? '#f7f9fc' : '#fff', borderBottom: '1px solid #edf0f5' }}>
                   <span style={{ fontSize: '10px', color: '#7a8fa6', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '2px' }}>{k}</span>
-                  <span style={{ fontSize: '13px', color: '#1b2437', fontWeight: '700' }}>{v}</span>
+                  <span style={{ fontSize: '13px', color: TH, fontWeight: '700' }}>{v}</span>
                 </div>
               ))}
             </div>
@@ -380,20 +386,20 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
           {/* Beschreibung */}
           {desc && (
             <div style={{ marginBottom: '18px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1b2437', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>Beschreibung</div>
-              <p style={{ fontSize: '13px', color: '#3d5068', lineHeight: 1.8, margin: 0 }}>{desc.slice(0, 450)}{desc.length > 450 ? '…' : ''}</p>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>Beschreibung</div>
+              <p style={{ fontSize: '13px', color: TS, lineHeight: 1.8, margin: 0 }}>{desc.slice(0, 450)}{desc.length > 450 ? '…' : ''}</p>
             </div>
           )}
 
           {/* Ausstattung */}
           {equipment.length > 0 && (
             <div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1b2437', marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>
                 Ausstattung ({equipment.length} Merkmale)
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 20px' }}>
                 {equipment.slice(0, 18).map((e, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: '#3d5068', padding: '4px 0', borderBottom: '1px solid #f0f3f8' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: TS, padding: '4px 0', borderBottom: '1px solid #f0f3f8' }}>
                     <Check size={12} color="#003781" strokeWidth={2.5} style={{ flexShrink: 0 }} />
                     {e}
                   </div>
@@ -413,7 +419,7 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
           {/* Contact box */}
           <div style={{ border: '1px solid #d8e3f0', borderRadius: '6px', overflow: 'hidden', marginBottom: '12px' }}>
             <div style={{ padding: '14px', borderBottom: '1px solid #edf0f5' }}>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#1b2437', letterSpacing: '-0.8px', marginBottom: '1px' }}>{fmtPrice}</div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: TH, letterSpacing: '-0.8px', marginBottom: '1px' }}>{fmtPrice}</div>
               {monthlyRate && <div style={{ fontSize: '11px', color: '#7a8fa6' }}>ca. {monthlyRate} Finanzierung*</div>}
             </div>
             <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
@@ -429,7 +435,7 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
           {/* Dealer */}
           <div style={{ border: '1px solid #d8e3f0', borderRadius: '6px', padding: '12px' }}>
             <div style={{ fontSize: '11px', color: '#7a8fa6', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Händler</div>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1b2437', marginBottom: '2px' }}>2Fast4Sale</div>
+            <div style={{ fontSize: '13px', fontWeight: '700', color: TH, marginBottom: '2px' }}>2Fast4Sale</div>
             <div style={{ display: 'flex', gap: '2px', marginBottom: '6px', alignItems: 'center' }}>
               {[1,2,3,4,5].map(i => <Star key={i} size={11} fill={i <= 5 ? '#f56700' : 'none'} color="#f56700" />)}
               <span style={{ fontSize: '10px', color: '#7a8fa6', marginLeft: '3px' }}>5,0</span>
@@ -557,7 +563,7 @@ function Step4Inner() {
 
   /* ── Success ─────────────────────────────────────────────────────────────── */
   if (done) return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f1e 0%, #1a1040 50%, #0a0f1e 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F, padding: '24px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: G.grund, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F, padding: '24px', position: 'relative', overflow: 'hidden' }}>
       <Confetti />
       <div style={{ position: 'absolute', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)', top: '10%', right: '10%', pointerEvents: 'none' }} />
@@ -579,7 +585,7 @@ function Step4Inner() {
           {brand || 'Fahrzeug'}<br />
           <span style={{ background: 'linear-gradient(135deg, #818cf8, #c4b5fd, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>ist bereit.</span>
         </h1>
-        <p style={{ color: '#475569', fontSize: '15px', margin: '0 0 40px', lineHeight: 1.7, maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
+        <p style={{ color: G.leise, fontSize: '15px', margin: '0 0 40px', lineHeight: 1.7, maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
           Dein Inserat ist gespeichert. Ab September wird es automatisch auf{' '}
           <span style={{ color: '#ff6600', fontWeight: '700' }}>Mobile.de</span> und{' '}
           <span style={{ color: '#1a77c9', fontWeight: '700' }}>AutoScout24</span> erscheinen.
@@ -595,13 +601,13 @@ function Step4Inner() {
             <div key={sub} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '16px 20px', textAlign: 'center', minWidth: '95px' }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>{icon}</div>
               <div style={{ fontSize: '26px', fontWeight: '900', color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{val}</div>
-              <div style={{ fontSize: '10px', color: '#475569', marginTop: '3px' }}>{sub}</div>
+              <div style={{ fontSize: '10px', color: G.leise, marginTop: '3px' }}>{sub}</div>
             </div>
           ))}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <button onClick={() => router.push('/dashboard')} style={{ padding: '15px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '13px', color: '#e2e8f0', fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: F, transition: 'background 0.2s' }}
+          <button onClick={() => router.push('/dashboard')} style={{ padding: '15px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '13px', color: G.leise, fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: F, transition: 'background 0.2s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}>
             Zum Dashboard
@@ -664,14 +670,14 @@ function Step4Inner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
             {checks.map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '10px 11px', background: c.ok ? 'rgba(16,185,129,0.05)' : '#fafafa', border: `1px solid ${c.ok ? 'rgba(16,185,129,0.2)' : BORD}`, borderRadius: '10px', transition: 'all 0.4s' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: c.ok ? 'rgba(16,185,129,0.12)' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: c.ok ? '#10b981' : TD, transition: 'all 0.4s' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: c.ok ? 'rgba(16,185,129,0.12)' : G.linieLeise, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: c.ok ? '#10b981' : TD, transition: 'all 0.4s' }}>
                   {c.ok ? <CheckCircle2 size={14} strokeWidth={2.5} /> : c.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '12px', fontWeight: '700', color: c.ok ? '#059669' : TH }}>{c.label}</div>
                   <div style={{ fontSize: '10px', color: c.ok ? '#6ee7b7' : TD, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.detail}</div>
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: c.ok ? '#10b981' : '#e2e8f0' }}>+{c.pts}</span>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: c.ok ? '#10b981' : G.leise }}>+{c.pts}</span>
               </div>
             ))}
           </div>
@@ -679,7 +685,7 @@ function Step4Inner() {
           {/* Score bar card */}
           <div style={{ padding: '14px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', borderRadius: '12px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '11px', color: '#475569', fontWeight: '700' }}>Inserat-Score</span>
+              <span style={{ fontSize: '11px', color: G.leise, fontWeight: '700' }}>Inserat-Score</span>
               <span style={{ fontSize: '13px', fontWeight: '900', color: score >= 80 ? '#10b981' : '#f59e0b' }}>{score}/100</span>
             </div>
             <div style={{ height: '7px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -783,7 +789,7 @@ function Step4Inner() {
             <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: '14px', padding: '18px', marginBottom: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: TH, marginBottom: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}><Shield size={12} color={IND} /> Ausstattung <span style={{ fontSize: '11px', fontWeight: '600', color: TD }}>· {equipment.length} Merkmale</span></div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {equipment.map((item, i) => <span key={i} style={{ fontSize: '12px', color: '#4f46e5', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.14)', padding: '4px 11px', borderRadius: '20px', fontWeight: '500' }}>{item}</span>)}
+                {equipment.map((item, i) => <span key={i} style={{ fontSize: '12px', color: G.akzent, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.14)', padding: '4px 11px', borderRadius: '20px', fontWeight: '500' }}>{item}</span>)}
               </div>
             </div>
           )}
@@ -799,7 +805,7 @@ function Step4Inner() {
                     {i === 0 && <div style={{ position: 'absolute', bottom: '2px', left: '2px', background: IND, borderRadius: '3px', padding: '1px 4px', fontSize: '9px', color: '#fff', fontWeight: '700' }}>Cover</div>}
                   </div>
                 ))}
-                {photos.length > 9 && <div style={{ width: '70px', height: '54px', borderRadius: '7px', background: '#f1f5f9', border: `1px solid ${BORD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: TS, fontWeight: '700' }}>+{photos.length - 9}</div>}
+                {photos.length > 9 && <div style={{ width: '70px', height: '54px', borderRadius: '7px', background: G.linieLeise, border: `1px solid ${BORD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: TS, fontWeight: '700' }}>+{photos.length - 9}</div>}
               </div>
             </div>
           )}

@@ -578,7 +578,7 @@ function Step2Inner() {
             <div style={{ fontSize: '13px', color: TS }}>
               <span style={{ fontWeight: '700', color: photos.length >= photoLimit ? '#ef4444' : '#0f172a', fontSize: '13px' }}>{photos.length}</span>
               <span style={{ color: '#94a3b8' }}> / </span>
-              <span style={{ fontWeight: '700', color: '#0f172a' }}>{photoLimit} Fotos</span>
+              <span style={{ fontWeight: '700', color: TH }}>{photoLimit} Fotos</span>
               {/*
                 Hier stand "({plan}-Plan)". Mit den Paketen ergab das
                 "S-Plan" oder "M-Plan". Und die Grenze haengt gar nicht
@@ -603,12 +603,12 @@ function Step2Inner() {
             Studio-Bilder ueber dem Kontingent.
           */}
           {studioStand.extra > 0 ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', color: '#7c3aed', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', color: G.akzent, padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
               {studioStand.extra} Studio-Bilder über dem Kontingent
               {' '}= {centAlsEuro(studioStand.extraCent)}
             </span>
           ) : photos.length >= photoLimit ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.25)', color: '#64748b', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.25)', color: TS, padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700' }}>
               Mehr als {photoLimit} Fotos nimmt auch mobile.de nicht an
             </span>
           ) : null}
@@ -691,7 +691,7 @@ function Step2Inner() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {['Frontal', 'Seite', 'Heck', 'Innenraum', 'Details', 'Motor'].map(t => (
-              <span key={t} style={{ fontSize: '13px', color: '#6366f1', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', padding: '3px 10px', borderRadius: '20px', fontWeight: '600' }}>{t}</span>
+              <span key={t} style={{ fontSize: '13px', color: G.akzent, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', padding: '3px 10px', borderRadius: '20px', fontWeight: '600' }}>{t}</span>
             ))}
           </div>
           <input
@@ -720,9 +720,9 @@ function Step2Inner() {
               background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.18)',
               borderRadius: '10px',
             }}>
-              <Wand2 size={14} style={{ color: '#7c3aed', marginTop: '2px', flexShrink: 0 }} />
-              <div style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.6 }}>
-                <strong style={{ color: '#0f172a' }}>
+              <Wand2 size={14} style={{ color: G.akzent, marginTop: '2px', flexShrink: 0 }} />
+              <div style={{ fontSize: '12.5px', color: TS, lineHeight: 1.6 }}>
+                <strong style={{ color: TH }}>
                   {photos.filter(p => p.studio).length} von {photos.length} Fotos
                 </strong>{' '}
                 kommen ins Studio. Außenaufnahmen profitieren davon — bei Cockpit,
@@ -740,12 +740,12 @@ function Step2Inner() {
                   * Zahlen nennen koennen.
                   */}
                 {studioStand.extra > 0 ? (
-                  <div style={{ marginTop: '6px', color: '#7c3aed', fontWeight: '600' }}>
+                  <div style={{ marginTop: '6px', color: G.akzent, fontWeight: '600' }}>
                     {studioInklusive(paketId)} inklusive · {studioStand.extra} zusätzlich
                     {' '}= {centAlsEuro(studioStand.extraCent)} extra
                   </div>
                 ) : (
-                  <div style={{ marginTop: '6px', color: '#64748b' }}>
+                  <div style={{ marginTop: '6px', color: TS }}>
                     {studioInklusive(paketId)} Studio-Bilder sind im Inseratspreis enthalten.
                     {' '}Weitere kosten {PREIS_EXTRA_BILD_CENT} Cent.
                   </div>

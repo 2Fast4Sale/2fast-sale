@@ -4,8 +4,14 @@ import { Suspense, useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles, CheckCircle2, Loader2, Zap, TrendingUp, Target, Search, Globe, FileText, Car } from 'lucide-react';
 import { entwurfId } from '../../../../lib/entwurf';
+import { G } from '../gestaltung';
 
-const F = '"Inter", -apple-system, BlinkMacSystemFont, sans-serif';
+/*
+ * Die Farben kommen aus ../gestaltung, damit alle vier Schritte gleich
+ * aussehen. Hier standen sie einzeln in den Formatangaben verstreut --
+ * eine helle Seite mitten in einer dunklen Strecke.
+ */
+const F = G.schrift;
 
 const STEPS = [
   { icon: FileText,  label: 'Fahrzeugdaten analysieren',  sub: 'Marke · Modell · Ausstattung',       duration: 700  },
@@ -118,7 +124,7 @@ function Step3Inner() {
   const progress = Math.round(((stepIndex + 1) / STEPS.length) * 100);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: F, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+    <div style={{ minHeight: '100vh', background: G.grund, fontFamily: F, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ width: '100%', maxWidth: '900px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
 
         {/* ── LEFT: Fahrzeug-Info + Fortschritt ── */}
@@ -133,7 +139,7 @@ function Step3Inner() {
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
                   <Car size={40} color="#334155" style={{ opacity: 0.3 }} />
-                  <div style={{ fontSize: '12px', color: '#475569' }}>Fahrzeugvorschau</div>
+                  <div style={{ fontSize: '12px', color: G.leise }}>Fahrzeugvorschau</div>
                 </div>
               )}
               {/* Gradient overlay */}
@@ -160,16 +166,16 @@ function Step3Inner() {
           </div>
 
           {/* Progress */}
-          <div style={{ background: '#fff', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+          <div style={{ background: G.flaeche, borderRadius: '16px', padding: '20px', border: `1px solid ${G.linieLeise}`, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>Fortschritt</span>
-              <span style={{ fontSize: '22px', fontWeight: '900', color: '#6366f1', letterSpacing: '-1px' }}>{progress}%</span>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: G.text }}>Fortschritt</span>
+              <span style={{ fontSize: '22px', fontWeight: '900', color: G.akzent, letterSpacing: '-1px' }}>{progress}%</span>
             </div>
             {/* Bar */}
-            <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ height: '8px', background: G.linieLeise, borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '4px', transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)', boxShadow: '0 0 12px rgba(99,102,241,0.4)' }} />
             </div>
-            <div style={{ marginTop: '8px', fontSize: '12px', color: '#64748b' }}>
+            <div style={{ marginTop: '8px', fontSize: '12px', color: G.leise }}>
               {STEPS[stepIndex]?.label}{dots}
             </div>
           </div>
@@ -185,14 +191,14 @@ function Step3Inner() {
         </div>
 
         {/* ── RIGHT: Steps ── */}
-        <div style={{ background: '#fff', borderRadius: '20px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
+        <div style={{ background: G.flaeche, borderRadius: '20px', padding: '24px', border: `1px solid ${G.linieLeise}`, boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={18} color="#fff" />
             </div>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>KI generiert deinen Text</div>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>Dauert nur wenige Sekunden</div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: G.text }}>KI generiert deinen Text</div>
+              <div style={{ fontSize: '12px', color: G.blass }}>Dauert nur wenige Sekunden</div>
             </div>
           </div>
 
@@ -207,7 +213,7 @@ function Step3Inner() {
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '12px 14px',
                   background: current ? 'rgba(99,102,241,0.06)' : done ? 'rgba(16,185,129,0.04)' : '#fafafa',
-                  border: `1px solid ${current ? 'rgba(99,102,241,0.3)' : done ? 'rgba(16,185,129,0.25)' : '#f1f5f9'}`,
+                  border: `1px solid ${current ? 'rgba(99,102,241,0.3)' : done ? 'rgba(16,185,129,0.25)' : G.linieLeise}`,
                   borderRadius: '12px',
                   opacity: pending ? 0.45 : 1,
                   transition: 'all 0.5s cubic-bezier(0.4,0,0.2,1)',
@@ -217,7 +223,7 @@ function Step3Inner() {
                   {/* Icon Box */}
                   <div style={{
                     width: '34px', height: '34px', borderRadius: '9px', flexShrink: 0,
-                    background: current ? 'rgba(99,102,241,0.12)' : done ? 'rgba(16,185,129,0.1)' : '#f1f5f9',
+                    background: current ? 'rgba(99,102,241,0.12)' : done ? 'rgba(16,185,129,0.1)' : G.linieLeise,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {done
@@ -230,10 +236,10 @@ function Step3Inner() {
 
                   {/* Text */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: current ? '700' : done ? '600' : '500', color: done ? '#059669' : current ? '#4f46e5' : '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '13px', fontWeight: current ? '700' : done ? '600' : '500', color: done ? G.gut : current ? G.akzent : G.blass, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {s.label}
                     </div>
-                    <div style={{ fontSize: '11px', color: done ? '#6ee7b7' : current ? '#a5b4fc' : '#e2e8f0', marginTop: '1px' }}>
+                    <div style={{ fontSize: '11px', color: done ? '#6ee7b7' : current ? '#a5b4fc' : G.leise, marginTop: '1px' }}>
                       {s.sub}
                     </div>
                   </div>
@@ -250,9 +256,9 @@ function Step3Inner() {
           </div>
 
           {/* Bottom hint */}
-          <div style={{ marginTop: '20px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-            <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.6, textAlign: 'center' }}>
-              Der Text wird für <strong style={{ color: '#0f172a' }}>mobile.de & AutoScout24</strong> optimiert — du kannst ihn danach noch bearbeiten.
+          <div style={{ marginTop: '20px', padding: '14px', background: G.flaeche, borderRadius: '10px', border: `1px solid ${G.linieLeise}` }}>
+            <div style={{ fontSize: '12px', color: G.leise, lineHeight: 1.6, textAlign: 'center' }}>
+              Der Text wird für <strong style={{ color: G.text }}>mobile.de & AutoScout24</strong> optimiert — du kannst ihn danach noch bearbeiten.
             </div>
           </div>
         </div>
@@ -282,7 +288,7 @@ function Tag({ label, accent }: { label: string; accent?: boolean }) {
 export default function Step3() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: G.grund, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Loader2 size={32} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
       </div>
     }>
