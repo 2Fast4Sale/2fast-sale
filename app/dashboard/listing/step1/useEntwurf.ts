@@ -20,6 +20,21 @@ import { searchEquipment } from '../../../../lib/equipmentDatabase';
 import { validateEnvkv, isEnvkvRequired, type EnvkvData } from '../../../../lib/envkv';
 import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
 
+/** Woher ein Wert stammt. */
+export type Quelle = 'schein' | 'dat';
+
+/**
+ * Felder, die DAT ueber die Fahrgestellnummer liefern kann.
+ *
+ * Herstellerdaten zur Ausstattung. HU und Vorbesitzer stehen bewusst
+ * NICHT dabei: Das eine ist der Stand der letzten Hauptuntersuchung, das
+ * andere die Besitzhistorie aus Teil II — beides kennt kein
+ * Datenanbieter, das weiss nur, wer das Fahrzeug vor sich stehen hat.
+ */
+export const DAT_FELDER = [
+  'interiorType', 'interiorColor', 'doors', 'emissionClass', 'driveType',
+] as const;
+
 export interface FormData {
   brand: string; model: string; vin: string;
   firstRegistration: string; km: string; price: string;
@@ -122,7 +137,20 @@ export function useEntwurf() {
 
   const [blattOffen, setBlattOffen]   = useState(false);
   const [fehler, setFehler]           = useState<Record<string, string>>({});
-  const [erkannt, setErkannt]         = useState<Set<string>>(new Set());
+  /**
+   * Woher ein Feld seinen Wert hat.
+   *
+   * Vorher nur eine Menge von Feldnamen — "erkannt" oder nicht. Das
+   * reichte, solange es eine Quelle gab. Mit DAT kommt eine zweite dazu,
+   * und der Unterschied ist fuer den Haendler wichtig: Was aus dem Schein
+   * kommt, hat er selbst fotografiert; was von DAT kommt, sind
+   * Herstellerdaten. Beides darf er glauben, aber aus verschiedenen
+   * Gruenden — und wenn etwas falsch ist, muss er wissen, wo er
+   * nachsehen muss.
+   */
+  const [herkunft, setHerkunft] = useState<Map<string, Quelle>>(new Map());
+  /** Nur die Feldnamen — fuer Aufrufer, die die Quelle nicht brauchen. */
+  const erkannt = useMemo(() => new Set(herkunft.keys()), [herkunft]);
   const [scanZustand, setScanZustand] = useState<'ruhe' | 'laeuft' | 'fertig' | 'fehler'>('ruhe');
   const [scanBild, setScanBild]       = useState<string | null>(null);
   const [unterwegs, setUnterwegs]     = useState(false);
@@ -145,7 +173,7 @@ export function useEntwurf() {
     setData(p => ({ ...p, [k]: v }));
     setFehler(p => ({ ...p, [k]: '' }));
     // Von Hand geändert heisst: nicht mehr „erkannt".
-    setErkannt(p => { const n = new Set(p); n.delete(k as string); return n; });
+    setHerkunft(p => { const n = new Map(p); n.delete(k as string); return n; });
   };
 
   /*
@@ -244,7 +272,11 @@ export function useEntwurf() {
           };
         });
 
-        setErkannt(neu);
+        setHerkunft(p => {
+          const n = new Map(p);
+          for (const feld of neu) n.set(feld, 'schein');
+          return n;
+        });
         setScanZustand('fertig');
         setBlattOffen(true);
       } catch {
@@ -347,7 +379,7 @@ export function useEntwurf() {
 
   return {
     data, setData, setzen,
-    fehler, setFehler, erkannt,
+    fehler, setFehler, erkannt, herkunft, setHerkunft,
     blattOffen, setBlattOffen,
     scanZustand, scanBild, einlesen, dateiRef,
     weiter, unterwegs,

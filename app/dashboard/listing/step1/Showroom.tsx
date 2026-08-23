@@ -32,7 +32,7 @@
 
 import { useState } from 'react';
 import {
-  Camera, Loader2, ArrowRight, ChevronDown, Search, X, Plus, RotateCcw, AlertCircle,
+  Camera, Loader2, ArrowRight, ChevronDown, Search, X, Plus, RotateCcw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
@@ -198,7 +198,50 @@ function Wahl({ optionen, wert, beiWahl }: {
   );
 }
 
-function Block({ titel, kinder, rechts }: { titel: string; kinder: React.ReactNode; rechts?: React.ReactNode }) {
+/**
+ * Ein Abschnitt, der sich zusammenfaltet, sobald er fertig ist.
+ *
+ * Das ist die Antwort auf ein Problem, das mit jedem neuen Feld groesser
+ * wurde: Die Seite sah nach immer mehr Handarbeit aus, obwohl der Scan
+ * das meiste davon fuellt. Ein ausgefuelltes Feld, das weiter Platz
+ * beansprucht, sieht aus wie eine offene Aufgabe.
+ *
+ * Ist alles beisammen, bleibt eine Zeile: Titel, die Werte im Klartext,
+ * ein "aendern". Nach einem Scan schrumpft die Seite damit auf die
+ * Luecken zusammen — und genau das soll der Haendler sehen.
+ *
+ * Wer selbst aufklappt, dessen Entscheidung gilt und schlaegt die
+ * Automatik, bis er wieder zuklappt.
+ */
+function Block({ titel, kinder, rechts, fertig, zusammenfassung }: {
+  titel: string; kinder: React.ReactNode; rechts?: React.ReactNode;
+  fertig?: boolean; zusammenfassung?: string;
+}) {
+  const [selbstGeklappt, setSelbstGeklappt] = useState<boolean | null>(null);
+  const zu = selbstGeklappt ?? (fertig === true && !!zusammenfassung);
+
+  if (zu) {
+    return (
+      <section style={{ borderTop: `1px solid ${F.linieLeise}`, padding: '13px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+            <CheckCircle2 size={13} color={F.gut} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: F.gedämpft }}>{titel}</span>
+          </span>
+          <span style={{
+            flex: 1, minWidth: 0, fontSize: 12.5, color: F.leise,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{zusammenfassung}</span>
+          <button type="button" onClick={() => setSelbstGeklappt(false)}
+            style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
+                     fontFamily: F.schrift, fontSize: 12.5, color: F.akzent, padding: 0 }}>
+            ändern
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section style={{ borderTop: `1px solid ${F.linieLeise}`, padding: '20px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
@@ -213,7 +256,16 @@ function Block({ titel, kinder, rechts }: { titel: string; kinder: React.ReactNo
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
                        color: F.text }}>{titel}</h2>
         </div>
-        {rechts && <div style={{ marginLeft: 'auto' }}>{rechts}</div>}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          {rechts}
+          {fertig && zusammenfassung && (
+            <button type="button" onClick={() => setSelbstGeklappt(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                       fontFamily: F.schrift, fontSize: 12.5, color: F.leise, padding: 0 }}>
+              zuklappen
+            </button>
+          )}
+        </div>
       </div>
       {kinder}
     </section>
@@ -255,6 +307,16 @@ export default function Showroom() {
    * kann. Wird in der Überschrift des Blocks angezeigt.
    */
   const offeneSelbst = SELBST_FELDER.filter(f => !String(data[f]).trim()).length;
+
+  /*
+   * Was in der zugeklappten Zeile eines Blocks steht.
+   *
+   * Nur gefuellte Werte, mit Trennzeichen verbunden. Leere wegzulassen
+   * statt "-" zu schreiben ist Absicht: Eine Zeile voller Striche sieht
+   * aus wie ein Mangel, obwohl der Block vollstaendig ist.
+   */
+  const zusammen = (...teile: (string | false | undefined)[]) =>
+    teile.filter(Boolean).join(' · ');
 
   /* Farbe, Sitze und FIN — offen, solange eines davon leer ist. */
   const mehrLuecken = [data.color, data.seats, data.vin].filter(x => !String(x).trim()).length;
@@ -423,7 +485,14 @@ export default function Showroom() {
         )}
 
         {/* Fahrzeug + Eckdaten nebeneinander */}
-        <Block titel="Fahrzeug" kinder={
+        <Block titel="Fahrzeug"
+          fertig={!!data.brand && !!data.model && !!data.firstRegistration}
+          zusammenfassung={zusammen(
+            [data.brand, data.model].filter(Boolean).join(' '),
+            data.firstRegistration && `EZ ${data.firstRegistration}`,
+            data.vin && `FIN ${data.vin}`,
+          )}
+          kinder={
           <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr', gap: 20 }}>
             <div style={{ position: 'relative' }}>
               <Beschriftung text="Marke" luecke={!data.brand} />
@@ -530,7 +599,13 @@ export default function Showroom() {
           </div>
         } />
 
-        <Block titel="Eckdaten" kinder={
+        <Block titel="Eckdaten"
+          fertig={!!data.price && !!data.km}
+          zusammenfassung={zusammen(
+            data.price && `${zahl(data.price)} €`,
+            data.km && `${zahl(data.km)} km`,
+          )}
+          kinder={
           <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
             <div>
               {/* Steht auf keinem Fahrzeugschein: der Preis ist eine Entscheidung. */}
@@ -579,7 +654,14 @@ export default function Showroom() {
           }
         />
 
-        <Block titel="Antrieb" kinder={
+        <Block titel="Antrieb"
+          fertig={!!data.fuelType && !!data.gearbox && !!data.powerKw}
+          zusammenfassung={zusammen(
+            data.fuelType, data.gearbox,
+            data.powerKw && `${data.powerKw} PS`,
+            data.displacementCcm && `${zahl(data.displacementCcm)} ccm`,
+          )}
+          kinder={
           <div style={{ display: 'grid', gap: 18 }}>
             <div>
               <Beschriftung text="Kraftstoff" />
@@ -613,6 +695,14 @@ export default function Showroom() {
           sind nicht unsere Fragen.
         */}
         <Block titel="Für mobile.de erforderlich"
+          fertig={!!data.bodyType && !!data.vatType}
+          zusammenfassung={zusammen(
+            data.bodyType,
+            data.vatType === 'ausgewiesen' ? 'MwSt. ausweisbar' : data.vatType === 'differenz' ? '§ 25a' : '',
+            data.damaged ? 'beschädigt' : 'unfallfrei',
+            data.metallic && 'Metallic',
+            data.warranty && 'mit Garantie',
+          )}
           rechts={<span style={{ fontSize: 11.5, color: F.leise }}>ohne diese Angaben nimmt mobile.de das Inserat nicht an</span>}
           kinder={
             <div style={{ display: 'grid', gap: 18 }}>
@@ -672,6 +762,14 @@ export default function Showroom() {
           nimmt im Zweifel an: viel.
         */}
         <Block titel="Wonach Käufer filtern"
+          fertig={offeneSelbst === 0}
+          zusammenfassung={zusammen(
+            data.huUntil && `HU ${data.huUntil}`,
+            data.previousOwners && `${data.previousOwners} Vorbesitzer`,
+            data.interiorType, data.interiorColor,
+            data.doors && `${data.doors} Türen`,
+            data.emissionClass,
+          )}
           rechts={
             <span style={{ fontSize: 11.5, fontWeight: 600, color: offeneSelbst === 0 ? F.gut : F.leise }}>
               {offeneSelbst === 0
