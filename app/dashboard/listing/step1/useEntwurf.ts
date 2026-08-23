@@ -27,6 +27,21 @@ export interface FormData {
   displacementCcm: string; color: string; seats: string;
   equipment: string[]; dealerNotes: string;
   envkv: EnvkvData;
+
+  /*
+   * Die fuenf Pflichtfelder von mobile.de.
+   *
+   * Ohne sie laesst sich dort kein Inserat anlegen — nachzulesen in der
+   * offiziellen CSV-Schnittstelle. Bisher entstanden hier Inserate, die
+   * vollstaendig aussahen und beim Uebertragen zurueckgewiesen worden
+   * waeren.
+   */
+  bodyType: string;
+  /** 'ausgewiesen' = Regelbesteuerung, 'differenz' = § 25a UStG. */
+  vatType: 'ausgewiesen' | 'differenz' | '';
+  damaged: boolean;
+  metallic: boolean;
+  warranty: boolean;
 }
 
 export const LEER_ENVKV: EnvkvData = {
@@ -40,11 +55,24 @@ export const LEER_ENVKV: EnvkvData = {
 
 export const KRAFTSTOFFE = ['Benzin', 'Diesel', 'Hybrid', 'Plug-in Hybrid', 'Elektro', 'LPG', 'CNG'];
 export const GETRIEBE    = ['Automatik', 'Manuell'];
+
+/**
+ * Karosserieformen.
+ *
+ * Im Klartext, nicht als mobile.de-Code. Die Umsetzung nach
+ * "Car.Limousine" gehoert in die Exportschicht — sonst muesste man bei
+ * einem zweiten Portal jede Zeile anfassen.
+ */
+export const KAROSSERIE = [
+  'Limousine', 'Kombi', 'SUV / Geländewagen', 'Kleinwagen',
+  'Cabrio / Roadster', 'Coupé', 'Van / Kleinbus', 'Transporter',
+];
 export const TOP_MARKEN  = ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Opel', 'Ford',
                             'Skoda', 'Seat', 'Hyundai', 'Kia', 'Toyota', 'Renault'];
 
 export const PFLICHT_NAME: Record<string, string> = {
   brand: 'Marke', km: 'Kilometerstand', price: 'Preis', gearbox: 'Getriebe',
+  bodyType: 'Karosserieform', vatType: 'Umsatzsteuer',
 };
 
 export function useEntwurf() {
@@ -58,6 +86,7 @@ export function useEntwurf() {
     fuelType: '', gearbox: '', powerKw: '', displacementCcm: '',
     color: '', seats: '', equipment: [], dealerNotes: '',
     envkv: LEER_ENVKV,
+    bodyType: '', vatType: '', damaged: false, metallic: false, warranty: false,
   });
 
   const [blattOffen, setBlattOffen]   = useState(false);
@@ -75,7 +104,13 @@ export function useEntwurf() {
     return () => window.removeEventListener('resize', prüfen);
   }, []);
 
-  const setzen = (k: keyof FormData, v: string | string[]) => {
+  /*
+   * Auch Wahrheitswerte, seit die mobile.de-Pflichtfelder dazugekommen
+   * sind. Vorher nahm die Funktion nur Text, und die Aufrufer haben den
+   * Typ mit einer Umdeutung erzwungen — das laeuft, bis jemand den Wert
+   * spaeter als Text behandelt.
+   */
+  const setzen = (k: keyof FormData, v: string | string[] | boolean) => {
     setData(p => ({ ...p, [k]: v }));
     setFehler(p => ({ ...p, [k]: '' }));
     // Von Hand geändert heisst: nicht mehr „erkannt".
@@ -93,7 +128,16 @@ export function useEntwurf() {
    * Eine Kennzeichnung ohne Pruefung ist ein Hinweis, den man
    * uebersehen darf. Wenn es ohne nicht geht, muss es auch aufhalten.
    */
-  const PFLICHT = ['brand', 'km', 'price', 'gearbox'] as const;
+  /*
+   * Karosserieform und Umsatzsteuer sind bei mobile.de Pflicht.
+   *
+   * Beschaedigt, Metallic und Garantie sind es dort auch, haben aber ein
+   * sinnvolles Nein als Voreinstellung — sie sind immer beantwortet und
+   * muessen deshalb nicht aufhalten. Karosserieform und Umsatzsteuer
+   * haben keine Voreinstellung, die stimmen koennte: Raten waere hier
+   * schlimmer als fragen.
+   */
+  const PFLICHT = ['brand', 'km', 'price', 'gearbox', 'bodyType', 'vatType'] as const;
   const offenePflicht = PFLICHT.filter(k => !String(data[k]).trim());
 
   /*
@@ -185,6 +229,8 @@ export function useEntwurf() {
     if (!data.km.trim())    e.km    = 'fehlt';
     if (!data.price.trim()) e.price = 'fehlt';
     if (!data.gearbox.trim()) e.gearbox = 'fehlt';
+    if (!data.bodyType.trim()) e.bodyType = 'fehlt';
+    if (!data.vatType) e.vatType = 'fehlt';
 
     const envkv = validateEnvkv(data.envkv, data.fuelType);
     if (!envkv.complete) e.envkv = `EnVKV-Pflichtangaben fehlen: ${envkv.missing.join(', ')}`;

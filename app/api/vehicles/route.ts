@@ -61,6 +61,14 @@ export async function POST(req: Request) {
     ];
     /* Neue Spalten aus Migration 004 */
     const NEW_COLS = ['title', 'year', 'gearbox_type'];
+    /*
+     * Pflichtfelder von mobile.de aus Migration 022.
+     *
+     * Eigene Gruppe, weil die Route bei fehlenden Spalten stufenweise
+     * zurueckfaellt: Wer die Migration noch nicht eingespielt hat, legt
+     * das Inserat trotzdem an — nur ohne diese Angaben.
+     */
+    const MOBILE_COLS = ['body_type', 'vat_type', 'damaged', 'metallic', 'warranty'];
     /* Pkw-EnVKV Spalten aus Migration 012 */
     const ENVKV_COLS = [
       'vehicle_kind', 'consumption_combined', 'power_consumption_combined',
@@ -72,6 +80,11 @@ export async function POST(req: Request) {
       for (const key of cols) {
         if (key === 'equipment') {
           obj.equipment = Array.isArray(body.equipment) ? body.equipment : [];
+        } else if (typeof body[key] === 'boolean') {
+          // Ausdruecklich vor der naechsten Pruefung: Die verwirft leere
+          // Werte, und false zaehlt dort faelschlich als leer. "Unfallfrei"
+          // waere sonst nie gespeichert worden.
+          obj[key] = body[key];
         } else if (body[key] !== undefined && body[key] !== null && body[key] !== '') {
           obj[key] = body[key];
         }
@@ -80,10 +93,18 @@ export async function POST(req: Request) {
     };
 
     /* Erst mit allen Spalten versuchen */
-    const fullPayload = buildPayload([...BASE_COLS, ...NEW_COLS, ...ENVKV_COLS]);
+    const fullPayload = buildPayload([...BASE_COLS, ...NEW_COLS, ...ENVKV_COLS, ...MOBILE_COLS]);
     let { data, error } = await supabase.from('vehicles').insert(fullPayload).select().single();
 
     /* Falls die EnVKV-Spalten (Migration 012) noch fehlen - ohne sie erneut versuchen */
+    /* Fehlt Migration 022, ohne die mobile.de-Spalten erneut versuchen. */
+    if (error && MOBILE_COLS.some(c => error!.message.includes(c))) {
+      const retry = await supabase.from('vehicles')
+        .insert(buildPayload([...BASE_COLS, ...NEW_COLS, ...ENVKV_COLS])).select().single();
+      data  = retry.data;
+      error = retry.error;
+    }
+
     if (error && ENVKV_COLS.some(c => error!.message.includes(c))) {
       const retry = await supabase.from('vehicles')
         .insert(buildPayload([...BASE_COLS, ...NEW_COLS])).select().single();

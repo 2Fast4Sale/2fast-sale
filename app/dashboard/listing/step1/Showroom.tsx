@@ -40,7 +40,7 @@ import EnvkvFields from '../../../components/EnvkvFields';
 import { type VehicleKind } from '../../../../lib/envkv';
 import { G } from '../gestaltung';
 import {
-  useEntwurf, KRAFTSTOFFE, GETRIEBE, TOP_MARKEN, PFLICHT_NAME, type FormData,
+  useEntwurf, KRAFTSTOFFE, GETRIEBE, KAROSSERIE, TOP_MARKEN, PFLICHT_NAME, type FormData,
 } from './useEntwurf';
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
@@ -142,6 +142,35 @@ function Beschriftung({ text, luecke, selbst, erledigt }: {
           fontSize: 10.5, background: 'rgba(124,138,255,0.16)', color: F.akzent,
         }}>trägst du ein</span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Ja/Nein — als zwei Schaltflächen, nicht als Häkchen.
+ *
+ * Ein leeres Kästchen sagt nicht, ob jemand "nein" gemeint oder die
+ * Frage übersehen hat. Bei "unfallfrei" ist das kein Detail: Wer die
+ * Frage überspringt, veröffentlicht am Ende eine Aussage über den
+ * Zustand des Fahrzeugs, die er nie getroffen hat.
+ */
+function JaNein({ wert, beiWahl, jaText = 'Ja', neinText = 'Nein' }: {
+  wert: boolean; beiWahl: (v: boolean) => void; jaText?: string; neinText?: string;
+}) {
+  const knopf = (an: boolean, text: string, wohin: boolean) => (
+    <button type="button" onClick={() => beiWahl(wohin)}
+      style={{
+        padding: '6px 14px', borderRadius: 7, cursor: 'pointer', fontFamily: F.schrift,
+        fontSize: 12.5, fontWeight: an ? 600 : 500,
+        border: `1px solid ${an ? F.akzent : F.linie}`,
+        background: an ? F.akzentSchleier : 'transparent',
+        color: an ? F.akzent : F.gedämpft,
+      }}>{text}</button>
+  );
+  return (
+    <div style={{ display: 'flex', gap: 5 }}>
+      {knopf(!wert, neinText, false)}
+      {knopf(wert, jaText, true)}
     </div>
   );
 }
@@ -568,6 +597,61 @@ export default function Showroom() {
             </div>
           </div>
         } />
+
+        {/*
+          Was mobile.de verlangt.
+          Fuenf Felder, ohne die sich dort kein Inserat anlegen laesst —
+          nachzulesen in deren CSV-Schnittstelle. Sie stehen zusammen und
+          mit dieser Ueberschrift, damit klar ist, warum sie da sind: Es
+          sind nicht unsere Fragen.
+        */}
+        <Block titel="Für mobile.de erforderlich"
+          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>ohne diese Angaben nimmt mobile.de das Inserat nicht an</span>}
+          kinder={
+            <div style={{ display: 'grid', gap: 18 }}>
+              <div>
+                <Beschriftung text="Karosserieform" luecke={!data.bodyType} selbst erledigt={!!data.bodyType} />
+                <Wahl optionen={KAROSSERIE} wert={data.bodyType}
+                  beiWahl={v => setzen('bodyType', data.bodyType === v ? '' : v)} />
+              </div>
+
+              <div>
+                <Beschriftung text="Umsatzsteuer" luecke={!data.vatType} selbst erledigt={!!data.vatType} />
+                <Wahl
+                  optionen={['ausweisbar', 'Differenzbesteuert § 25a']}
+                  wert={data.vatType === 'ausgewiesen' ? 'ausweisbar'
+                      : data.vatType === 'differenz' ? 'Differenzbesteuert § 25a' : ''}
+                  beiWahl={v => setzen('vatType', v === 'ausweisbar' ? 'ausgewiesen' : 'differenz')} />
+                <p style={{ margin: '7px 0 0', fontSize: 12.5, color: F.leise, lineHeight: 1.6 }}>
+                  {/*
+                    Der Satz gehoert dazu. Wer die beiden Begriffe nicht
+                    taeglich benutzt, raet sonst — und ein falscher Wert
+                    kostet den gewerblichen Kaeufer, der danach filtert.
+                  */}
+                  Ausweisbar heisst: Der Käufer kann die Vorsteuer ziehen. Fahrzeuge, die
+                  du von Privat angekauft hast, laufen fast immer über § 25a.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
+                <div>
+                  <Beschriftung text="Zustand" />
+                  <JaNein wert={data.damaged}
+                    beiWahl={v => setzen('damaged', v)}
+                    neinText="Unfallfrei" jaText="Beschädigt" />
+                </div>
+                <div>
+                  <Beschriftung text="Metallic-Lackierung" />
+                  <JaNein wert={data.metallic} beiWahl={v => setzen('metallic', v)} />
+                </div>
+                <div>
+                  <Beschriftung text="Garantie" />
+                  <JaNein wert={data.warranty} beiWahl={v => setzen('warranty', v)} />
+                </div>
+              </div>
+            </div>
+          }
+        />
 
         {/* Selten Geändertes hinter einem Klick */}
         <Block titel="Weitere Angaben"

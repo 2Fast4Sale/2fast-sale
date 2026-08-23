@@ -503,6 +503,13 @@ function Step4Inner() {
     setSaving(true); setError('');
     try {
       const body = { brand, title: title || undefined, km, price: editPrice || price, year: year || undefined, fuel_type: fuel || undefined, gearbox_type: gearbox || undefined, color: carColor || undefined, power_kw: power ? String(Math.round(Number(power)/1.36)) : undefined, description: desc || undefined, status: st, vin: step1.vin || undefined, first_registration: (step1.firstRegistration as string) || year || undefined, displacement_ccm: step1.displacementCcm || undefined, seats: step1.seats || undefined, equipment, dealer_notes: (step1.dealerNotes as string) || undefined,
+        // Pflichtfelder von mobile.de. Ohne sie sieht das Inserat
+        // vollstaendig aus und wird beim Uebertragen zurueckgewiesen.
+        body_type: (step1.bodyType as string) || undefined,
+        vat_type:  (step1.vatType as string) || undefined,
+        damaged:   step1.damaged === true,
+        metallic:  step1.metallic === true,
+        warranty:  step1.warranty === true,
         // Pkw-EnVKV Pflichtangaben aus Schritt 1
         vehicle_kind:               step1.envkv?.vehicleKind || 'gebrauchtwagen',
         consumption_combined:       step1.envkv?.consumptionCombined ?? undefined,
