@@ -177,9 +177,17 @@ function BrowserFrame({ url, children }: { url: string; children: React.ReactNod
 }
 
 /* ─── mobile.de listing ──────────────────────────────────────────────────── */
-function MobileDeListing({ title, price, brand, km, year, fuel, gearbox, power, carColor, desc, equipment, photos }: {
+function MobileDeListing({
+  title, price, brand, km, year, fuel, gearbox, power, carColor, desc, equipment, photos,
+  bodyType = '', driveType = '', seats = '', doors = '', warranty = false,
+  huUntil = '', previousOwners = '', displacement = '', emissionClass = '',
+  metallic = false, interiorColor = '', interiorType = '', damaged = false, vatType = '',
+}: {
   title:string; price:string; brand:string; km:string; year:string; fuel:string;
   gearbox:string; power:string; carColor:string; desc:string; equipment:string[]; photos:string[];
+  bodyType?:string; driveType?:string; seats?:string; doors?:string; warranty?:boolean;
+  huUntil?:string; previousOwners?:string; displacement?:string; emissionClass?:string;
+  metallic?:boolean; interiorColor?:string; interiorType?:string; damaged?:boolean; vatType?:string;
 }) {
   const fmtKm = km ? `${Number(km).toLocaleString('de-DE')} km` : '—';
   const fmtPs = power ? `${power} PS (${Math.round(Number(power)/1.36)} kW)` : '—';
@@ -250,12 +258,36 @@ function MobileDeListing({ title, price, brand, km, year, fuel, gearbox, power, 
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 {[
-                  ['Kilometerstand', fmtKm],
-                  ['Erstzulassung', year || '—'],
-                  ['Kraftstoff', fuel || '—'],
-                  ['Getriebe', gearbox || '—'],
-                  ['Leistung', fmtPs],
-                  ['Außenfarbe', carColor || '—'],
+                  /*
+                    Dieselben Angaben wie in der AutoScout-Vorschau. Zwei
+                    Vorschauen, die verschieden viel zeigen, laden zu der
+                    Frage ein, welche denn nun stimmt.
+
+                    Leere Angaben fallen weg statt als Strich zu erscheinen:
+                    Eine Seite voller Striche sieht nach einem schlechten
+                    Inserat aus, und genau den Eindruck soll die Vorschau
+                    nicht erwecken.
+                  */
+                  ...([
+                    ['Kilometerstand', fmtKm],
+                    ['Erstzulassung',  year],
+                    ['HU',             huUntil],
+                    ['Kraftstoff',     fuel],
+                    ['Getriebe',       gearbox],
+                    ['Leistung',       power ? fmtPs : ''],
+                    ['Hubraum',        displacement ? `${Number(displacement).toLocaleString('de-DE')} cm³` : ''],
+                    ['Schadstoffklasse', emissionClass],
+                    ['Karosserieform', bodyType],
+                    ['Türen',          doors],
+                    ['Sitzplätze',     seats],
+                    ['Antriebsart',    driveType],
+                    ['Außenfarbe',     metallic && carColor ? `${carColor}, Metallic` : carColor],
+                    ['Innenausstattung', [interiorType, interiorColor].filter(Boolean).join(', ')],
+                    ['Vorbesitzer',    previousOwners],
+                    ['Fahrzeugzustand', damaged ? 'Beschädigt' : 'Unfallfrei'],
+                    ['Garantie',       warranty ? 'Ja' : ''],
+                    ['MwSt.',          vatType === 'ausgewiesen' ? 'ausweisbar' : vatType === 'differenz' ? 'nicht ausweisbar' : ''],
+                  ] as [string, string][]).filter(([, w]) => w),
                 ].map(([k, v], i) => (
                   <tr key={k} style={{ background: i % 2 === 0 ? '#f9f9f9' : '#fff' }}>
                     <td style={{ padding: '7px 10px', fontSize: '12px', color: '#666', width: '45%', borderBottom: '1px solid #efefef' }}>{k}</td>
@@ -330,9 +362,17 @@ function MobileDeListing({ title, price, brand, km, year, fuel, gearbox, power, 
 }
 
 /* ─── AutoScout24 listing ────────────────────────────────────────────────── */
-function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power, carColor, desc, equipment, photos }: {
+function AutoScoutListing({
+  title, price, brand, km, year, fuel, gearbox, power, carColor, desc, equipment, photos,
+  bodyType = '', driveType = '', seats = '', doors = '', warranty = false,
+  huUntil = '', previousOwners = '', displacement = '', emissionClass = '',
+  metallic = false, interiorColor = '', interiorType = '', damaged = false, vatType = '',
+}: {
   title:string; price:string; brand:string; km:string; year:string; fuel:string;
   gearbox:string; power:string; carColor:string; desc:string; equipment:string[]; photos:string[];
+  bodyType?:string; driveType?:string; seats?:string; doors?:string; warranty?:boolean;
+  huUntil?:string; previousOwners?:string; displacement?:string; emissionClass?:string;
+  metallic?:boolean; interiorColor?:string; interiorType?:string; damaged?:boolean; vatType?:string;
 }) {
   const fmtKm = km ? `${Number(km).toLocaleString('de-DE')} km` : '—';
   const fmtPrice = price ? `${Number(price).toLocaleString('de-DE')} €` : '—';
@@ -417,11 +457,36 @@ function AutoScoutListing({ title, price, brand, km, year, fuel, gearbox, power,
             <div style={{ fontSize: '14px', fontWeight: '700', color: TH, marginBottom: '10px', paddingBottom: '8px', borderBottom: '2px solid #003781' }}>Fahrzeugdaten</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0' }}>
               {[
-                ['Kilometerstand', fmtKm],
-                ['Erstzulassung', year || '—'],
-                ['Kraftstoff', fuel || '—'],
-                ['Getriebe', gearbox || '—'],
-                ['Leistung', power ? `${power} PS` : '—'],
+                /*
+                  Aufgebaut wie die echte Seite: Basisdaten,
+                  Fahrzeughistorie, Technische Daten, Energieverbrauch,
+                  Farbe und Innenausstattung. Leere Angaben werden
+                  weggelassen statt als Strich gezeigt -- eine Seite
+                  voller Striche sieht aus wie ein schlechtes Inserat,
+                  und genau den Eindruck soll die Vorschau nicht machen.
+                */
+                ...([
+                  ['Karosserieform', bodyType],
+                  ['Fahrzeugart',    damaged ? 'Beschädigt' : 'Gebraucht'],
+                  ['Antriebsart',    driveType],
+                  ['Sitzplätze',     seats],
+                  ['Türen',          doors],
+                  ['Garantie',       warranty ? 'Ja' : ''],
+                  ['Kilometerstand', fmtKm],
+                  ['Erstzulassung',  year],
+                  ['HU',             huUntil],
+                  ['Vorbesitzer',    previousOwners],
+                  ['Leistung',       power ? `${power} PS` : ''],
+                  ['Getriebe',       gearbox],
+                  ['Hubraum',        displacement ? `${Number(displacement).toLocaleString('de-DE')} cm³` : ''],
+                  ['Kraftstoff',     fuel],
+                  ['Schadstoffklasse', emissionClass],
+                  ['Außenfarbe',     carColor],
+                  ['Lackierung',     metallic ? 'Metallic' : ''],
+                  ['Innenausstattung', interiorType],
+                  ['Farbe der Innenausstattung', interiorColor],
+                  ['Mehrwertsteuer', vatType === 'ausgewiesen' ? 'ausweisbar' : vatType === 'differenz' ? 'nicht ausweisbar' : ''],
+                ] as [string, string][]).filter(([, w]) => w),
                 ['Außenfarbe', carColor || '—'],
               ].map(([k, v], i) => (
                 <div key={k} style={{ display: 'flex', flexDirection: 'column', padding: '8px 10px', background: i % 4 < 2 ? '#f7f9fc' : '#fff', borderBottom: '1px solid #edf0f5' }}>
@@ -675,7 +740,34 @@ function Step4Inner() {
   const qualColor = charCount > 500 ? '#10b981' : charCount > 250 ? '#3b82f6' : charCount > 100 ? '#f59e0b' : '#ef4444';
   const qualLabel = charCount > 500 ? 'Sehr gut' : charCount > 250 ? 'Gut' : charCount > 100 ? 'OK' : 'Zu kurz';
 
-  const mockupProps = { title, price: editPrice || price, brand, km, year, fuel, gearbox, power, carColor, desc, equipment, photos };
+  /*
+   * Alles, was eine echte Inseratsseite zeigt.
+   *
+   * Die Vorschau nannte bisher fuenf Zeilen. Eine echte Seite bei
+   * AutoScout24 hat fuenf GRUPPEN mit ueber zwanzig Angaben -- und die
+   * meisten davon erfassen wir inzwischen. Eine Vorschau, die weniger
+   * zeigt als das Ergebnis, beruhigt den Haendler nicht, sie
+   * beunruhigt ihn: Er sieht ein duenneres Inserat als das, was
+   * entsteht.
+   */
+  const mockupProps = {
+    title, price: editPrice || price, brand, km, year, fuel, gearbox, power,
+    carColor, desc, equipment, photos,
+    bodyType:       (step1.bodyType as string) || '',
+    driveType:      (step1.driveType as string) || '',
+    seats:          (step1.seats as string) || '',
+    doors:          (step1.doors as string) || '',
+    warranty:       step1.warranty === true,
+    huUntil:        (step1.huUntil as string) || '',
+    previousOwners: (step1.previousOwners as string) || '',
+    displacement:   (step1.displacementCcm as string) || '',
+    emissionClass:  (step1.emissionClass as string) || '',
+    metallic:       step1.metallic === true,
+    interiorColor:  (step1.interiorColor as string) || '',
+    interiorType:   (step1.interiorType as string) || '',
+    damaged:        step1.damaged === true,
+    vatType:        (step1.vatType as string) || '',
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: F }}>
