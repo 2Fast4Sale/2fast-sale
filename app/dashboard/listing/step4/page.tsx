@@ -106,6 +106,55 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 }
 
 /* ─── Browser Frame ──────────────────────────────────────────────────────── */
+/**
+ * Zeigt seinen Inhalt in natuerlicher Breite, auf die verfuegbare
+ * Spalte herunterskaliert.
+ *
+ * Die Vorschau war rechts abgeschnitten: Ein Inserat auf mobile.de hat
+ * eine feste zweite Spalte von 260 Pixeln, und in einem 388 Pixel
+ * breiten Behaelter lief der Rest heraus.
+ *
+ * Zusammenquetschen waere die falsche Loesung gewesen -- die Vorschau
+ * soll zeigen, wie das Inserat beim Kaeufer aussieht, und dort ist die
+ * Seite nun einmal breit. Ein umbrechendes Layout waere eine Vorschau
+ * auf etwas, das es nicht gibt.
+ *
+ * Deshalb: in voller Breite bauen, dann verkleinern. Die Proportionen
+ * bleiben richtig, nur eben klein -- wie ein Modell.
+ */
+function Massstab({ breite, kinder }: { breite: number; kinder: React.ReactNode }) {
+  const rahmenRef = useRef<HTMLDivElement>(null);
+  const [faktor, setFaktor] = useState(1);
+
+  useEffect(() => {
+    const messen = () => {
+      const b = rahmenRef.current?.clientWidth ?? 0;
+      if (b > 0) setFaktor(Math.min(1, b / breite));
+    };
+    messen();
+    // Auch auf Groessenaenderungen der Spalte reagieren, nicht nur des
+    // Fensters: Die Seitenleiste laesst sich einklappen.
+    const beobachter = new ResizeObserver(messen);
+    if (rahmenRef.current) beobachter.observe(rahmenRef.current);
+    return () => beobachter.disconnect();
+  }, [breite]);
+
+  return (
+    <div ref={rahmenRef} style={{ width: '100%', overflow: 'hidden' }}>
+      <div style={{
+        width: breite,
+        transform: `scale(${faktor})`,
+        transformOrigin: 'top left',
+        // Ohne das bliebe unter dem verkleinerten Inhalt die urspruengliche
+        // Hoehe als Leerraum stehen -- transform aendert den Platzbedarf nicht.
+        marginBottom: `calc((${faktor} - 1) * 100%)`,
+      }}>
+        {kinder}
+      </div>
+    </div>
+  );
+}
+
 function BrowserFrame({ url, children }: { url: string; children: React.ReactNode }) {
   return (
     <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: `1px solid ${BORD}`, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
@@ -652,7 +701,7 @@ function Step4Inner() {
       </div>
 
       {/* 3-column → 1-column on mobile */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '248px 1fr 420px', minHeight: 'calc(100vh - 58px)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '248px 1fr 520px', minHeight: 'calc(100vh - 58px)' }}>
 
         {/* COL 1: Checklist — hidden on mobile */}
         <div style={{ borderRight: `1px solid ${BORD}`, background: CARD, padding: '22px 16px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'flex', flexDirection: 'column', gap: '0' }}>
@@ -843,9 +892,11 @@ function Step4Inner() {
               {platform === 'mobile' ? <MobileDeListing {...mockupProps} /> : <AutoScoutListing {...mockupProps} />}
             </PhoneFrame>
           ) : (
-            <BrowserFrame url={platform === 'mobile' ? 'mobile.de/auto/details/...' : 'autoscout24.de/angebote/...'}>
-              {platform === 'mobile' ? <MobileDeListing {...mockupProps} /> : <AutoScoutListing {...mockupProps} />}
-            </BrowserFrame>
+            <Massstab breite={860} kinder={
+              <BrowserFrame url={platform === 'mobile' ? 'mobile.de/auto/details/...' : 'autoscout24.de/angebote/...'}>
+                {platform === 'mobile' ? <MobileDeListing {...mockupProps} /> : <AutoScoutListing {...mockupProps} />}
+              </BrowserFrame>
+            } />
           )}
         </div>
       </div>

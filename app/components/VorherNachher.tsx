@@ -64,6 +64,7 @@ export default function VorherNachher({
        * benutzen.
        */
       onClick={e => e.stopPropagation()}
+      onDragStart={e => e.preventDefault()}
       style={{
         position: 'relative', width: '100%', aspectRatio: verhaeltnis,
         overflow: 'hidden', borderRadius: 12, cursor: zieht ? 'grabbing' : 'ew-resize',
@@ -71,15 +72,19 @@ export default function VorherNachher({
       }}
     >
       {/* Nachher liegt unten und füllt die ganze Fläche. */}
-      <img src={nachher} alt="Mit Studio-Hintergrund"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <img src={nachher} alt="Mit Studio-Hintergrund" draggable={false}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+          WebkitUserDrag: 'none', userSelect: 'none', pointerEvents: 'none',
+        } as React.CSSProperties} />
 
       {/* Vorher liegt darüber und wird rechts abgeschnitten. */}
-      <img src={vorher} alt="Originalfoto"
+      <img src={vorher} alt="Originalfoto" draggable={false}
         style={{
           position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
           clipPath: `inset(0 ${100 - anteil}% 0 0)`,
-        }} />
+          WebkitUserDrag: 'none', userSelect: 'none', pointerEvents: 'none',
+        } as React.CSSProperties} />
 
       {/* Die Kante */}
       <div style={{
