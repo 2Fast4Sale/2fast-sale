@@ -7,7 +7,7 @@ import { createClient } from '../../../lib/supabase/client';
 import {
   PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, paketLohntAb, euro,
 } from '../../../lib/preismodell';
-import { studioInklusive, PREIS_EXTRA_BILD_CENT } from '../../../lib/studioQuota';
+import { studioInklusive, PREIS_EXTRA_BILD_CENT, centAlsEuro } from '../../../lib/studioQuota';
 import {
   CheckCircle2, X, Zap, Crown, Building2, Sparkles,
   User, ShoppingCart, Loader2, AlertTriangle, ChevronDown,
@@ -45,7 +45,6 @@ const PLANS = [
     color: '#64748b',
     bg: '#f8fafc',
     features: [
-      `${studioInklusive(null)} Studio-Bilder je Inserat`,
       'Fahrzeugschein-Scan',
       'Geführte Aufnahme mit Silhouette',
       'Titel und Beschreibung aus den Fahrzeugdaten',
@@ -71,7 +70,6 @@ const PLANS = [
     color: ['#3b82f6', '#7c3aed', '#d97706'][i],
     bg: ['#eff6ff', '#f5f3ff', '#fffbeb'][i],
     features: [
-      `${studioInklusive(p.id)} Studio-Bilder je Inserat`,
       i === 0 ? 'Alles aus "Ohne Paket"' : `Alles aus ${PAKETE[i - 1].name}`,
       'Eigener Showroom als Hintergrund',
       ...(i >= 1 ? ['Firmen-Wasserzeichen', 'Statistiken zu deinen Inseraten'] : []),
@@ -92,6 +90,81 @@ const FAQS = [
   { q: 'Kann ich jederzeit kündigen?', a: 'Ja — monatliche Kündigung zum Ende des Abrechnungszeitraums. Keine Mindestlaufzeit.' },
   { q: 'Stellt ihr direkt auf mobile.de ein?', a: 'Noch nicht. Du lädst Fotopaket und Text herunter und stellst damit selbst ein. Die direkte Übertragung ist in Vorbereitung — wir bewerben sie erst, wenn sie läuft.' },
 ];
+
+/* ─── Bilder-Rechner ─────────────────────────────────────── */
+
+/**
+ * Wie viele Studio-Bilder brauche ich, und was kostet das extra?
+ *
+ * Die Zahl der enthaltenen Bilder stand bisher nur als Zeile in der
+ * Merkmalsliste. Wer mehr braucht — und bei einem teuren Fahrzeug
+ * braucht man mehr —, konnte nicht sehen, was ihn das kostet. Er musste
+ * es aus zwei Angaben auf verschiedenen Seiten selbst zusammenrechnen.
+ *
+ * Hier stellt er die Zahl direkt ein und sieht den Aufschlag sofort.
+ * Der Regler kauft nichts: Zusatzbilder werden nach Verbrauch
+ * abgerechnet, nicht im Voraus gebucht. Er beantwortet nur die Frage,
+ * die vor dem Buchen im Kopf steht.
+ */
+function BilderRechner({ inklusive, farbe }: { inklusive: number; farbe: string }) {
+  const [anzahl, setAnzahl] = useState(inklusive);
+  const extra = Math.max(0, anzahl - inklusive);
+  const extraCent = extra * PREIS_EXTRA_BILD_CENT;
+
+  const knopf = (zeichen: string, beiKlick: () => void, aus: boolean) => (
+    <button type="button" onClick={beiKlick} disabled={aus}
+      style={{
+        width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+        border: `1px solid ${aus ? '#e2e8f0' : '#cbd5e1'}`,
+        background: '#fff', cursor: aus ? 'default' : 'pointer',
+        color: aus ? '#cbd5e1' : '#475569',
+        fontSize: 16, fontWeight: 700, lineHeight: 1, fontFamily: F,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>{zeichen}</button>
+  );
+
+  return (
+    <div style={{
+      marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9',
+    }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', marginBottom: 8 }}>
+        Studio-Bilder je Inserat
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/*
+          Unter das Inklusivkontingent kann man nicht: Weniger zu waehlen
+          spart nichts, es ist ja bezahlt. Ein Regler, der nach unten geht
+          ohne etwas zu bewirken, verspricht eine Ersparnis, die es nicht
+          gibt.
+        */}
+        {knopf('−', () => setAnzahl(a => Math.max(inklusive, a - 1)), anzahl <= inklusive)}
+        <span style={{
+          minWidth: 34, textAlign: 'center', fontSize: 19, fontWeight: 800,
+          color: '#0f172a', fontVariantNumeric: 'tabular-nums',
+        }}>{anzahl}</span>
+        {knopf('+', () => setAnzahl(a => Math.min(60, a + 1)), anzahl >= 60)}
+
+        <span style={{ marginLeft: 'auto', textAlign: 'right', lineHeight: 1.35 }}>
+          {extra > 0 ? (
+            <>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: farbe }}>
+                + {centAlsEuro(extraCent)}
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8' }}>
+                je Inserat
+              </span>
+            </>
+          ) : (
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>alles enthalten</span>
+          )}
+        </span>
+      </div>
+      <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 7 }}>
+        {inklusive} enthalten · jedes weitere {PREIS_EXTRA_BILD_CENT} Cent
+      </div>
+    </div>
+  );
+}
 
 /* ─── Plan Card ─────────────────────────────────────────── */
 function PlanCard({
@@ -253,6 +326,9 @@ function PlanCard({
             </div>
           ))}
         </div>
+
+        {/* Steht unter den Merkmalen, nicht dazwischen: Es ist eine Rechnung, keine Eigenschaft. */}
+        <BilderRechner inklusive={studioInklusive(plan.id === 'kein' ? null : (plan.id as 's' | 'm' | 'l'))} farbe={plan.color} />
       </div>
     </div>
   );
