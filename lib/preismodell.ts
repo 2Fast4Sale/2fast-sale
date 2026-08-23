@@ -49,6 +49,44 @@ export interface Paket {
  * hier unproblematisch, weil das nächstgrössere Paket dann ohnehin
  * günstiger wird — siehe bestesAngebot().
  */
+/**
+ * Der Probelauf.
+ *
+ * 50 € Grundgebühr sind für jemanden, der das Werkzeug noch nie gesehen
+ * hat, eine hohe Hürde — er soll erst einmal erleben, was aus seinem
+ * Handyfoto wird. Fünf Euro sind niedrig genug, dass niemand lange
+ * überlegt, und hoch genug, dass es nicht kostenlos ist.
+ *
+ * Bewusst nicht gratis, und das aus zwei Gründen. Ein Preis, und sei er
+ * klein, verlangt eine Zahlungsmethode — und die ist die einzige Bremse
+ * gegen Mehrfachkonten, die tatsächlich greift. Ausserdem probiert, wer
+ * fünf Euro zahlt, das Werkzeug wirklich aus; wer nichts zahlt, meldet
+ * sich an und schaut nie wieder rein.
+ *
+ * Zwei Inserate, weil eines nichts zeigt: Der Effekt der Studiofotos
+ * wird erst sichtbar, wenn zwei Fahrzeuge nebeneinander denselben
+ * Hintergrund haben.
+ */
+export const PROBE = {
+  name: 'Probelauf',
+  preisCent: 500,
+  inserate: 2,
+  /** Studio-Bilder je Inserat — wie ohne Paket. */
+  studioBilder: 12,
+} as const;
+
+/**
+ * Deckt der Probelauf seine Kosten?
+ *
+ * Zwei Inserate zu je rund 0,23 € gemessener API-Kosten, dazu die
+ * Stripe-Gebühr auf eine Einzelzahlung. Der Rest ist Werbebudget —
+ * bewusst, aber es soll kein Minus sein.
+ */
+export function probeDeckung(kostenJeInseratCent = 23): number {
+  const stripe = Math.round(PROBE.preisCent * 0.015 + 25);
+  return PROBE.preisCent - PROBE.inserate * kostenJeInseratCent - stripe;
+}
+
 export const PAKETE: readonly Paket[] = [
   { id: 's', name: 'Paket S', preisCent: 15000,  inserate: 50 },
   { id: 'm', name: 'Paket M', preisCent: 40000,  inserate: 150 },
