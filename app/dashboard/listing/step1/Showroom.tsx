@@ -44,21 +44,48 @@ import {
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
 
+/*
+ * Hell.
+ *
+ * Die erste Fassung war dunkel — Bildbearbeitungssoftware sieht so aus,
+ * und das Werkzeug tut ja etwas Ähnliches. Beim Benutzen zeigte sich der
+ * Haken: Ein Datenblatt liest man anders als ein Bild. Feine Linien,
+ * Beschriftungen und leere Felder verschwimmen auf dunklem Grund, und
+ * genau davon lebt diese Seite.
+ *
+ * Alle Textfarben gegen die weisse Fläche gerechnet, keine unter 4,5:1.
+ */
 const F = {
   schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
-  /** Tiefes Anthrazit, kein reines Schwarz — das wirkt auf Bildschirmen hart. */
-  grund:   '#0a0c11',
-  flaeche: '#12151d',
-  erhoben: '#191d27',
-  linie:   '#252b38',
-  text:    '#f8fafc',
-  gedämpft:'#c2cad8',
-  /** 5,9:1 gegen die Fläche — auf dunklem Grund muss Grau heller sein. */
-  leise:   '#8d99ad',
-  akzent:  '#7c8aff',
-  gut:     '#4ade80',
-  luecke:  '#fbbf24',
-  fehler:  '#fb7185',
+  /** Der Seitengrund liegt nur knapp unter Weiss — genug, damit sich die Karten absetzen. */
+  grund:   '#f6f7f9',
+  flaeche: '#ffffff',
+  erhoben: '#ffffff',
+  linie:   '#e4e8ee',
+  text:    '#0f172a',
+  gedämpft:'#475569',
+  /*
+   * 5,30:1 gegen den Seitengrund.
+   *
+   * #64748b haette gegen Weiss gereicht (4,76), aber die Beschriftungen
+   * stehen auf dem Seitengrund #f6f7f9 — dort kam es nur auf 4,44 und lag
+   * damit knapp unter der Grenze. Gemessen wird gegen den Untergrund, den
+   * das Element wirklich hat, nicht gegen den, den man im Kopf hat.
+   */
+  leise:   '#5b6878',
+  akzent:  '#4338ca',
+  gut:     '#047857',
+  /*
+   * 5,36:1 auf dem eigenen Farbfeld.
+   *
+   * #b45309 reichte gegen Weiss (5,02), aber die Warnungen stehen auf
+   * einer eingefaerbten Flaeche aus derselben Farbe — dort kam es nur
+   * auf 4,15. Ein Farbfeld hebt den Untergrund an und frisst genau den
+   * Kontrast, den die Farbe gegen Weiss noch hatte. Gemessen wird gegen
+   * den Untergrund, den das Element wirklich hat.
+   */
+  luecke:  '#a04a08',
+  fehler:  '#b91c1c',
 } as const;
 
 const ART_ANZEIGE: Record<VehicleKind, string> = {
@@ -135,13 +162,13 @@ function Beschriftung({ text, luecke, selbst, erledigt }: {
       {luecke && (
         <span style={{
           padding: '1px 6px', borderRadius: 4, letterSpacing: 0, textTransform: 'none',
-          fontSize: 10.5, background: 'rgba(251,191,36,0.16)', color: F.luecke,
+          fontSize: 10.5, background: 'rgba(180,83,9,0.09)', color: F.luecke,
         }}>Pflicht</span>
       )}
       {zeigeSelbst && !luecke && (
         <span style={{
           padding: '1px 6px', borderRadius: 4, letterSpacing: 0, textTransform: 'none',
-          fontSize: 10.5, background: 'rgba(124,138,255,0.16)', color: F.akzent,
+          fontSize: 10.5, background: 'rgba(67,56,202,0.09)', color: F.akzent,
         }}>trägst du ein</span>
       )}
     </div>
@@ -161,7 +188,7 @@ function Wahl({ optionen, wert, beiWahl }: {
               padding: '6px 11px', borderRadius: 7, cursor: 'pointer', fontFamily: F.schrift,
               fontSize: 12.5, fontWeight: an ? 600 : 500,
               border: `1px solid ${an ? F.akzent : F.linie}`,
-              background: an ? 'rgba(124,138,255,0.13)' : 'transparent',
+              background: an ? 'rgba(67,56,202,0.07)' : 'transparent',
               color: an ? F.akzent : F.gedämpft,
             }}>{o}</button>
         );
@@ -244,7 +271,7 @@ export default function Showroom() {
         <div style={{
           position: 'fixed', top: '38%', left: '50%', transform: 'translate(-50%,-50%)',
           width: 620, height: 620, pointerEvents: 'none',
-          background: 'radial-gradient(circle, rgba(124,138,255,0.13) 0%, transparent 68%)',
+          background: 'radial-gradient(circle, rgba(67,56,202,0.07) 0%, transparent 68%)',
         }} />
 
         <div style={{ textAlign: 'center', maxWidth: 460, position: 'relative' }}>
@@ -276,10 +303,10 @@ export default function Showroom() {
           style={{
             position: 'relative', width: '100%', maxWidth: 380, padding: '18px 26px',
             borderRadius: 12, border: 'none', cursor: e.scanZustand === 'laeuft' ? 'wait' : 'pointer',
-            background: ueberZone ? '#98a4ff' : F.akzent, color: '#0a0c11',
+            background: ueberZone ? '#98a4ff' : F.akzent, color: '#ffffff',
             fontFamily: F.schrift, fontSize: 15, fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-            boxShadow: '0 10px 34px rgba(124,138,255,0.32)',
+            boxShadow: '0 8px 22px rgba(67,56,202,0.22)',
           }}>
           {e.scanZustand === 'laeuft'
             ? <><Loader2 size={18} style={{ animation: 'drehen .8s linear infinite' }} /> Wird gelesen…</>
@@ -307,7 +334,7 @@ export default function Showroom() {
       {/* ══ Das entstehende Inserat ══ */}
       <div style={{
         borderBottom: `1px solid ${F.linie}`,
-        background: `linear-gradient(180deg, ${F.flaeche} 0%, ${F.grund} 100%)`,
+        background: F.flaeche,
       }}>
         <div style={{ maxWidth: 880, margin: '0 auto', padding: schmal ? '26px 20px 22px' : '38px 24px 30px' }}>
 
@@ -344,13 +371,18 @@ export default function Showroom() {
                     {t}
                   </span>
                 ))
-              : <span style={{ color: F.linie }}>Noch kein Fahrzeug</span>}
+              /*
+                #94a3b8 statt der Linienfarbe. Als Rahmen ist die richtig,
+                als Schrift war sie mit 1,23:1 schlicht nicht zu sehen — der
+                Platzhalter soll blass wirken, nicht verschwinden.
+              */
+              : <span style={{ color: '#7f8da3', fontWeight: 400 }}>Noch kein Fahrzeug</span>}
           </h1>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
             <div style={{
               fontSize: schmal ? 30 : 40, fontWeight: 700, letterSpacing: '-1.4px',
-              color: data.price ? F.text : F.linie, lineHeight: 1,
+              color: data.price ? F.text : '#7f8da3', lineHeight: 1,
             }}>
               {data.price ? `${zahl(data.price)} €` : '— €'}
             </div>
@@ -374,7 +406,7 @@ export default function Showroom() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 9, marginTop: 18,
             padding: '11px 14px', borderRadius: 9,
-            background: 'rgba(251,191,36,0.09)', border: '1px solid rgba(251,191,36,0.26)',
+            background: 'rgba(180,83,9,0.06)', border: '1px solid rgba(251,191,36,0.26)',
           }}>
             <AlertCircle size={15} color={F.luecke} style={{ flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: F.luecke, fontWeight: 600 }}>
@@ -404,7 +436,7 @@ export default function Showroom() {
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, marginTop: 6,
                   background: F.erhoben, border: `1px solid ${F.linie}`, borderRadius: 11,
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.6)', maxHeight: 320, overflow: 'auto',
+                  boxShadow: '0 14px 36px rgba(15,23,42,0.13)', maxHeight: 320, overflow: 'auto',
                 }}>
                   <div style={{ padding: 8, position: 'sticky', top: 0, background: F.erhoben, borderBottom: `1px solid ${F.linie}` }}>
                     <div style={{ position: 'relative' }}>
@@ -426,7 +458,7 @@ export default function Showroom() {
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                             padding: '11px 4px', borderRadius: 9, cursor: 'pointer',
                             border: `1px solid ${data.brand === m ? F.akzent : F.linie}`,
-                            background: data.brand === m ? 'rgba(124,138,255,0.13)' : 'transparent',
+                            background: data.brand === m ? 'rgba(67,56,202,0.07)' : 'transparent',
                             color: data.brand === m ? F.akzent : F.gedämpft,
                             fontFamily: F.schrift, fontSize: 11, fontWeight: 600,
                           }}>
@@ -764,7 +796,7 @@ export default function Showroom() {
                                 : [...data.equipment, m])}
                               style={{ padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
                                        border: `1px solid ${drin ? F.akzent : F.linie}`,
-                                       background: drin ? 'rgba(124,138,255,0.13)' : 'transparent',
+                                       background: drin ? 'rgba(67,56,202,0.07)' : 'transparent',
                                        color: drin ? F.akzent : F.gedämpft,
                                        fontFamily: F.schrift, fontSize: 12 }}>{m}</button>
                           );
@@ -786,7 +818,7 @@ export default function Showroom() {
       {/* ══ Fussleiste ══ */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
-        background: 'rgba(10,12,17,0.93)', backdropFilter: 'blur(12px)',
+        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)',
         borderTop: `1px solid ${F.linie}`,
         // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px).
         // Ohne diesen Abstand liegt der Weiter-Knopf darunter und ist nicht
@@ -803,7 +835,7 @@ export default function Showroom() {
           <button type="button" onClick={e.weiter} disabled={e.unterwegs}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: '11px 22px',
-              borderRadius: 9, border: 'none', background: F.akzent, color: '#0a0c11',
+              borderRadius: 9, border: 'none', background: F.akzent, color: '#ffffff',
               fontFamily: F.schrift, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap',
               cursor: e.unterwegs ? 'wait' : 'pointer', opacity: e.unterwegs ? 0.7 : 1,
             }}>
@@ -815,7 +847,7 @@ export default function Showroom() {
 
       <style>{`
         @keyframes drehen { to { transform: rotate(360deg) } }
-        input::placeholder, textarea::placeholder { color: ${F.leise}; opacity: .75 }
+        input::placeholder, textarea::placeholder { color: ${F.leise}; opacity: .6 }
       `}</style>
     </div>
   );
