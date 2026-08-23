@@ -12,6 +12,7 @@ import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
 import Link from 'next/link';
 import VorherNachher from '../../../components/VorherNachher';
+import { G } from '../gestaltung';
 import { entwurfId } from '../../../../lib/entwurf';
 
 /*
@@ -34,13 +35,22 @@ import { entwurfId } from '../../../../lib/entwurf';
  */
 const FOTO_OBERGRENZE = 60;
 
-const F    = '"Inter", -apple-system, sans-serif';
-const BG   = '#f0f2f5';
-const CARD = '#ffffff';
-const BORD = '#e2e8f0';
-const TH   = '#0f172a';
-const TS   = '#64748b';
-const TD   = '#94a3b8';
+/*
+ * Die Farben kommen aus ../gestaltung, damit alle vier Schritte gleich
+ * aussehen. Vorher standen sie hier als eigene Konstanten und ergaben
+ * eine helle Seite mitten in einer dunklen Strecke — wer sie durchlaeuft,
+ * hatte das Gefuehl, die Anwendung gewechselt zu haben.
+ *
+ * Die alten Namen bleiben als Zuweisung stehen: Sie kommen in dieser
+ * Datei ueber hundertmal vor, und ein Umbenennen brauchte kein Mensch.
+ */
+const F    = G.schrift;
+const BG   = G.grund;
+const CARD = G.flaeche;
+const BORD = G.linieLeise;
+const TH   = G.text;
+const TS   = G.leise;
+const TD   = G.blass;
 
 /* --- Bildqualitäts-Analyse (läuft im Browser, kostenlos) --- */
 

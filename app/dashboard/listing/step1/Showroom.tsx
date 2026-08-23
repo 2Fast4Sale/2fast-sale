@@ -38,6 +38,7 @@ import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
 import { type VehicleKind } from '../../../../lib/envkv';
+import { G } from '../gestaltung';
 import {
   useEntwurf, KRAFTSTOFFE, GETRIEBE, TOP_MARKEN, PFLICHT_NAME, type FormData,
 } from './useEntwurf';
@@ -55,45 +56,8 @@ import {
  *
  * Alle Textfarben gegen die weisse Fläche gerechnet, keine unter 4,5:1.
  */
-/*
- * Dunkel — der Ton war nie das Problem.
- *
- * Zwischendurch war diese Seite hell, weil die dunkle Fassung
- * "undeutlich" wirkte. Nachgemessen lag es aber nicht am Ton: Alle
- * Textfarben kamen auf 6,8 bis 18,7 zu ihrem Untergrund, also weit über
- * jeder Grenze. Undeutlich waren die LINIEN.
- *
- * #252b38 erreichte gegen den Grund 1,38:1. Für eine Begrenzung verlangt
- * WCAG 1.4.11 mindestens 3:1 — Feldunterstriche, Trennlinien und Ränder
- * waren praktisch unsichtbar. Auf einem Datenblatt SIND die Linien die
- * Struktur; verschwinden sie, verschwimmt alles.
- *
- * Deshalb dunkel wie vorher, aber mit Linien, die man sieht, und
- * Platzhaltern bei voller Deckkraft. Das ist der Unterschied zwischen
- * "wirkt hochwertig" und "wirkt matschig".
- */
-const F = {
-  schrift: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
-  /** Tiefes Anthrazit, kein reines Schwarz — das wirkt auf Bildschirmen hart. */
-  grund:   '#0a0c11',
-  flaeche: '#12151d',
-  erhoben: '#1b2029',
-  /*
-   * 3,34:1 gegen die Fläche. Vorher #252b38 mit 1,38 — der eine Wert,
-   * der die ganze Seite hat verschwimmen lassen.
-   */
-  linie:   '#5c6a82',
-  /** Für grosse Flächenränder reicht weniger, dort stört ein heller Rand. */
-  linieLeise: '#2a3140',
-  text:    '#f8fafc',
-  gedämpft:'#c2cad8',
-  /** 6,79:1 gegen den Grund. */
-  leise:   '#8d99ad',
-  akzent:  '#7c8aff',
-  gut:     '#4ade80',
-  luecke:  '#fbbf24',
-  fehler:  '#fb7185',
-} as const;
+/* Die Werte liegen in ../gestaltung — alle vier Schritte lesen dieselben. */
+const F = G;
 
 const ART_ANZEIGE: Record<VehicleKind, string> = {
   gebrauchtwagen: 'Gebrauchtwagen',
@@ -383,13 +347,13 @@ export default function Showroom() {
                 als Schrift war sie mit 1,23:1 schlicht nicht zu sehen — der
                 Platzhalter soll blass wirken, nicht verschwinden.
               */
-              : <span style={{ color: '#7c8598', fontWeight: 400 }}>Noch kein Fahrzeug</span>}
+              : <span style={{ color: F.blass, fontWeight: 400 }}>Noch kein Fahrzeug</span>}
           </h1>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
             <div style={{
               fontSize: schmal ? 30 : 40, fontWeight: 700, letterSpacing: '-1.4px',
-              color: data.price ? F.text : '#7c8598', lineHeight: 1,
+              color: data.price ? F.text : F.blass, lineHeight: 1,
             }}>
               {data.price ? `${zahl(data.price)} €` : '— €'}
             </div>
@@ -588,7 +552,7 @@ export default function Showroom() {
             <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
               <div>
                 {/* Der Fahrzeugschein nennt kein Getriebe — das kommt immer von Hand. */}
-                <Beschriftung text="Getriebe" selbst erledigt={!!data.gearbox} />
+                <Beschriftung text="Getriebe" luecke={!data.gearbox} selbst erledigt={!!data.gearbox} />
                 <Wahl optionen={GETRIEBE} wert={data.gearbox} beiWahl={v => setzen('gearbox', data.gearbox === v ? '' : v)} />
               </div>
               <div>

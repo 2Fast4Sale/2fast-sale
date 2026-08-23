@@ -44,7 +44,7 @@ export const TOP_MARKEN  = ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Opel', 'Fo
                             'Skoda', 'Seat', 'Hyundai', 'Kia', 'Toyota', 'Renault'];
 
 export const PFLICHT_NAME: Record<string, string> = {
-  brand: 'Marke', km: 'Kilometerstand', price: 'Preis',
+  brand: 'Marke', km: 'Kilometerstand', price: 'Preis', gearbox: 'Getriebe',
 };
 
 export function useEntwurf() {
@@ -82,7 +82,18 @@ export function useEntwurf() {
     setErkannt(p => { const n = new Set(p); n.delete(k as string); return n; });
   };
 
-  const PFLICHT = ['brand', 'km', 'price'] as const;
+  /*
+   * Getriebe gehoert dazu.
+   *
+   * Es war als "traegst du ein" gekennzeichnet, aber nicht verlangt —
+   * man kam bis Schritt 4 und hatte am Ende ein Inserat, das bei
+   * mobile.de nicht vollstaendig ist. Getriebe ist dort Pflichtfeld,
+   * und der Fahrzeugschein liefert es nie: Es kommt immer von Hand.
+   *
+   * Eine Kennzeichnung ohne Pruefung ist ein Hinweis, den man
+   * uebersehen darf. Wenn es ohne nicht geht, muss es auch aufhalten.
+   */
+  const PFLICHT = ['brand', 'km', 'price', 'gearbox'] as const;
   const offenePflicht = PFLICHT.filter(k => !String(data[k]).trim());
 
   /*
@@ -173,6 +184,7 @@ export function useEntwurf() {
     if (!data.brand.trim()) e.brand = 'fehlt';
     if (!data.km.trim())    e.km    = 'fehlt';
     if (!data.price.trim()) e.price = 'fehlt';
+    if (!data.gearbox.trim()) e.gearbox = 'fehlt';
 
     const envkv = validateEnvkv(data.envkv, data.fuelType);
     if (!envkv.complete) e.envkv = `EnVKV-Pflichtangaben fehlen: ${envkv.missing.join(', ')}`;
