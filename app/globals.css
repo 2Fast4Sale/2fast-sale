@@ -11,7 +11,14 @@
 
 :root {
   /* Flaechen — identisch zum Dashboard */
-  --bg-base:     #f0f2f5;
+  /*
+   * Grundfarbe der Seite.
+   *
+   * Sie liegt hinter allem und wird sichtbar, wo eine Seite nicht bis
+   * zum Rand reicht -- unter der Seitenleiste, beim Ueberscrollen. Hell
+   * gab das einen weissen Streifen mitten in einer dunklen Anwendung.
+   */
+  --bg-base:     #0a0c11;
   --bg-surface:  #ffffff;
   --bg-elevated: #ffffff;
   --bg-card:     #ffffff;
