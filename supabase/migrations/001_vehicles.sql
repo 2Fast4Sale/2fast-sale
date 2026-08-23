@@ -1,6 +1,6 @@
 -- ============================================================
--- 2Fast4Sale — Datenbank Schema
--- In Supabase SQL Editor ausführen
+-- 2Fast4Sale -- Datenbank Schema
+-- In Supabase SQL Editor ausfuehren
 -- ============================================================
 
 -- VEHICLES Tabelle
@@ -81,7 +81,7 @@ create trigger vehicles_updated_at
   for each row execute procedure public.handle_updated_at();
 
 -- ============================================================
--- ROW LEVEL SECURITY (RLS) — Jeder sieht nur seine Daten
+-- ROW LEVEL SECURITY (RLS) -- Jeder sieht nur seine Daten
 -- ============================================================
 
 alter table public.vehicles       enable row level security;

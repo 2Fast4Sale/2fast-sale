@@ -1,4 +1,4 @@
--- Migration 007: Händler-Profil Erweiterungen + Onboarding-Flag
+-- Migration 007: Haendler-Profil Erweiterungen + Onboarding-Flag
 
 alter table public.profiles
   add column if not exists onboarding_done    boolean  default false,

@@ -4,7 +4,7 @@
 -- offizielle CSV-Schnittstelle (services.mobile.de/manual):
 --
 --   kategorie              Fahrzeugklasse.Karosserieform, z.B. "Car.Limousine"
---   mwst                   0 = ausgewiesen, 1 = nicht ausgewiesen (§ 25a)
+--   mwst                   0 = ausgewiesen, 1 = nicht ausgewiesen (Paragraf 25a)
 --   beschaedigtes_fahrzeug 0/1
 --   metallic               0/1
 --   garantie               0/1
@@ -16,15 +16,15 @@
 alter table public.vehicles
   -- Karosserieform. Als Text und nicht als Zahl: Der mobile.de-Code
   -- ("Car.Limousine") gehoert in die Exportschicht, nicht in unsere
-  -- Datenhaltung — sonst muesste man beim Anbieterwechsel jede Zeile
+  -- Datenhaltung -- sonst muesste man beim Anbieterwechsel jede Zeile
   -- anfassen.
   add column if not exists body_type text,
 
   /*
    * Umsatzsteuer.
    *
-   * 'ausgewiesen'  — Regelbesteuerung, der Kaeufer kann Vorsteuer ziehen.
-   * 'differenz'    — § 25a UStG, kein Ausweis moeglich.
+   * 'ausgewiesen'  -- Regelbesteuerung, der Kaeufer kann Vorsteuer ziehen.
+   * 'differenz'    -- Paragraf 25a UStG, kein Ausweis moeglich.
    *
    * Das ist keine Formalie: Gewerbliche Kaeufer filtern danach, und ein
    * falscher Wert kostet den Haendler den Geschaeftskunden.
@@ -42,18 +42,18 @@ alter table public.vehicles
 comment on column public.vehicles.body_type is
   'Karosserieform im Klartext. Die Umsetzung in mobile.de-Codes passiert beim Export.';
 comment on column public.vehicles.vat_type is
-  'ausgewiesen = Regelbesteuerung, differenz = § 25a UStG.';
+  'ausgewiesen = Regelbesteuerung, differenz = Paragraf 25a UStG.';
 
 /*
  * Voreinstellungen am Haendler.
  *
  * Umsatzsteuerbehandlung und Garantie sind bei den meisten Haendlern bei
  * jedem Fahrzeug gleich. Sie bei jedem Inserat neu abzufragen ist genau
- * die Art von Arbeit, die ein Werkzeug abnehmen soll — es sind zwei
+ * die Art von Arbeit, die ein Werkzeug abnehmen soll -- es sind zwei
  * Zeilen, aber bei zwanzig Fahrzeugen im Monat vierzig.
  *
  * Sie sind Vorbelegung, keine Festlegung: Ein Fahrzeug vom Privatmann
- * faellt unter § 25a, auch wenn der Haendler sonst ausweist.
+ * faellt unter Paragraf 25a, auch wenn der Haendler sonst ausweist.
  */
 alter table public.profiles
   add column if not exists default_vat_type text

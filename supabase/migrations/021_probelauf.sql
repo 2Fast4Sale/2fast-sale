@@ -1,13 +1,13 @@
 -- Der Probelauf und sein Missbrauchsschutz.
 --
--- 5 € für 2 Inserate, einmal je Person. Die Frage ist, woran man "eine
+-- 5 EUR fuer 2 Inserate, einmal je Person. Die Frage ist, woran man "eine
 -- Person" festmacht.
 --
 -- NICHT an der IP-Adresse. Das war der erste Gedanke, und er faellt bei
 -- naeherem Hinsehen durch:
 --
 --   Ein Autohaus mit drei Mitarbeitern hat eine IP. Wer pro IP sperrt,
---   sperrt den zweiten und dritten Mitarbeiter aus — also genau die
+--   sperrt den zweiten und dritten Mitarbeiter aus -- also genau die
 --   Kunden, die man will.
 --
 --   Mobilfunk in Deutschland laeuft ueber CGNAT: Tausende Teilnehmer
@@ -15,7 +15,7 @@
 --   weil irgendein Fremder dieselbe Adresse hatte.
 --
 --   Die Telekom trennt taeglich und vergibt eine neue Adresse. Dieselbe
---   Person hat morgen eine andere IP — die Sperre haelt also nicht
+--   Person hat morgen eine andere IP -- die Sperre haelt also nicht
 --   einmal gegen denjenigen, gegen den sie gedacht war.
 --
 --   Und umgehen laesst sie sich mit einem Fingertipp: Mobilfunk statt
@@ -27,12 +27,12 @@
 -- STATTDESSEN: die Zahlungsmethode.
 --
 -- Der Probelauf kostet Geld, also braucht er eine Karte. Stripe liefert
--- zu jeder Karte einen "fingerprint" — derselbe Wert fuer dieselbe
+-- zu jeder Karte einen "fingerprint" -- derselbe Wert fuer dieselbe
 -- physische Karte, auch ueber verschiedene Konten und Kundennummern
 -- hinweg. Wer ein zweites Konto anlegt und wieder mit derselben Karte
 -- zahlen will, faellt auf.
 --
--- Das ist keine perfekte Sperre — wer mehrere Karten hat, kommt durch.
+-- Das ist keine perfekte Sperre -- wer mehrere Karten hat, kommt durch.
 -- Aber es ist die einzige, die den ehrlichen Kunden nicht trifft, und
 -- der Aufwand fuer den Missbraucher steht in keinem Verhaeltnis zu zwei
 -- geschenkten Inseraten.
@@ -42,7 +42,7 @@ create table if not exists public.probelaeufe (
   user_id       uuid not null references auth.users(id) on delete cascade,
 
   /*
-   * Stripes Kennung der physischen Karte. Gleiche Karte, gleicher Wert —
+   * Stripes Kennung der physischen Karte. Gleiche Karte, gleicher Wert --
    * auch bei einem anderen Konto. Das ist der eigentliche Schutz.
    */
   karten_kennung text,
@@ -51,7 +51,7 @@ create table if not exists public.probelaeufe (
    * IP nur zur Beobachtung, nicht zum Sperren.
    *
    * Wenn zwanzig Probelaeufe von derselben Adresse kommen, will man das
-   * sehen — aber ansehen und automatisch sperren sind zwei verschiedene
+   * sehen -- aber ansehen und automatisch sperren sind zwei verschiedene
    * Dinge. Nach DSGVO ist eine IP ein personenbezogenes Datum; sie steht
    * hier zur Missbrauchsabwehr und wird nach 90 Tagen geloescht.
    */
@@ -82,7 +82,7 @@ create index if not exists probelaeufe_ip_idx
 alter table public.probelaeufe enable row level security;
 
 -- Nur der Server schreibt hier. Der Nutzer darf sehen, ob er seinen
--- Probelauf schon verbraucht hat — mehr nicht.
+-- Probelauf schon verbraucht hat -- mehr nicht.
 drop policy if exists "eigenen probelauf sehen" on public.probelaeufe;
 create policy "eigenen probelauf sehen" on public.probelaeufe
   for select using (auth.uid() = user_id);
@@ -119,7 +119,7 @@ $$;
  * IP-Adressen nach 90 Tagen entfernen.
  *
  * Sie sind zur Missbrauchsabwehr erhoben, und danach ist der Zweck
- * erfuellt. Der Probelauf selbst bleibt stehen — fuer die Sperre wird
+ * erfuellt. Der Probelauf selbst bleibt stehen -- fuer die Sperre wird
  * die IP ohnehin nicht gebraucht.
  */
 create or replace function public.probelauf_ips_aufraeumen()

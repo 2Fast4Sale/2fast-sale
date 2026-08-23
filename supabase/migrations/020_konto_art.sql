@@ -27,7 +27,7 @@ create index if not exists profiles_konto_art_idx
  * Die Angabe aus der Registrierung uebernehmen.
  *
  * Die bestehende Funktion schrieb nur Name und Firma. Ohne diese
- * Ergaenzung liefe die Auswahl im Formular ins Leere — sie stuende in
+ * Ergaenzung liefe die Auswahl im Formular ins Leere -- sie stuende in
  * auth.users.raw_user_meta_data und niemand laese sie je.
  *
  * Der Rueckfall auf 'haendler' ist Absicht: Alle bisherigen Konten sind

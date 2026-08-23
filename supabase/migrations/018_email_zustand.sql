@@ -2,7 +2,7 @@
 --
 -- Ohne Zustand verschickt die Plattform die Begruessung bei jedem Login
 -- erneut und den Guthaben-Hinweis nach jedem einzelnen Inserat. Nichts
--- bringt einen Haendler schneller dazu, den Absender zu blockieren — und
+-- bringt einen Haendler schneller dazu, den Absender zu blockieren -- und
 -- danach kommt auch die Rechnung nicht mehr an.
 
 alter table public.profiles
@@ -20,7 +20,7 @@ comment on column public.profiles.low_credit_email_at is
 
 -- Beide Spalten werden ausschliesslich serverseitig gesetzt. Die
 -- bestehende RLS-Policy auf profiles erlaubt dem Nutzer, seine eigene
--- Zeile zu aendern — er koennte den Zeitstempel also selbst zuruecksetzen
+-- Zeile zu aendern -- er koennte den Zeitstempel also selbst zuruecksetzen
 -- und sich die Mails erneut schicken lassen. Harmlos, aber unnoetig:
 -- ein Trigger haelt die Spalten gegen Aenderungen von aussen fest.
 create or replace function public.email_zustand_schuetzen()

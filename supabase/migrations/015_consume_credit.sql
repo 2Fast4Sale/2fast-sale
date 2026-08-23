@@ -31,7 +31,7 @@ begin
   end if;
 
   -- Privatperson: nur abziehen, wenn wirklich einer da ist.
-  -- Die Bedingung im UPDATE macht das atomar — zwei parallele Aufrufe
+  -- Die Bedingung im UPDATE macht das atomar -- zwei parallele Aufrufe
   -- koennen denselben Credit nicht doppelt verbrauchen.
   update public.profiles
      set listing_credits = listing_credits - 1

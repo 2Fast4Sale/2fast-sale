@@ -8,7 +8,7 @@ alter table public.vehicles
   -- Kraftstoffverbrauch kombiniert, l/100 km (WLTP)
   add column if not exists consumption_combined numeric(5,2),
 
-  -- Stromverbrauch kombiniert, kWh/100 km (WLTP) — Elektro & Plug-in
+  -- Stromverbrauch kombiniert, kWh/100 km (WLTP) -- Elektro & Plug-in
   add column if not exists power_consumption_combined numeric(6,2),
 
   -- CO2-Emissionen kombiniert, g/km (WLTP)
@@ -17,7 +17,7 @@ alter table public.vehicles
   -- Nur Plug-in-Hybrid: CO2 kombiniert bei entladener Batterie, g/km
   add column if not exists co2_combined_discharged numeric(6,1),
 
-  -- Elektrische Reichweite in km — Elektro & Plug-in
+  -- Elektrische Reichweite in km -- Elektro & Plug-in
   add column if not exists electric_range_km numeric(6,1);
 
 comment on column public.vehicles.vehicle_kind is

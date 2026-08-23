@@ -2,7 +2,7 @@
 --
 -- Problem: api_costs.vehicle_id war bei jedem einzelnen Eintrag leer.
 -- Nicht weil jemand den Parameter vergessen hat, sondern wegen der
--- Reihenfolge — alle KI-Aufrufe passieren in den Schritten 1 bis 3, das
+-- Reihenfolge -- alle KI-Aufrufe passieren in den Schritten 1 bis 3, das
 -- Fahrzeug entsteht erst beim Speichern in Schritt 4. Zum Zeitpunkt des
 -- Scans gibt es die vehicle_id schlicht noch nicht.
 --

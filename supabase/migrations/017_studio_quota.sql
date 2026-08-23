@@ -2,11 +2,11 @@
 --
 -- Hintergrund: Die Bildanzahl bestimmt die Marge staerker als der
 -- Inseratspreis. Bei 10 ct/Bild kostet ein Inserat mit 30 Studio-Bildern
--- 3,04 EUR — mehr als das groesste Paket pro Inserat einnimmt.
+-- 3,04 EUR -- mehr als das groesste Paket pro Inserat einnimmt.
 --
 -- Deshalb: feste Anzahl inklusive, jedes weitere Bild wird berechnet.
 -- Damit bleibt die Marge stabil, egal wie intensiv der Haendler das Werkzeug
--- nutzt — und der Einkaufspreis bei Octopus wird zur Margenfrage statt zur
+-- nutzt -- und der Einkaufspreis bei Octopus wird zur Margenfrage statt zur
 -- Existenzfrage.
 
 alter table public.listing_charges
@@ -21,4 +21,4 @@ alter table public.listing_charges
 comment on column public.listing_charges.studio_images is
   'Anzahl freigestellter Bilder in diesem Inserat.';
 comment on column public.listing_charges.extra_images is
-  'Davon ueber dem Inklusivkontingent — nur diese werden zusaetzlich berechnet.';
+  'Davon ueber dem Inklusivkontingent -- nur diese werden zusaetzlich berechnet.';

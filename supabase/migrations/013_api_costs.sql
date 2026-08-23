@@ -1,6 +1,6 @@
 -- Migration 013: Kostenerfassung pro API-Aufruf
 -- Zweck: echte Marge pro Inserat und pro Haendler sichtbar machen.
--- Diese Daten sind INTERN — Haendler duerfen sie nie sehen.
+-- Diese Daten sind INTERN -- Haendler duerfen sie nie sehen.
 
 -- Admin-Flag auf Profilen
 alter table public.profiles
@@ -10,7 +10,7 @@ create table if not exists public.api_costs (
   id          uuid default gen_random_uuid() primary key,
   -- Wer hat den Aufruf ausgeloest
   user_id     uuid references auth.users(id) on delete set null,
-  -- Zu welchem Fahrzeug gehoert er (optional — z.B. Scan vor dem Anlegen)
+  -- Zu welchem Fahrzeug gehoert er (optional -- z.B. Scan vor dem Anlegen)
   vehicle_id  uuid references public.vehicles(id) on delete set null,
   -- Anbieter: anthropic | removebg | photoroom | fal | pixelcut
   service     text not null,

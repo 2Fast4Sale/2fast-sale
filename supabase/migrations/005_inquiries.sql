@@ -18,7 +18,7 @@ create index if not exists inquiries_vehicle_id_idx on public.inquiries(vehicle_
 -- RLS
 alter table public.inquiries enable row level security;
 
--- Händler sieht nur seine eigenen Anfragen
+-- Haendler sieht nur seine eigenen Anfragen
 create policy "dealer sees own inquiries"
   on public.inquiries for select
   using (auth.uid() = dealer_id);

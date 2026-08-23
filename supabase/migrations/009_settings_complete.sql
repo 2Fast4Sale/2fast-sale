@@ -1,4 +1,4 @@
--- Migration 009: Vollständige Settings-Erweiterungen für Launch
+-- Migration 009: Vollstaendige Settings-Erweiterungen fuer Launch
 
 -- Fehlende Spalten im profiles table
 alter table public.profiles

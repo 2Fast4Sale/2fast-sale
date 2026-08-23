@@ -3,7 +3,7 @@
 -- Modell: Grundgebuehr als Abo + Preis pro Inserat, gesammelt am Monatsende.
 -- Technisch ueber Stripe Invoice Items: die werden ohne Rechnungszuordnung
 -- angelegt und automatisch auf die naechste Abo-Rechnung gesetzt. Dadurch
--- entsteht EINE Abbuchung statt einer pro Inserat — spart die Stripe-Fixgebuehr
+-- entsteht EINE Abbuchung statt einer pro Inserat -- spart die Stripe-Fixgebuehr
 -- von 0,25 EUR je Transaktion und ist fuer den Haendler uebersichtlicher.
 
 -- Wer wird nutzungsbasiert abgerechnet? Alte Paketkunden bleiben unberuehrt.
@@ -34,14 +34,14 @@ create index if not exists listing_charges_offen_idx
 
 alter table public.listing_charges enable row level security;
 
--- Haendler duerfen ihre eigenen Posten sehen — das ist die Grundlage fuer die
+-- Haendler duerfen ihre eigenen Posten sehen -- das ist die Grundlage fuer die
 -- laufende Kostenanzeige im Dashboard. Geschrieben wird nur serverseitig.
 drop policy if exists "select_own_charges" on public.listing_charges;
 create policy "select_own_charges" on public.listing_charges
   for select using (auth.uid() = user_id);
 
 comment on table public.listing_charges is
-  'Je Inserat ein Abrechnungsposten. vehicle_id ist unique — verhindert '
+  'Je Inserat ein Abrechnungsposten. vehicle_id ist unique -- verhindert '
   'Doppelberechnung bei wiederholtem Speichern.';
 
 -- Credit-Pruefung erweitern: nutzungsbasierte Kunden brauchen keine Credits,
