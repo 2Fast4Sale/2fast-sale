@@ -111,7 +111,14 @@ export const KAROSSERIE = [
   'Limousine', 'Kombi', 'SUV / Geländewagen', 'Kleinwagen',
   'Cabrio / Roadster', 'Coupé', 'Van / Kleinbus', 'Transporter',
 ];
-export const TOP_MARKEN  = ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Opel', 'Ford',
+/*
+ * Die Namen muessen genau den Anzeigenamen in mobileMarken.ts
+ * entsprechen. "Mercedes" stand hier lange und passte auf keinen
+ * Eintrag: Die Kachel setzte die Marke, aber die Modelliste blieb
+ * leer, weil es keine Marke dieses Namens gibt. Sie heisst
+ * "Mercedes-Benz".
+ */
+export const TOP_MARKEN  = ['BMW', 'Mercedes-Benz', 'Audi', 'Volkswagen', 'Opel', 'Ford',
                             'Skoda', 'Seat', 'Hyundai', 'Kia', 'Toyota', 'Renault'];
 
 export const PFLICHT_NAME: Record<string, string> = {
