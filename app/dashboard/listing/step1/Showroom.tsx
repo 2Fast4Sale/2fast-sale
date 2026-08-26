@@ -32,7 +32,7 @@
 
 import { useState } from 'react';
 import {
-  Camera, Loader2, ArrowRight, ChevronDown, Search, X, Plus, RotateCcw, AlertCircle, CheckCircle2,
+  Camera, Loader2, ArrowRight, ChevronDown, ChevronRight, Search, X, Plus, RotateCcw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
@@ -41,23 +41,23 @@ import { type VehicleKind } from '../../../../lib/envkv';
 import { G } from '../gestaltung';
 import {
   useEntwurf, KRAFTSTOFFE, GETRIEBE, KAROSSERIE, POLSTERUNG, INNENFARBE,
-  ANTRIEB, EURONORM, SELBST_FELDER, TOP_MARKEN, PFLICHT_NAME, type FormData,
+  ANTRIEB, EURONORM, SELBST_FELDER, TOP_MARKEN, PFLICHT_NAME,
 } from './useEntwurf';
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
 
 /*
- * Hell.
+ * Dunkler Rahmen, weisses Blatt.
  *
- * Die erste Fassung war dunkel — Bildbearbeitungssoftware sieht so aus,
- * und das Werkzeug tut ja etwas Ähnliches. Beim Benutzen zeigte sich der
- * Haken: Ein Datenblatt liest man anders als ein Bild. Feine Linien,
- * Beschriftungen und leere Felder verschwimmen auf dunklem Grund, und
- * genau davon lebt diese Seite.
+ * Der Kopf bleibt dunkel und zeigt das entstehende Inserat; gearbeitet
+ * wird auf Weiss. Ein Datenblatt liest man anders als ein Bild: Feine
+ * Linien, Beschriftungen und leere Felder verschwimmen auf dunklem
+ * Grund, und genau davon lebt der untere Teil der Seite.
  *
- * Alle Textfarben gegen die weisse Fläche gerechnet, keine unter 4,5:1.
+ * Die Werte liegen in ../gestaltung, damit alle vier Schritte dieselben
+ * lesen. Dort stehen zwei Saetze — `rahmen…` fuer den dunklen Grund,
+ * die kurzen Namen fuer das weisse Blatt.
  */
-/* Die Werte liegen in ../gestaltung — alle vier Schritte lesen dieselben. */
 const F = G;
 
 const ART_ANZEIGE: Record<VehicleKind, string> = {
@@ -81,15 +81,45 @@ const ART_ANZEIGE: Record<VehicleKind, string> = {
  * Codes praktisch unsichtbar und beim Benutzen sofort unertraeglich.
  */
 
-/** Eingabe ohne Kasten — nur eine Linie, die bei Fokus aufleuchtet. */
-function Eingabe({ wert, aendern, platzhalter, einheit, gross, erkannt }: {
+/**
+ * Eingabe ohne Kasten — nur eine Linie, die bei Fokus aufleuchtet.
+ * Mit Beispiel statt Platzhalter.
+ *
+ * Die Platzhalter lauteten "18.900", "84.500", "03/2019", "Tiefschwarz".
+ * Alles plausible Werte — und weil sie gut lesbar sein sollen, standen
+ * sie in fast derselben Farbe da wie eine Eingabe. Das Ergebnis: Ein
+ * leeres Formular sah ausgefuellt aus. Oben stand "Fehlt noch: Preis,
+ * Kilometerstand", waehrend darunter Zahlen zu sehen waren — als haette
+ * die Anwendung einen Fehler.
+ *
+ * Zwei Massnahmen, weil eine allein nicht reicht:
+ *
+ *   "z. B." davor — der Unterschied wird gelesen, nicht nur gesehen.
+ *     Ihn allein ueber die Helligkeit zu machen, ist die uebliche
+ *     Loesung und genau die, die hier versagt hat: Entweder blass genug
+ *     zum Unterscheiden und dann zu blass zum Lesen, oder umgekehrt.
+ *
+ *   Kursiv — trennt die Schriften auf einen Blick, ohne dass der
+ *     Kontrast leidet.
+ */
+function Eingabe({ wert, aendern, platzhalter, hinweis, einheit, gross, erkannt }: {
   wert: string; aendern: (v: string) => void; platzhalter: string;
+  /**
+   * Ein Hinweis statt eines Beispiels — wird wörtlich übernommen.
+   *
+   * Nötig, weil nicht jeder Platzhalter ein Beispielwert ist. Das
+   * Modellfeld zeigt ohne gewählte Marke "erst Marke wählen", und die
+   * pauschale Voranstellung machte daraus "z. B. erst Marke wählen".
+   */
+  hinweis?: string;
   einheit?: string; gross?: boolean; erkannt?: boolean;
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, borderBottom: `1px solid ${F.linie}`, paddingBottom: 5 }}>
       <input
-        value={wert} onChange={ev => aendern(ev.target.value)} placeholder={platzhalter}
+        className="beispiel"
+        value={wert} onChange={ev => aendern(ev.target.value)}
+        placeholder={hinweis ?? `z. B. ${platzhalter}`}
         onFocus={ev => (ev.target.parentElement!.style.borderBottomColor = F.akzent)}
         onBlur={ev => (ev.target.parentElement!.style.borderBottomColor = F.linie)}
         style={{
@@ -134,13 +164,13 @@ function Beschriftung({ text, luecke, selbst, erledigt }: {
       {luecke && (
         <span style={{
           padding: '1px 6px', borderRadius: 4, letterSpacing: 0, textTransform: 'none',
-          fontSize: 10.5, background: 'rgba(251,191,36,0.16)', color: F.luecke,
+          fontSize: 10.5, background: F.luekeSchleier, color: F.luecke,
         }}>Pflicht</span>
       )}
       {zeigeSelbst && !luecke && (
         <span style={{
           padding: '1px 6px', borderRadius: 4, letterSpacing: 0, textTransform: 'none',
-          fontSize: 10.5, background: 'rgba(124,138,255,0.16)', color: F.akzent,
+          fontSize: 10.5, background: F.akzentSchleier, color: F.akzent,
         }}>trägst du ein</span>
       )}
     </div>
@@ -189,7 +219,7 @@ function Wahl({ optionen, wert, beiWahl }: {
               padding: '6px 11px', borderRadius: 7, cursor: 'pointer', fontFamily: F.schrift,
               fontSize: 12.5, fontWeight: an ? 600 : 500,
               border: `1px solid ${an ? F.akzent : F.linie}`,
-              background: an ? 'rgba(124,138,255,0.13)' : 'transparent',
+              background: an ? F.akzentSchleier : 'transparent',
               color: an ? F.akzent : F.gedämpft,
             }}>{o}</button>
         );
@@ -213,29 +243,53 @@ function Wahl({ optionen, wert, beiWahl }: {
  * Wer selbst aufklappt, dessen Entscheidung gilt und schlaegt die
  * Automatik, bis er wieder zuklappt.
  */
-function Block({ titel, kinder, rechts, fertig, zusammenfassung }: {
+function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt }: {
   titel: string; kinder: React.ReactNode; rechts?: React.ReactNode;
   fertig?: boolean; zusammenfassung?: string;
+  /**
+   * Beginnt zugeklappt, auch wenn noch nichts ausgefüllt ist.
+   *
+   * Für alles, was keine Pflichtangabe enthält. Offen standen neun
+   * Abschnitte mit rund fünfzig Auswahlknöpfen untereinander — die Seite
+   * sah nach Arbeit aus, bevor der Händler das erste Zeichen getippt
+   * hatte. Zugeklappt sieht er zuerst, was er wirklich braucht.
+   */
+  startZu?: boolean;
+  /** Was in einem zugeklappten, noch leeren Block steckt. */
+  inhalt?: string;
 }) {
   const [selbstGeklappt, setSelbstGeklappt] = useState<boolean | null>(null);
-  const zu = selbstGeklappt ?? (fertig === true && !!zusammenfassung);
+  const zu = selbstGeklappt ?? (startZu === true || (fertig === true && !!zusammenfassung));
 
   if (zu) {
+    /*
+     * Zwei Arten von "zu", die verschieden aussehen müssen.
+     *
+     * Erledigt: grünes Häkchen, daneben die Werte. Das ist eine
+     * Bestätigung — hier ist nichts mehr zu tun.
+     *
+     * Noch leer: kein Häkchen, sondern die Aufzählung dessen, was
+     * drinsteckt. Ein grüner Haken vor einem leeren Abschnitt wäre eine
+     * Lüge, und der Händler würde ihn nie öffnen.
+     */
+    const erledigt = fertig === true && !!zusammenfassung;
     return (
       <section style={{ borderTop: `1px solid ${F.linieLeise}`, padding: '13px 0' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            <CheckCircle2 size={13} color={F.gut} />
+            {erledigt
+              ? <CheckCircle2 size={13} color={F.gut} />
+              : <ChevronRight size={13} color={F.leise} />}
             <span style={{ fontSize: 13, fontWeight: 600, color: F.gedämpft }}>{titel}</span>
           </span>
           <span style={{
             flex: 1, minWidth: 0, fontSize: 12.5, color: F.leise,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{zusammenfassung}</span>
+          }}>{erledigt ? zusammenfassung : inhalt}</span>
           <button type="button" onClick={() => setSelbstGeklappt(false)}
             style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
                      fontFamily: F.schrift, fontSize: 12.5, color: F.akzent, padding: 0 }}>
-            ändern
+            {erledigt ? 'ändern' : 'öffnen'}
           </button>
         </div>
       </section>
@@ -258,7 +312,14 @@ function Block({ titel, kinder, rechts, fertig, zusammenfassung }: {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           {rechts}
-          {fertig && zusammenfassung && (
+          {/*
+            Auch wenn der Block noch nicht fertig ist. Wer einen
+            zugeklappten Abschnitt öffnet und dann feststellt, dass er
+            ihn doch nicht braucht, muss ihn wieder schliessen können —
+            sonst ist jedes Öffnen endgültig, und das hatten wir hier
+            schon einmal bei den Verbrauchswerten.
+          */}
+          {(startZu || (fertig && zusammenfassung)) && (
             <button type="button" onClick={() => setSelbstGeklappt(true)}
               style={{ background: 'none', border: 'none', cursor: 'pointer',
                        fontFamily: F.schrift, fontSize: 12.5, color: F.leise, padding: 0 }}>
@@ -283,17 +344,8 @@ export default function Showroom() {
   const [ausstattungSuche, setAusstattungSuche] = useState('');
   const [ausstattungOffen, setAusstattungOffen] = useState(false);
   const [envkvOffen, setEnvkvOffen]       = useState(false);
-  /*
-   * Zugeklappt wird nur, was ERLEDIGT ist — nicht, was lang ist.
-   *
-   * Vorher war "Weitere Angaben" immer zu. Damit verschwanden genau die
-   * Felder, die von Hand nachgetragen werden muessen, wenn der Scan sie
-   * nicht gefunden hat. Wer nichts sieht, traegt nichts nach.
-   *
-   * null heisst: nach Datenlage entscheiden. true/false heisst: der
-   * Haendler hat selbst geklappt, und das gilt dann.
-   */
-  const [mehrGeklappt, setMehrGeklappt] = useState<boolean | null>(null);
+  /** Der eingelesene Schein in gross, zum Nachlesen einzelner Felder. */
+  const [scheinGross, setScheinGross]     = useState(false);
 
   /*
    * Verbrauchsangaben: Pflicht zeigt sie immer. Freiwillig geoeffnet
@@ -309,6 +361,16 @@ export default function Showroom() {
   const offeneSelbst = SELBST_FELDER.filter(f => !String(data[f]).trim()).length;
 
   /*
+   * Noch kein einziges Zeichen eingetragen.
+   *
+   * Der Kopf zeigt dann einen ruhigen Satz statt der leeren Hülle des
+   * Inserats. Sobald irgendetwas dasteht, wechselt er auf Titel und
+   * Preis — auch wenn der Rest noch fehlt.
+   */
+  const leerAmAnfang =
+    e.titelBisher.length === 0 && !data.price && !data.km && data.equipment.length === 0;
+
+  /*
    * Was in der zugeklappten Zeile eines Blocks steht.
    *
    * Nur gefuellte Werte, mit Trennzeichen verbunden. Leere wegzulassen
@@ -320,7 +382,6 @@ export default function Showroom() {
 
   /* Farbe, Sitze und FIN — offen, solange eines davon leer ist. */
   const mehrLuecken = [data.color, data.seats, data.vin].filter(x => !String(x).trim()).length;
-  const mehrOffen = mehrGeklappt ?? mehrLuecken > 0;
   const zahl = (v: string) => (v ? Number(v).toLocaleString('de-DE') : '');
 
   /* ── Startbildschirm ── */
@@ -328,7 +389,7 @@ export default function Showroom() {
   if (!e.blattOffen) {
     return (
       <div style={{
-        minHeight: '100vh', background: F.grund, color: F.text, fontFamily: F.schrift,
+        minHeight: '100vh', background: F.buehneGrund, color: F.buehneText, fontFamily: F.schrift,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: 24, gap: 20,
       }}>
@@ -345,14 +406,14 @@ export default function Showroom() {
 
         <div style={{ textAlign: 'center', maxWidth: 460, position: 'relative' }}>
           <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.14em',
-                        textTransform: 'uppercase', color: F.akzent, marginBottom: 12 }}>
+                        textTransform: 'uppercase', color: F.buehneAkzent, marginBottom: 12 }}>
             Neues Inserat
           </div>
           <h1 style={{ margin: '0 0 10px', fontSize: schmal ? 27 : 34, fontWeight: 700,
                        letterSpacing: '-1px', lineHeight: 1.15 }}>
             Schein fotografieren.<br />Den Rest machen wir.
           </h1>
-          <p style={{ margin: 0, fontSize: 14.5, color: F.leise, lineHeight: 1.65 }}>
+          <p style={{ margin: 0, fontSize: 14.5, color: F.buehneLeise, lineHeight: 1.65 }}>
             Marke, Modell, Erstzulassung, Leistung, Hubraum und Farbe werden ausgelesen.
             Du trägst den Preis nach — fertig.
           </p>
@@ -372,7 +433,7 @@ export default function Showroom() {
           style={{
             position: 'relative', width: '100%', maxWidth: 380, padding: '18px 26px',
             borderRadius: 12, border: 'none', cursor: e.scanZustand === 'laeuft' ? 'wait' : 'pointer',
-            background: ueberZone ? '#98a4ff' : F.akzent, color: '#0a0c11',
+            background: ueberZone ? '#98a4ff' : F.buehneAkzent, color: '#0a0c11',
             fontFamily: F.schrift, fontSize: 15, fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
             boxShadow: '0 10px 34px rgba(124,138,255,0.32)',
@@ -384,7 +445,7 @@ export default function Showroom() {
 
         <button type="button" onClick={() => e.setBlattOffen(true)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
-                   fontSize: 13, color: F.leise, position: 'relative' }}>
+                   fontSize: 13, color: F.buehneLeise, position: 'relative' }}>
           oder von Hand eintragen
         </button>
 
@@ -402,87 +463,165 @@ export default function Showroom() {
 
       {/* ══ Das entstehende Inserat ══ */}
       <div style={{
-        borderBottom: `1px solid ${F.linie}`,
-        background: `linear-gradient(180deg, ${F.flaeche} 0%, ${F.grund} 100%)`,
+        borderBottom: `1px solid ${F.rahmenLinie}`,
+        background: `linear-gradient(180deg, ${F.rahmenFlaeche} 0%, ${F.grund} 100%)`,
       }}>
-        <div style={{ maxWidth: 880, margin: '0 auto', padding: schmal ? '26px 20px 22px' : '38px 24px 30px' }}>
+        <div style={{ maxWidth: F.breite, margin: '0 auto', padding: schmal ? '26px 20px 22px' : '38px 24px 30px' }}>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 16 }}>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em',
-                           textTransform: 'uppercase', color: F.akzent }}>Schritt 1 von 4</span>
+                           textTransform: 'uppercase', color: F.rahmenAkzent }}>Schritt 1 von 4</span>
             {e.scanZustand === 'fertig' && (
-              <span style={{ fontSize: 11.5, color: F.gut, fontWeight: 600 }}>
+              <span style={{ fontSize: 11.5, color: F.rahmenGut, fontWeight: 600 }}>
                 ● {erkannt.size} Felder aus dem Schein
               </span>
             )}
+            {/*
+              Der eingelesene Schein, klein.
+
+              Das Bild lag schon vor — es wurde nur nirgends gezeigt.
+              Wer zwei Fahrzeuge nacheinander einpflegt, hat sonst keine
+              Möglichkeit zu prüfen, ob die Daten oben vom richtigen
+              Schein stammen. Ein falsch zugeordneter Schein fällt sonst
+              erst auf, wenn das Inserat online steht.
+
+              Anklickbar: gross genug zum Nachlesen, wenn ein Feld
+              zweifelhaft aussieht.
+            */}
+            {e.scanBild && (
+              <button type="button" onClick={() => setScheinGross(true)}
+                title="Eingelesenen Fahrzeugschein ansehen"
+                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7,
+                         background: 'none', border: 'none', padding: 0, cursor: 'zoom-in' }}>
+                <span style={{ fontSize: 11, color: F.rahmenLeise }}>Schein</span>
+                <img src={e.scanBild} alt="Eingelesener Fahrzeugschein"
+                  style={{ width: 54, height: 36, objectFit: 'cover', borderRadius: 5,
+                           border: `1px solid ${F.rahmenLinie}`, display: 'block' }} />
+              </button>
+            )}
+
             <button type="button" onClick={() => e.dateiRef.current?.click()}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
-                       background: 'none', border: `1px solid ${F.linie}`, borderRadius: 7,
+              style={{ marginLeft: e.scanBild ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 5,
+                       background: 'none', border: `1px solid ${F.rahmenLinie}`, borderRadius: 7,
                        padding: '5px 10px', cursor: 'pointer', fontFamily: F.schrift,
-                       fontSize: 12, color: F.gedämpft }}>
+                       fontSize: 12, color: F.rahmenLeise }}>
               {e.scanBild ? <><RotateCcw size={11} /> Neu scannen</> : <><Camera size={11} /> Schein scannen</>}
             </button>
           </div>
+
+          {/* Der Schein in gross, wenn man ihn angeklickt hat. */}
+          {scheinGross && e.scanBild && (
+            <div onClick={() => setScheinGross(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 120, background: 'rgba(0,0,0,0.92)',
+                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+                       cursor: 'zoom-out' }}>
+              <img src={e.scanBild} alt="Eingelesener Fahrzeugschein"
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
+              <button type="button" onClick={() => setScheinGross(false)}
+                aria-label="Schliessen"
+                style={{ position: 'absolute', top: 18, right: 18, width: 38, height: 38,
+                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                         background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 9,
+                         color: F.rahmenText, cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+          )}
 
           {/*
             Der Titel, wie er entsteht. Noch leere Bestandteile stehen als
             blasse Platzhalter da — man sieht, was noch kommt, statt einer
             leeren Zeile.
           */}
-          <h1 style={{
-            margin: '0 0 4px', fontSize: schmal ? 26 : 38, fontWeight: 700,
-            letterSpacing: '-1.1px', lineHeight: 1.12, minHeight: schmal ? 32 : 46,
-          }}>
-            {e.titelBisher.length > 0
-              ? e.titelBisher.map((t, i) => (
-                  <span key={i}>
-                    {i > 0 && <span style={{ color: F.leise, fontWeight: 300 }}> · </span>}
-                    {t}
-                  </span>
-                ))
-              /*
-                #94a3b8 statt der Linienfarbe. Als Rahmen ist die richtig,
-                als Schrift war sie mit 1,23:1 schlicht nicht zu sehen — der
-                Platzhalter soll blass wirken, nicht verschwinden.
-              */
-              : <span style={{ color: F.blass, fontWeight: 400 }}>Noch kein Fahrzeug</span>}
-          </h1>
+          {/*
+            Am Anfang ist hier nichts — und das darf man nicht gross
+            ausstellen.
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
-            <div style={{
-              fontSize: schmal ? 30 : 40, fontWeight: 700, letterSpacing: '-1.4px',
-              color: data.price ? F.text : F.blass, lineHeight: 1,
-            }}>
-              {data.price ? `${zahl(data.price)} €` : '— €'}
-            </div>
-            {data.km && (
-              <div style={{ fontSize: 15, color: F.gedämpft }}>{zahl(data.km)} km</div>
-            )}
-            {data.equipment.length > 0 && (
-              <div style={{ fontSize: 13, color: F.leise }}>
-                {data.equipment.length} Ausstattungsmerkmale
+            Vorher stand im leeren Zustand "Noch kein Fahrzeug" in 38 px
+            und darunter "— €" in 40 px. Zwei riesige Hinweise auf
+            Leere, bevor der Haendler ein Zeichen getippt hat. Das sah
+            nicht ruhig aus, sondern kaputt.
+
+            Jetzt steht dort ein Satz, der sagt, was gleich passiert.
+            Sobald das erste Feld gefuellt ist, wechselt der Kopf auf
+            das entstehende Inserat und waechst mit.
+          */}
+          {leerAmAnfang ? (
+            <div style={{ minHeight: schmal ? 46 : 60, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: schmal ? 19 : 23, fontWeight: 600, color: F.rahmenText,
+                            letterSpacing: '-0.5px', lineHeight: 1.25 }}>
+                Dein Inserat entsteht hier
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <>
+              <h1 style={{
+                margin: '0 0 4px', fontSize: schmal ? 26 : 38, fontWeight: 700,
+                letterSpacing: '-1.1px', lineHeight: 1.12, minHeight: schmal ? 32 : 46,
+              }}>
+                {e.titelBisher.length > 0
+                  ? e.titelBisher.map((t, i) => (
+                      <span key={i}>
+                        {i > 0 && <span style={{ color: F.rahmenLeise, fontWeight: 300 }}> · </span>}
+                        {t}
+                      </span>
+                    ))
+                  : <span style={{ color: F.rahmenLeise, fontWeight: 400 }}>Noch kein Fahrzeug</span>}
+              </h1>
+
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 14 }}>
+                <div style={{
+                  fontSize: schmal ? 30 : 40, fontWeight: 700, letterSpacing: '-1.4px',
+                  color: data.price ? F.rahmenText : F.rahmenLeise, lineHeight: 1,
+                }}>
+                  {data.price ? `${zahl(data.price)} €` : '— €'}
+                </div>
+                {data.km && (
+                  <div style={{ fontSize: 15, color: F.rahmenLeise }}>{zahl(data.km)} km</div>
+                )}
+                {data.equipment.length > 0 && (
+                  <div style={{ fontSize: 13, color: F.rahmenLeise }}>
+                    {data.equipment.length} Ausstattungsmerkmale
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* ══ Die Eingabe ══ */}
-      <div style={{ maxWidth: 880, margin: '0 auto', padding: `0 ${schmal ? 20 : 24}px 110px` }}>
+      {/*
+        Das weisse Blatt.
 
-        {/* Was fehlt — ganz oben, sonst nirgends */}
-        {offenePflicht.length > 0 && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 9, marginTop: 18,
-            padding: '11px 14px', borderRadius: 9,
-            background: 'rgba(251,191,36,0.09)', border: '1px solid rgba(251,191,36,0.26)',
-          }}>
-            <AlertCircle size={15} color={F.luecke} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: F.luecke, fontWeight: 600 }}>
-              Fehlt noch: {offenePflicht.map(k => PFLICHT_NAME[k]).join(', ')}
-            </span>
-          </div>
-        )}
+        Der Kopf darueber bleibt dunkel und zeigt das entstehende
+        Inserat; hier wird gearbeitet. Ein Datenblatt liest man anders
+        als ein Bild: Feine Linien, Beschriftungen und leere Felder
+        verschwimmen auf dunklem Grund, und genau davon lebt dieser
+        Teil der Seite.
+
+        Der Abstand nach unten bleibt aussen am Rahmen, nicht am Blatt
+        -- sonst haette das Blatt 110 Pixel Leerraum unter dem letzten
+        Feld.
+      */}
+      <div style={{ maxWidth: F.breite, margin: '0 auto', padding: `22px ${schmal ? 14 : 24}px 110px` }}>
+      <div style={{
+        background: F.flaeche,
+        border: `1px solid ${F.linieLeise}`,
+        borderRadius: schmal ? 12 : 16,
+        padding: `2px ${schmal ? 18 : 30}px 26px`,
+        color: F.text,
+      }}>
+
+        {/*
+          Hier stand derselbe Kasten "Fehlt noch: …", den auch die
+          Fussleiste zeigt — zweimal dieselbe Liste auf einer Seite.
+
+          Geblieben ist die Fussleiste: Sie steht fest am unteren Rand
+          und ist damit auch nach 2000 Pixeln Scrollen noch da, waehrend
+          der Kasten oben nach der ersten Bildschirmhoehe verschwand.
+          An den Feldern selbst steht ohnehin "Pflicht".
+        */}
 
         {/* Fahrzeug + Eckdaten nebeneinander */}
         <Block titel="Fahrzeug"
@@ -534,7 +673,7 @@ export default function Showroom() {
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                             padding: '11px 4px', borderRadius: 9, cursor: 'pointer',
                             border: `1px solid ${data.brand === m ? F.akzent : F.linie}`,
-                            background: data.brand === m ? 'rgba(124,138,255,0.13)' : 'transparent',
+                            background: data.brand === m ? F.akzentSchleier : 'transparent',
                             color: data.brand === m ? F.akzent : F.gedämpft,
                             fontFamily: F.schrift, fontSize: 11, fontWeight: 600,
                           }}>
@@ -582,7 +721,7 @@ export default function Showroom() {
                                    fontFamily: F.schrift, fontSize: 13, fontWeight: 600,
                                    display: 'flex', alignItems: 'center', gap: 7 }}>
                           <Plus size={13} />
-                          „{markeSuche.trim()}" übernehmen
+                          „{markeSuche.trim()}“ übernehmen
                         </button>
                       )}
                     </div>
@@ -594,7 +733,8 @@ export default function Showroom() {
             <div>
               <Beschriftung text="Modell" />
               <Eingabe erkannt={erkannt.has('model')} wert={data.model} aendern={v => setzen('model', v)}
-                platzhalter={data.brand ? (e.modelle[0] ?? 'Modell') : 'erst Marke wählen'} />
+                platzhalter={e.modelle[0] ?? 'Golf VII'}
+                hinweis={data.brand ? undefined : 'erst Marke wählen'} />
             </div>
           </div>
         } />
@@ -635,20 +775,17 @@ export default function Showroom() {
           entsprechend blass.
         */}
         <Block titel="Was der Scan nicht weiss"
-          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>bestimmt, wie gut die Beschreibung wird</span>}
           kinder={
             <>
               <textarea value={data.dealerNotes} onChange={ev => setzen('dealerNotes', ev.target.value)} rows={3}
                 placeholder="Zwei Vorbesitzer · scheckheftgepflegt · Winterreifen auf Alu dabei · Zahnriemen bei 120.000 gemacht · kleiner Kratzer hinten rechts"
                 style={{ width: '100%', boxSizing: 'border-box', background: F.flaeche,
-                         border: `1px solid ${data.dealerNotes ? F.linie : 'rgba(124,138,255,0.32)'}`,
+                         border: `1px solid ${data.dealerNotes ? F.linie : `${F.akzent}55`}`,
                          borderRadius: 9, padding: 13,
                          color: F.text, fontSize: 14, fontFamily: F.schrift,
                          resize: 'vertical', lineHeight: 1.7, outline: 'none' }} />
               <p style={{ margin: '9px 0 0', fontSize: 12.5, color: F.leise, lineHeight: 1.6 }}>
-                Historie, Reifen, Reparaturen, Macken. Steht nichts hier, bleibt die
-                Beschreibung bei dem, was auf dem Schein steht — und liest sich wie
-                jedes andere Inserat.
+                Je mehr hier steht, desto besser wird der Text.
               </p>
             </>
           }
@@ -703,7 +840,6 @@ export default function Showroom() {
             data.metallic && 'Metallic',
             data.warranty && 'mit Garantie',
           )}
-          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>ohne diese Angaben nimmt mobile.de das Inserat nicht an</span>}
           kinder={
             <div style={{ display: 'grid', gap: 18 }}>
               <div>
@@ -725,8 +861,7 @@ export default function Showroom() {
                     taeglich benutzt, raet sonst — und ein falscher Wert
                     kostet den gewerblichen Kaeufer, der danach filtert.
                   */}
-                  Ausweisbar heisst: Der Käufer kann die Vorsteuer ziehen. Fahrzeuge, die
-                  du von Privat angekauft hast, laufen fast immer über § 25a.
+                  Von Privat angekauft? Dann fast immer § 25a.
                 </p>
               </div>
 
@@ -762,6 +897,10 @@ export default function Showroom() {
           nimmt im Zweifel an: viel.
         */}
         <Block titel="Wonach Käufer filtern"
+          startZu
+          inhalt={offeneSelbst > 0
+            ? `${offeneSelbst} Angaben, die nur du machen kannst — danach filtern Käufer`
+            : 'HU, Vorbesitzer, Polsterung, Innenfarbe, Türen, Schadstoffklasse'}
           fertig={offeneSelbst === 0}
           zusammenfassung={zusammen(
             data.huUntil && `HU ${data.huUntil}`,
@@ -812,7 +951,7 @@ export default function Showroom() {
               */}
               <div style={{ borderTop: `1px solid ${F.linieLeise}`, paddingTop: 16 }}>
                 <div style={{ fontSize: 11.5, color: F.leise, marginBottom: 12 }}>
-                  Aus dem Fahrzeugschein — bitte nur prüfen:
+                  Aus dem Schein — nur prüfen
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
                   <div>
@@ -836,17 +975,22 @@ export default function Showroom() {
           }
         />
 
-        {/* Selten Geändertes hinter einem Klick */}
+        {/*
+          Selten Geändertes hinter einem Klick.
+
+          Hatte bis eben eine eigene Klappmechanik mit eigenem Knopf,
+          eigenem Pfeil und einem Satz "Nichts eingetragen" im
+          zugeklappten Zustand. Neben drei Nachbarn, die inzwischen
+          alle gleich zuklappen, sah dieser eine anders aus und stand
+          als einziger offen da. Jetzt dieselbe Mechanik wie überall.
+        */}
         <Block titel="Weitere Angaben"
-          rechts={
-            <button type="button" onClick={() => setMehrGeklappt(!mehrOffen)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: F.schrift,
-                       fontSize: 12.5, color: F.leise, display: 'flex', alignItems: 'center', gap: 5 }}>
-              <ChevronDown size={13} style={{ transform: mehrOffen ? 'none' : 'rotate(-90deg)' }} />
-              {mehrOffen ? 'schliessen' : `Farbe, Sitze, FIN${mehrLuecken > 0 ? ` · ${mehrLuecken} offen` : ''}`}
-            </button>
-          }
-          kinder={mehrOffen ? (
+          startZu
+          inhalt={zusammen(data.color, data.seats && `${data.seats} Sitze`, data.vin)
+            || 'Farbe, Sitzplätze, Fahrgestellnummer — meist nicht nötig'}
+          fertig={mehrLuecken === 0}
+          zusammenfassung={zusammen(data.color, data.seats && `${data.seats} Sitze`, data.vin)}
+          kinder={
             <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
               <div>
                 <Beschriftung text="Farbe" />
@@ -863,16 +1007,13 @@ export default function Showroom() {
                   platzhalter="WVWZZZ1JZW000001" />
               </div>
             </div>
-          ) : (
-            <p style={{ margin: 0, fontSize: 13, color: F.leise }}>
-              {[data.color, data.seats ? `${data.seats} Sitze` : '', data.vin].filter(Boolean).join(' · ')
-                || 'Nichts eingetragen — meist auch nicht nötig.'}
-            </p>
-          )}
+          }
         />
 
         {/* Verbrauch: bei Gebrauchtwagen eingeklappt */}
         <Block titel="Verbrauch und Emissionen"
+          startZu={!e.envkvPflicht}
+          inhalt="Bei Gebrauchtwagen freiwillig"
           rechts={
             <span style={{ fontSize: 11.5, color: e.envkvPflicht ? F.luecke : F.leise, fontWeight: e.envkvPflicht ? 600 : 500 }}>
               {e.envkvPflicht ? 'Pflichtangaben' : 'bei Gebrauchtwagen freiwillig'}
@@ -940,7 +1081,8 @@ export default function Showroom() {
 
         {/* Ausstattung: kommt aus den Fotos */}
         <Block titel="Ausstattung"
-          rechts={<span style={{ fontSize: 11.5, color: F.leise }}>wird aus den Fotos ergänzt</span>}
+          startZu
+          inhalt="Wird aus den Fotos ergänzt — hier nur nachtragen"
           kinder={
             <div>
               {data.equipment.length > 0 && (
@@ -967,8 +1109,7 @@ export default function Showroom() {
                   Der Grund gehört sichtbar hin, sonst klickt sich der Händler
                   durch eine Liste, die Schritt 2 gleich selbst füllt.
                 */}
-                Beim Hochladen der Fotos wird erkannt, was zu sehen ist. Hier lohnt sich
-                nur, was man <em>nicht</em> sieht: Scheckheft, Vorbesitzer, Standheizung.
+                Nur, was man auf Fotos <em>nicht</em> sieht — Scheckheft, Standheizung.
               </p>
 
               <div style={{ position: 'relative', maxWidth: 420 }}>
@@ -1034,7 +1175,7 @@ export default function Showroom() {
                                 : [...data.equipment, m])}
                               style={{ padding: '5px 10px', borderRadius: 7, cursor: 'pointer',
                                        border: `1px solid ${drin ? F.akzent : F.linie}`,
-                                       background: drin ? 'rgba(124,138,255,0.13)' : 'transparent',
+                                       background: drin ? F.akzentSchleier : 'transparent',
                                        color: drin ? F.akzent : F.gedämpft,
                                        fontFamily: F.schrift, fontSize: 12 }}>{m}</button>
                           );
@@ -1049,6 +1190,7 @@ export default function Showroom() {
         />
 
       </div>
+      </div>
 
       <input ref={e.dateiRef} type="file" accept="image/*" hidden
         onChange={ev => { const f = ev.target.files?.[0]; if (f) e.einlesen(f); }} />
@@ -1056,16 +1198,16 @@ export default function Showroom() {
       {/* ══ Fussleiste ══ */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 45,
-        background: 'rgba(10,12,17,0.93)', backdropFilter: 'blur(12px)',
-        borderTop: `1px solid ${F.linie}`,
+        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(12px)',
+        borderTop: `1px solid ${F.rahmenLinie}`,
         // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px).
         // Ohne diesen Abstand liegt der Weiter-Knopf darunter und ist nicht
         // antippbar — der Fehler hat es schon einmal in die Anwendung geschafft.
         paddingBottom: schmal ? 56 : 0,
       }}>
-        <div style={{ maxWidth: 880, margin: '0 auto', padding: '11px 24px',
+        <div style={{ maxWidth: F.breite, margin: '0 auto', padding: '11px 24px',
                       display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: offenePflicht.length ? F.luecke : F.leise }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: offenePflicht.length ? F.rahmenLuecke : F.rahmenLeise }}>
             {offenePflicht.length > 0
               ? `Fehlt noch: ${offenePflicht.map(k => PFLICHT_NAME[k]).join(', ')}`
               : 'Weiter zu den Fotos'}
@@ -1073,7 +1215,7 @@ export default function Showroom() {
           <button type="button" onClick={e.weiter} disabled={e.unterwegs}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: '11px 22px',
-              borderRadius: 9, border: 'none', background: F.akzent, color: '#0a0c11',
+              borderRadius: 9, border: 'none', background: F.rahmenAkzent, color: '#ffffff',
               fontFamily: F.schrift, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap',
               cursor: e.unterwegs ? 'wait' : 'pointer', opacity: e.unterwegs ? 0.7 : 1,
             }}>
@@ -1085,7 +1227,18 @@ export default function Showroom() {
 
       <style>{`
         @keyframes drehen { to { transform: rotate(360deg) } }
-        input::placeholder, textarea::placeholder { color: ${F.leise}; opacity: 1 }
+        /*
+          Die Regel steht zwar am Ende bei der Fussleiste, gilt aber
+          allen Feldern -- und die sitzen auf dem weissen Blatt. Deshalb
+          die Kartenfarbe, nicht die Rahmenfarbe.
+
+          Kursiv, damit ein Beispiel nicht wie eine Eingabe aussieht.
+          Die Helligkeit allein reicht dafuer nicht: blass genug zum
+          Unterscheiden waere zu blass zum Lesen.
+        */
+        input::placeholder, textarea::placeholder {
+          color: ${F.blass}; opacity: 1; font-style: italic;
+        }
       `}</style>
     </div>
   );

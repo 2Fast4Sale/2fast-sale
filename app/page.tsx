@@ -360,6 +360,13 @@ export default function Startseite() {
             <Link href="/datenschutz">Datenschutz</Link>
             <Link href="/agb">AGB</Link>
             <Link href="/kontakt">Kontakt</Link>
+            {/*
+              § 312k BGB: Der Kündigungsbutton muss "ständig verfügbar
+              sowie unmittelbar und leicht erreichbar" sein. Deshalb im
+              Footer und nicht hinter dem Login — und mit genau dieser
+              Beschriftung, die das Gesetz wörtlich vorgibt.
+            */}
+            <Link href="/kuendigung">Verträge hier kündigen</Link>
           </div>
         </div>
         <div className="footer-bottom">

@@ -43,8 +43,11 @@ PFLICHTFELDER (immer ausfüllen):
 • R: Farbe des Fahrzeugs (auf Deutsch, z.B. "Schwarz", "Silber Metallic", "Perlweiß")
 • S.1: Anzahl Sitzplätze gesamt (inkl. Fahrer)
 • G: Leermasse in kg
-• Feld 22 oder Zeile "Anzahl der Türen": Anzahl Türen (2, 3, 4 oder 5)
-• Feld 14.1 oder "Emissionsklasse": Schadstoffklasse → "Euro 4" | "Euro 5" | "Euro 6" | "Euro 6d-Temp" | "Euro 6d"
+• Anzahl Türen (2, 3, 4 oder 5) — steht in keinem nummerierten Feld. Nur
+  angeben, wenn eine Zeile "Anzahl der Türen" oder "Türen" ausdrücklich
+  vorhanden ist. NICHT aus Feld 22 ableiten: Dort stehen die
+  Ausstattungscodes, keine Türenzahl.
+• Feld 14 / 14.1 ("Emissionsklasse" oder "zu 14"): Schadstoffklasse → "Euro 4" | "Euro 5" | "Euro 6" | "Euro 6d-Temp" | "Euro 6d"
 • Antriebsart, falls erkennbar → "Frontantrieb" | "Heckantrieb" | "Allrad"
 
 ZUSATZFELDER (wenn sichtbar):

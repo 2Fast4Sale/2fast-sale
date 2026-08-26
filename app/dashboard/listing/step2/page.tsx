@@ -4,13 +4,12 @@ import { useState, useRef, useCallback, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Upload, X, ChevronRight, ChevronLeft, Camera,
-  CheckCircle2, Image as ImageIcon, Sparkles, Loader2,
-  Wand2, Eye, AlertCircle, Droplets, Lock,
+  CheckCircle2, Loader2,
+  Wand2, AlertCircle, Droplets, Lock,
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
-import Link from 'next/link';
 import VorherNachher from '../../../components/VorherNachher';
 import { G } from '../gestaltung';
 import { entwurfId } from '../../../../lib/entwurf';
@@ -134,10 +133,10 @@ async function analyzeImageQuality(file: File, previewUrl: string): Promise<Qual
 }
 
 const ISSUE_LABELS: Record<QualityIssue, { text: string; color: string }> = {
-  blurry: { text: 'Unscharf',               color: '#f87171' },
-  dark:   { text: 'Zu dunkel',              color: '#fb923c' },
-  bright: { text: 'Überbelichtet',          color: '#fb923c' },
-  tiny:   { text: 'Niedrige Auflösung',     color: '#fbbf24' },
+  blurry: { text: 'Unscharf',               color: G.fehler },
+  dark:   { text: 'Zu dunkel',              color: G.luecke },
+  bright: { text: 'Überbelichtet',          color: G.luecke },
+  tiny:   { text: 'Niedrige Auflösung',     color: G.luecke },
 };
 
 interface Photo {
@@ -424,8 +423,8 @@ function Step2Inner() {
     <div style={{ minHeight: '100vh', background: BG, fontFamily: F }}>
 
       {/* ---- Top Progress Bar ---- */}
-      <div style={{ background: CARD, borderBottom: `1px solid ${BORD}`, padding: '0 40px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <button onClick={handleBack} style={{ background: 'none', border: 'none', color: TD, cursor: 'pointer', fontSize: '13px', fontFamily: F, display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ background: G.rahmenFlaeche, borderBottom: `1px solid ${G.rahmenLinie}`, padding: '0 40px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+        <button onClick={handleBack} style={{ background: 'none', border: 'none', color: G.rahmenLeise, cursor: 'pointer', fontSize: '13px', fontFamily: F, display: 'flex', alignItems: 'center', gap: '6px' }}>
           <ChevronLeft size={14} /> Zurück
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -434,16 +433,16 @@ function Step2Inner() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{
                   width: '24px', height: '24px', borderRadius: '50%',
-                  background: i < 1 ? '#10b981' : i === 1 ? '#2563eb' : 'rgba(0,0,0,0.06)',
-                  border: `2px solid ${i < 1 ? '#10b981' : i === 1 ? '#3b82f6' : 'rgba(0,0,0,0.07)'}`,
+                  background: i < 1 ? G.rahmenGut : i === 1 ? G.rahmenAkzent : 'rgba(255,255,255,0.07)',
+                  border: `2px solid ${i < 1 ? G.rahmenGut : i === 1 ? G.rahmenAkzent : G.rahmenLinie}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: '11px', fontWeight: '700',
+                  color: i <= 1 ? G.grund : G.rahmenLeise, fontSize: '11px', fontWeight: '700',
                 }}>
                   {i < 1 ? <CheckCircle2 size={12} /> : i + 1}
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: i === 1 ? '700' : '500', color: i === 1 ? '#6366f1' : i < 1 ? '#10b981' : '#94a3b8', whiteSpace: 'nowrap' }}>{s}</span>
+                <span style={{ fontSize: '13px', fontWeight: i === 1 ? '700' : '500', color: i === 1 ? G.rahmenAkzent : i < 1 ? G.rahmenGut : G.rahmenLeise, whiteSpace: 'nowrap' }}>{s}</span>
               </div>
-              {i < 3 && <div style={{ width: '24px', height: '1px', background: i < 1 ? '#10b981' : 'rgba(0,0,0,0.07)' }} />}
+              {i < 3 && <div style={{ width: '24px', height: '1px', background: i < 1 ? G.rahmenGut : G.rahmenLinie }} />}
             </div>
           ))}
         </div>
@@ -452,7 +451,7 @@ function Step2Inner() {
 
       {/* Unten Platz fuer die Weiter-Leiste, auf dem Handy zusaetzlich fuer
           die Navigation darunter. */}
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: isMobile ? '16px 14px 200px' : '20px 24px 100px' }}>
+      <div style={{ maxWidth: G.breite, margin: '0 auto', padding: isMobile ? '16px 14px 200px' : '20px 24px 100px' }}>
 
         {/* ---- Header ---- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
@@ -461,7 +460,7 @@ function Step2Inner() {
             <p style={{ color: TS, fontSize: '13px', margin: '4px 0 0' }}>
               {brand && <strong style={{ color: TH }}>{brand}</strong>}
               {km && ` · ${Number(km).toLocaleString('de-DE')} km`}
-              {' · '}Handy-Fotos genügen  KI entfernt den Hintergrund automatisch.
+
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -477,7 +476,7 @@ function Step2Inner() {
                 padding: '10px 16px',
                 background: watermarkOn ? 'rgba(16,185,129,0.1)' : '#f8fafc',
                 border: `1px solid ${watermarkOn ? 'rgba(16,185,129,0.3)' : 'rgba(0,0,0,0.07)'}`,
-                borderRadius: '10px', color: watermarkOn ? '#34d399' : '#7a9cbc',
+                borderRadius: '10px', color: watermarkOn ? G.gut : G.leise,
                 fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F,
                 whiteSpace: 'nowrap',
               }}
@@ -513,10 +512,10 @@ function Step2Inner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '12px', padding: '14px 18px', marginBottom: '16px' }}>
             <AlertCircle size={18} color="#f87171" style={{ flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#fca5a5' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: G.fehler }}>
                 {photos.filter(p => !p.analyzing && p.issues.length > 0 && !p.processed).length} Foto{photos.filter(p => !p.analyzing && p.issues.length > 0 && !p.processed).length > 1 ? 's' : ''} mit Qualitätsproblemen
               </div>
-              <div style={{ fontSize: '13px', color: '#7a9cbc', marginTop: '2px' }}>
+              <div style={{ fontSize: '13px', color: G.leise, marginTop: '2px' }}>
                 Unscharfe oder zu dunkle Fotos können trotzdem verwendet werden  für bessere Ergebnisse ersetze sie.
               </div>
             </div>
@@ -552,39 +551,46 @@ function Step2Inner() {
         {equipState === 'loading' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.25)', borderRadius: '12px', padding: '12px 18px', marginBottom: '12px' }}>
             <Loader2 size={15} color="#a78bfa" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-            <span style={{ fontSize: '14px', color: '#c4b5fd', fontWeight: '600' }}>KI erkennt Ausstattungsmerkmale aus den Fotos...</span>
+            <span style={{ fontSize: '14px', color: G.akzent, fontWeight: '600' }}>KI erkennt Ausstattungsmerkmale aus den Fotos...</span>
           </div>
         )}
         {equipState === 'done' && equipFound.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '12px', padding: '12px 18px', marginBottom: '12px' }}>
             <CheckCircle2 size={15} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <div style={{ fontSize: '14px', color: '#6ee7b7', fontWeight: '700', marginBottom: '6px' }}>
+              <div style={{ fontSize: '14px', color: G.gut, fontWeight: '700', marginBottom: '6px' }}>
                 {equipFound.length} Ausstattungsmerkmale aus Fotos erkannt  zu Schritt 1 hinzugefügt
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                 {equipFound.slice(0, 8).map((e, i) => (
-                  <span key={i} style={{ fontSize: '12px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#34d399', padding: '2px 9px', borderRadius: '20px' }}>{e}</span>
+                  <span key={i} style={{ fontSize: '12px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: G.gut, padding: '2px 9px', borderRadius: '20px' }}>{e}</span>
                 ))}
-                {equipFound.length > 8 && <span style={{ fontSize: '12px', color: '#7a9cbc' }}>+{equipFound.length - 8} weitere</span>}
+                {equipFound.length > 8 && <span style={{ fontSize: '12px', color: G.leise }}>+{equipFound.length - 8} weitere</span>}
               </div>
             </div>
           </div>
         )}
 
         {/* ---- Fotolimit Banner ---- */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '12px', padding: '14px 20px', marginBottom: '16px' }}>
+        {/*
+          Die weisse Flaeche stand hier als fester Wert '#ffffff', die
+          Schrift darauf kam aus den Farbwerten. Solange die hell waren
+          — sie waren fuer dunklen Grund gemacht —, stand heller Text
+          auf weissem Kasten und war nicht zu lesen. Genau das war an
+          "60 Fotos" zu sehen.
+        */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: G.flaeche, border: `1px solid ${G.linieLeise}`, borderRadius: '12px', padding: '14px 20px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ fontSize: '13px', color: TS }}>
-              <span style={{ fontWeight: '700', color: photos.length >= photoLimit ? '#ef4444' : '#0f172a', fontSize: '13px' }}>{photos.length}</span>
-              <span style={{ color: '#94a3b8' }}> / </span>
+              <span style={{ fontWeight: '700', color: photos.length >= photoLimit ? G.fehler : G.text, fontSize: '13px' }}>{photos.length}</span>
+              <span style={{ color: G.leise }}> / </span>
               <span style={{ fontWeight: '700', color: TH }}>{photoLimit} Fotos</span>
               {/*
                 Hier stand "({plan}-Plan)". Mit den Paketen ergab das
                 "S-Plan" oder "M-Plan". Und die Grenze haengt gar nicht
                 mehr am Paket, die Angabe war also doppelt falsch.
               */}
-              <span style={{ color: '#94a3b8', marginLeft: '8px' }}>
+              <span style={{ color: G.leise, marginLeft: '8px' }}>
                 davon {studioStand.gesamt} im Studio
               </span>
             </div>
@@ -639,7 +645,7 @@ function Step2Inner() {
                 Geführte Aufnahme starten
               </div>
               <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.45 }}>
-                Wir sagen dir Schritt für Schritt, wo du stehen musst — für gleichmäßige Fotos und die 360°-Ansicht.
+                Schritt für Schritt, wo du stehen musst.
               </div>
             </div>
           </button>
@@ -674,10 +680,10 @@ function Step2Inner() {
           <div style={{ width: '60px', height: '60px', background: photos.length >= photoLimit ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.12)', border: `1px solid ${photos.length >= photoLimit ? 'rgba(239,68,68,0.25)' : 'rgba(59,130,246,0.25)'}`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
             {photos.length >= photoLimit ? <Lock size={26} color="#f87171" /> : <Upload size={26} color="#60a5fa" />}
           </div>
-          <div style={{ fontSize: '13px', fontWeight: '700', color: TH, marginBottom: '5px' }}>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: G.rahmenText, marginBottom: '5px' }}>
             {photos.length >= photoLimit ? `Limit erreicht (${photoLimit} Fotos)` : 'Fotos hier reinziehen oder klicken'}
           </div>
-          <div style={{ fontSize: '13px', color: TS, marginBottom: '14px' }}>
+          <div style={{ fontSize: '13px', color: G.rahmenLeise, marginBottom: '14px' }}>
             {/*
               Hier stand "Upgrade auf Pro oder Business fuer mehr Fotos".
               Beide Plaene gibt es nicht mehr, und die Grenze haengt auch
@@ -691,7 +697,7 @@ function Step2Inner() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
             {['Frontal', 'Seite', 'Heck', 'Innenraum', 'Details', 'Motor'].map(t => (
-              <span key={t} style={{ fontSize: '13px', color: G.akzent, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', padding: '3px 10px', borderRadius: '20px', fontWeight: '600' }}>{t}</span>
+              <span key={t} style={{ fontSize: '13px', color: G.rahmenAkzent, background: 'rgba(124,138,255,0.13)', border: '1px solid rgba(124,138,255,0.28)', padding: '3px 10px', borderRadius: '20px', fontWeight: '600' }}>{t}</span>
             ))}
           </div>
           <input
@@ -708,7 +714,7 @@ function Step2Inner() {
               <span style={{ fontSize: '13px', fontWeight: '600', color: TS }}>
                 {photos.length} Foto{photos.length !== 1 ? 's' : ''} · Erste Bild = Titelbild
               </span>
-              <button onClick={() => setPhotos([])} style={{ fontSize: '13px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer', fontFamily: F }}>
+              <button onClick={() => setPhotos([])} style={{ fontSize: '13px', color: G.fehler, background: 'none', border: 'none', cursor: 'pointer', fontFamily: F }}>
                 Alle entfernen
               </button>
             </div>
@@ -787,7 +793,7 @@ function Step2Inner() {
                   {p.analyzing && (
                     <div style={{ position: 'absolute', bottom: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.7)', padding: '3px 8px', borderRadius: '6px' }}>
                       <Loader2 size={9} color="#7a9cbc" style={{ animation: 'spin 1s linear infinite' }} />
-                      <span style={{ fontSize: '9px', color: '#7a9cbc', fontWeight: '700' }}>Analyse...</span>
+                      <span style={{ fontSize: '9px', color: G.leise, fontWeight: '700' }}>Analyse...</span>
                     </div>
                   )}
 
@@ -809,7 +815,7 @@ function Step2Inner() {
                   {p.processing && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,20,35,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                       <Loader2 size={22} color="#a78bfa" style={{ animation: 'spin 1s linear infinite' }} />
-                      <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: '700' }}>KI...</span>
+                      <span style={{ fontSize: '11px', color: G.akzent, fontWeight: '700' }}>KI...</span>
                     </div>
                   )}
 
@@ -912,20 +918,19 @@ function Step2Inner() {
           </div>
         </div>
 
-        {/* ---- Tipps (leer) ---- */}
+        {/*
+          Aus drei Ratgeberkarten wurde eine Zeile.
+
+          Sie standen als Kaesten mit Symbol, Ueberschrift und
+          Beschreibung da und nahmen ein Drittel des leeren
+          Bildschirms ein -- bevor der Haendler ein Foto abgelegt
+          hatte. Der Inhalt passt in einen Satz.
+        */}
         {photos.length === 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-            {[
-              { icon: <Camera size={22} color="#60a5fa" />, title: 'Außen: 3 Seiten', desc: 'Vorne, Seite und Heck  immer aus gleicher Höhe' },
-              { icon: <Eye size={22} color="#a78bfa" />,    title: 'Gutes Licht',     desc: 'Tageslicht oder bewölkt  kein direktes Gegenlicht' },
-              { icon: <Wand2 size={22} color="#34d399" />,  title: 'KI-Studio',       desc: 'KI entfernt den Hintergrund und erstellt Studio-Look' },
-            ].map(t => (
-              <div key={t.title} style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-                <div style={{ margin: '0 auto 10px', width: '44px', height: '44px', background: '#f1f5f9', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{t.icon}</div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: TH, marginBottom: '5px' }}>{t.title}</div>
-                <div style={{ fontSize: '13px', color: TS, lineHeight: 1.6 }}>{t.desc}</div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px',
+                        fontSize: '13px', color: G.rahmenLeise }}>
+            <Camera size={14} style={{ flexShrink: 0 }} />
+            Vorne, Seite und Heck aus gleicher Höhe · Tageslicht, kein Gegenlicht
           </div>
         )}
 
@@ -943,15 +948,15 @@ function Step2Inner() {
       {/* ---- Sticky Bottom Bar ---- */}
       {/* Auf dem Handy ueber die Dashboard-Navigation (56 px, zIndex 200)
           heben, sonst liegt die Leiste darunter und ist nicht antippbar. */}
-      <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: `${CARD}ee`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${BORD}`, padding: isMobile ? '12px 16px' : '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', zIndex: 50 }}>
-        <div style={{ fontSize: '13px', color: TS }}>
+      <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: `${G.rahmenFlaeche}f0`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${G.rahmenLinie}`, padding: isMobile ? '12px 16px' : '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', zIndex: 50 }}>
+        <div style={{ fontSize: '13px', color: G.rahmenLeise }}>
           {photos.length === 0
             ? 'Mindestens 1 Foto hochladen'
-            : <span style={{ color: '#10b981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}><CheckCircle2 size={14} /> {photos.length} Foto{photos.length !== 1 ? 's' : ''} bereit{processedCount > 0 ? ` · ${processedCount} im Studio bearbeitet` : ''}</span>
+            : <span style={{ color: G.rahmenGut, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}><CheckCircle2 size={14} /> {photos.length} Foto{photos.length !== 1 ? 's' : ''} bereit{processedCount > 0 ? ` · ${processedCount} im Studio bearbeitet` : ''}</span>
           }
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 20px', background: '#f1f5f9', border: `1px solid ${BORD}`, borderRadius: '9px', color: TS, fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}>
+          <button onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '12px 20px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${G.rahmenLinie}`, borderRadius: '9px', color: G.rahmenLeise, fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}>
             <ChevronLeft size={16} /> Zurück
           </button>
           <button
@@ -959,7 +964,7 @@ function Step2Inner() {
             disabled={photos.length === 0}
             style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '12px 26px', background: photos.length > 0 ? '#2563eb' : 'rgba(37,99,235,0.3)',
+              padding: '12px 26px', background: photos.length > 0 ? '#2563eb' : '#64748b',
               border: 'none', color: '#fff', borderRadius: '9px',
               fontSize: '13px', fontWeight: '700', cursor: photos.length > 0 ? 'pointer' : 'not-allowed',
               fontFamily: F, boxShadow: photos.length > 0 ? '0 4px 18px rgba(37,99,235,0.4)' : 'none',

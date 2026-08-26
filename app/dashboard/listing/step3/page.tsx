@@ -139,7 +139,7 @@ function Step3Inner() {
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
                   <Car size={40} color="#334155" style={{ opacity: 0.3 }} />
-                  <div style={{ fontSize: '12px', color: G.leise }}>Fahrzeugvorschau</div>
+                  <div style={{ fontSize: '12px', color: G.rahmenLeise }}>Fahrzeugvorschau</div>
                 </div>
               )}
               {/* Gradient overlay */}
@@ -239,7 +239,12 @@ function Step3Inner() {
                     <div style={{ fontSize: '13px', fontWeight: current ? '700' : done ? '600' : '500', color: done ? G.gut : current ? G.akzent : G.blass, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {s.label}
                     </div>
-                    <div style={{ fontSize: '11px', color: done ? '#6ee7b7' : current ? '#a5b4fc' : G.leise, marginTop: '1px' }}>
+                    {/*
+                      Standen als #6ee7b7 und #a5b4fc hier — helle Töne
+                      für dunklen Grund. Auf der weissen Karte kommen
+                      sie auf 1,6:1 und sind nicht mehr zu lesen.
+                    */}
+                    <div style={{ fontSize: '11px', color: done ? G.gut : current ? G.akzent : G.leise, marginTop: '1px' }}>
                       {s.sub}
                     </div>
                   </div>
@@ -247,7 +252,7 @@ function Step3Inner() {
                   {/* Done badge */}
                   {done && (
                     <div style={{ width: '20px', height: '20px', background: 'rgba(16,185,129,0.15)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: '10px', color: '#10b981' }}>✓</span>
+                      <span style={{ fontSize: '10px', color: G.gut }}>✓</span>
                     </div>
                   )}
                 </div>

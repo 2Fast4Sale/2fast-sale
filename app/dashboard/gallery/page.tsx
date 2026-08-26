@@ -10,6 +10,7 @@ import {
   Phone, Mail, Share2, Heart, Zap, Copy, ArrowUpDown
 } from 'lucide-react';
 import { useToast } from '../../../components/Toast';
+import { G } from '../listing/gestaltung';
 import { VehicleToolButtons } from '../../../components/VehicleTools';
 import { Viewer360 } from '../../../components/Viewer360';
 
@@ -37,7 +38,7 @@ const STATUS_OPTIONS = ['Alle', 'Aktiv', 'Reserviert', 'Entwurf', 'Verkauft'];
 
 const statusStyle: Record<string, { bg: string; color: string; dot: string }> = {
   'Aktiv':      { bg: 'rgba(16,185,129,0.1)',  color: '#34d399', dot: '#10b981' },
-  'Reserviert': { bg: 'rgba(59,130,246,0.1)',  color: '#6366f1', dot: '#6366f1' },
+  'Reserviert': { bg: 'rgba(59,130,246,0.1)',  color: '#4f46e5', dot: '#4f46e5' },
   'Entwurf':    { bg: 'rgba(245,158,11,0.1)',  color: '#fbbf24', dot: '#f59e0b' },
   'Verkauft':   { bg: 'rgba(139,92,246,0.1)',  color: '#c4b5fd', dot: '#8b5cf6' },
 };
@@ -81,7 +82,7 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
   const has360 = realImgs.length >= 6;
   const [activeImg, setActiveImg] = useState(0);
   const [show360, setShow360] = useState(has360);
-  const sc = statusStyle[vehicle.status] || { bg: 'rgba(100,116,139,0.1)', color: '#64748b', dot: '#64748b' };
+  const sc = statusStyle[vehicle.status] || { bg: 'rgba(100,116,139,0.1)', color: '#334155', dot: '#64748b' };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -121,8 +122,8 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
           {/* Toggle 360° / Fotos */}
           {has360 && (
             <div style={{ display: 'flex', gap: '6px', padding: '10px 14px 0', position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
-              <button onClick={() => setShow360(true)} style={{ padding: '5px 12px', borderRadius: '7px', border: 'none', background: show360 ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>360°</button>
-              <button onClick={() => setShow360(false)} style={{ padding: '5px 12px', borderRadius: '7px', border: 'none', background: !show360 ? '#6366f1' : '#e2e8f0', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Fotos</button>
+              <button onClick={() => setShow360(true)} style={{ padding: '5px 12px', borderRadius: '7px', border: 'none', background: show360 ? '#4f46e5' : '#64748b', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>360°</button>
+              <button onClick={() => setShow360(false)} style={{ padding: '5px 12px', borderRadius: '7px', border: 'none', background: !show360 ? '#4f46e5' : '#64748b', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Fotos</button>
             </div>
           )}
 
@@ -136,7 +137,7 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
             {/* Gradient unten */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(to top, rgba(15,23,42,0.55), transparent)' }} />
             {/* Bild-Zähler */}
-            <div style={{ position: 'absolute', bottom: '14px', right: '16px', backgroundColor: 'rgba(0,0,0,0.7)', color: '#94a3b8', fontSize: '14px', fontWeight: '700', padding: '5px 12px', borderRadius: '8px', backdropFilter: 'blur(8px)' }}>
+            <div style={{ position: 'absolute', bottom: '14px', right: '16px', backgroundColor: 'rgba(0,0,0,0.7)', color: '#475569', fontSize: '14px', fontWeight: '700', padding: '5px 12px', borderRadius: '8px', backdropFilter: 'blur(8px)' }}>
               {activeImg + 1} / {imgs.length}
             </div>
             {/* Status Badge */}
@@ -162,7 +163,7 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
           {!show360 && imgs.length > 1 && (
             <div style={{ display: 'flex', gap: '6px', padding: '10px 16px', overflowX: 'auto' }}>
               {imgs.map((img, i) => (
-                <div key={i} onClick={() => setActiveImg(i)} style={{ width: '64px', height: '44px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, cursor: 'pointer', border: `2px solid ${i === activeImg ? '#6366f1' : '#f1f5f9'}`, transition: 'border-color 0.15s' }}>
+                <div key={i} onClick={() => setActiveImg(i)} style={{ width: '64px', height: '44px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, cursor: 'pointer', border: `2px solid ${i === activeImg ? '#4f46e5' : '#f1f5f9'}`, transition: 'border-color 0.15s' }}>
                   <img src={img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
                 </div>
               ))}
@@ -183,13 +184,13 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
             <div>
               <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: '0 0 6px 0', letterSpacing: '-0.3px' }}>{vehicle.brand || 'Fahrzeug'}</h2>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {vehicle.first_registration && <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>EZ {vehicle.first_registration}</span>}
-                {vehicle.km && <span style={{ fontSize: '14px', color: '#64748b' }}>· {vehicle.km} km</span>}
-                {vehicle.fuel_type && <span style={{ fontSize: '14px', color: '#64748b' }}>· {vehicle.fuel_type}</span>}
+                {vehicle.first_registration && <span style={{ fontSize: '14px', color: '#334155', fontWeight: '600' }}>EZ {vehicle.first_registration}</span>}
+                {vehicle.km && <span style={{ fontSize: '14px', color: '#334155' }}>· {vehicle.km} km</span>}
+                {vehicle.fuel_type && <span style={{ fontSize: '14px', color: '#334155' }}>· {vehicle.fuel_type}</span>}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#6366f1', lineHeight: 1 }}>{vehicle.price || 'Auf Anfrage'}</div>
+              <div style={{ fontSize: '32px', fontWeight: '700', color: '#4f46e5', lineHeight: 1 }}>{vehicle.price || 'Auf Anfrage'}</div>
               <div style={{ fontSize: '14px', color: '#7aaac8', marginTop: '4px' }}>inkl. 19% MwSt.</div>
             </div>
           </div>
@@ -215,7 +216,7 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#7aaac8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Ausstattung</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {vehicle.equipment.map((item, i) => (
-                  <span key={i} style={{ backgroundColor: '#f0f2f5', border: '1px solid #f1f5f9', color: '#94a3b8', padding: '5px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: '600' }}>
+                  <span key={i} style={{ backgroundColor: '#f0f2f5', border: '1px solid #f1f5f9', color: '#475569', padding: '5px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: '600' }}>
                     ✓ {item}
                   </span>
                 ))}
@@ -227,7 +228,7 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
           {vehicle.description && (
             <div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#7aaac8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Beschreibung</div>
-              <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8', lineHeight: 1.85, backgroundColor: '#f0f2f5', border: '1px solid #f1f5f9', borderRadius: '14px', padding: '16px' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: '#475569', lineHeight: 1.85, backgroundColor: '#f0f2f5', border: '1px solid #f1f5f9', borderRadius: '14px', padding: '16px' }}>
                 {vehicle.description}
               </p>
             </div>
@@ -236,18 +237,18 @@ function DetailModal({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => vo
           {/* Händler-Info Box (wie auf mobile.de) */}
           <div style={{ backgroundColor: '#f0f2f5', border: '1px solid #f1f5f9', borderRadius: '16px', padding: '18px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '48px', height: '48px', backgroundColor: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Car size={22} style={{ color: '#6366f1' }} />
+              <Car size={22} style={{ color: '#4f46e5' }} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>Ihr Fahrzeug</div>
-              <div style={{ fontSize: '14px', color: '#64748b', marginTop: '2px' }}>Erstellt am {new Date(vehicle.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+              <div style={{ fontSize: '14px', color: '#334155', marginTop: '2px' }}>Erstellt am {new Date(vehicle.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#4f46e5', border: 'none', color: 'white', padding: '10px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
                 <ExternalLink size={14} /> Veröffentlichen
               </button>
               <Link href="/dashboard/listing" style={{ textDecoration: 'none' }}>
-                <button style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', color: '#94a3b8', padding: '10px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                <button style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', color: '#475569', padding: '10px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
                   Neu inserieren
                 </button>
               </Link>
@@ -359,17 +360,17 @@ export default function InseratePage() {
   const F = '"Inter",-apple-system,sans-serif';
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: '1240px', margin: '0 auto', color: '#0f172a', fontFamily: F, minHeight: '100vh', background: '#f0f2f5' }}>
+    <div style={{ padding: '24px 28px', maxWidth: G.breite, margin: '0 auto', color: '#0f172a', fontFamily: F, minHeight: '100vh', background: '#f0f2f5' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 4px', letterSpacing: '-0.5px', color: '#0f172a' }}>Meine Inserate</h1>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px', fontFamily: F }}>Alle Fahrzeuge verwalten, Status ändern und publizieren.</p>
-          <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '13px', fontFamily: F }}>Tipp: Drücke <kbd style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '1px 6px', fontSize: '11px', color: '#475569' }}>N</kbd> für Neues Inserat</p>
+          <p style={{ margin: 0, color: '#334155', fontSize: '14px', fontFamily: F }}>Alle Fahrzeuge verwalten, Status ändern und publizieren.</p>
+          <p style={{ margin: '4px 0 0', color: '#475569', fontSize: '13px', fontFamily: F }}>Tipp: Drücke <kbd style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '1px 6px', fontSize: '11px', color: '#475569' }}>N</kbd> für Neues Inserat</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={fetchVehicles} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', color: '#64748b', padding: '10px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px', fontFamily: F, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <button onClick={fetchVehicles} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', padding: '10px 16px', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px', fontFamily: F, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <RefreshCw size={14} /> Aktualisieren
           </button>
           <Link href="/dashboard/listing" style={{ textDecoration: 'none' }}>
@@ -383,7 +384,7 @@ export default function InseratePage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
         {[
-          { label: 'Gesamt',  value: vehicles.length, icon: <Car size={18} />,          color: '#6366f1' },
+          { label: 'Gesamt',  value: vehicles.length, icon: <Car size={18} />,          color: '#4f46e5' },
           { label: 'Live',    value: live,             icon: <CheckCircle2 size={18} />, color: '#10b981' },
           { label: 'Entwurf', value: drafts,           icon: <Clock size={18} />,        color: '#f59e0b' },
           { label: 'Aufrufe', value: totalViews,       icon: <TrendingUp size={18} />,   color: '#8b5cf6' },
@@ -392,7 +393,7 @@ export default function InseratePage() {
             <div style={{ width: '38px', height: '38px', backgroundColor: `${s.color}12`, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}>{s.icon}</div>
             <div>
               <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', lineHeight: 1, letterSpacing: '-0.5px' }}>{s.value}</div>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>{s.label}</div>
+              <div style={{ fontSize: '12px', color: '#334155', fontWeight: '600', marginTop: '2px' }}>{s.label}</div>
             </div>
           </div>
         ))}
@@ -402,13 +403,13 @@ export default function InseratePage() {
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Suche */}
         <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-          <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+          <Search size={15} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#475569', pointerEvents: 'none' }} />
           <input
             style={{ width: '100%', boxSizing: 'border-box', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px 10px 42px', color: '#0f172a', fontSize: '14px', outline: 'none', fontFamily: F, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
             placeholder="Fahrzeug suchen..." value={search} onChange={e => setSearch(e.target.value)}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex' }}>
+            <button onClick={() => setSearch('')} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', display: 'flex' }}>
               <X size={14} />
             </button>
           )}
@@ -417,7 +418,7 @@ export default function InseratePage() {
         {/* Status Filter */}
         <div style={{ display: 'flex', gap: '4px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '4px', flexWrap: 'wrap', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           {STATUS_OPTIONS.map(s => (
-            <button key={s} onClick={() => setActiveStatus(s)} style={{ padding: '7px 13px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600', backgroundColor: activeStatus === s ? '#6366f1' : 'transparent', color: activeStatus === s ? '#fff' : '#64748b', transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: F } as React.CSSProperties}>{s}</button>
+            <button key={s} onClick={() => setActiveStatus(s)} style={{ padding: '7px 13px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600', backgroundColor: activeStatus === s ? '#4f46e5' : 'transparent', color: activeStatus === s ? '#fff' : '#334155', transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: F } as React.CSSProperties}>{s}</button>
           ))}
         </div>
 
@@ -439,19 +440,19 @@ export default function InseratePage() {
         {/* Grid/List */}
         <div style={{ display: 'flex', gap: '3px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '4px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           {(['grid', 'list'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: '7px 12px', borderRadius: '7px', border: 'none', cursor: 'pointer', backgroundColor: view === v ? '#6366f1' : 'transparent', color: view === v ? '#fff' : '#64748b', fontSize: '14px', fontWeight: '700' }}>
+            <button key={v} onClick={() => setView(v)} style={{ padding: '7px 12px', borderRadius: '7px', border: 'none', cursor: 'pointer', backgroundColor: view === v ? '#4f46e5' : 'transparent', color: view === v ? '#fff' : '#64748b', fontSize: '14px', fontWeight: '700' }}>
               {v === 'grid' ? '⊞' : '☰'}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '600', marginBottom: '14px' }}>
+      <div style={{ fontSize: '13px', color: '#475569', fontWeight: '600', marginBottom: '14px' }}>
         {loading ? 'Lädt…' : `${filtered.length} Inserat${filtered.length !== 1 ? 'e' : ''}`}
       </div>
 
       {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '60px', color: '#64748b' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '60px', color: '#334155' }}>
           <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
           <span style={{ fontSize: '14px', fontWeight: '600' }}>Inserate werden geladen…</span>
         </div>
@@ -461,7 +462,7 @@ export default function InseratePage() {
         <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '60px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚗</div>
           <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>{search ? `Kein Ergebnis für "${search}"` : 'Noch keine Inserate'}</h3>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 24px 0' }}>Erstelle dein erstes Inserat in wenigen Minuten.</p>
+          <p style={{ fontSize: '14px', color: '#334155', margin: '0 0 24px 0' }}>Erstelle dein erstes Inserat in wenigen Minuten.</p>
           <Link href="/dashboard/listing" style={{ textDecoration: 'none' }}>
             <button style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: '#fff', padding: '12px 24px', borderRadius: '12px', fontWeight: '700', border: 'none', cursor: 'pointer', fontSize: '14px' }}>
               <Plus size={16} /> Jetzt inserieren
@@ -474,7 +475,7 @@ export default function InseratePage() {
       {!loading && view === 'grid' && filtered.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '18px' }}>
           {filtered.map(car => {
-            const sc = statusStyle[car.status] || { bg: 'rgba(100,116,139,0.1)', color: '#64748b', dot: '#64748b' };
+            const sc = statusStyle[car.status] || { bg: 'rgba(100,116,139,0.1)', color: '#334155', dot: '#64748b' };
             const thumb = getImages(car)[0];
             return (
               <div key={car.id} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', position: 'relative', transition: 'transform 0.15s, box-shadow 0.2s', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
@@ -494,7 +495,7 @@ export default function InseratePage() {
                   </div>
                   {/* Menu */}
                   <div style={{ position: 'absolute', top: '10px', right: '10px' }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setOpenMenu(openMenu === car.id ? null : car.id)} style={{ width: '30px', height: '30px', backgroundColor: 'rgba(8,14,26,0.7)', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button onClick={() => setOpenMenu(openMenu === car.id ? null : car.id)} style={{ width: '30px', height: '30px', backgroundColor: 'rgba(8,14,26,0.7)', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {updatingId === car.id ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <MoreHorizontal size={14} />}
                     </button>
                     {openMenu === car.id && (
@@ -502,7 +503,7 @@ export default function InseratePage() {
                         <button onClick={() => setDetailVehicle(car)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', color: '#ffffff', textAlign: 'left', fontFamily: F }}>
                           <Eye size={13} /> Details ansehen
                         </button>
-                        <button onClick={() => updateStatus(car.id, cycleStatus(car.status))} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', color: '#6366f1', textAlign: 'left', fontFamily: F }}>
+                        <button onClick={() => updateStatus(car.id, cycleStatus(car.status))} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', color: '#4f46e5', textAlign: 'left', fontFamily: F }}>
                           <ExternalLink size={13} /> Status: {cycleStatus(car.status)}
                         </button>
                         <button onClick={() => duplicateVehicle(car)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '600', color: '#a78bfa', textAlign: 'left', fontFamily: F }}>
@@ -543,25 +544,25 @@ export default function InseratePage() {
                     }}
                     style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: '0 0 4px 0', lineHeight: 1.3, cursor: 'text' }}
                   >
-                    {car.brand || 'Unbekannt'} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '400' }}>✏️</span>
+                    {car.brand || 'Unbekannt'} <span style={{ fontSize: '11px', color: '#475569', fontWeight: '400' }}>✏️</span>
                   </h3>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                    {car.km && <span style={{ fontSize: '13px', color: '#64748b' }}>{car.km} km</span>}
-                    {car.fuel_type && <span style={{ fontSize: '13px', color: '#64748b' }}>· {car.fuel_type}</span>}
-                    {car.power_kw && <span style={{ fontSize: '13px', color: '#64748b' }}>· {car.power_kw} kW</span>}
+                    {car.km && <span style={{ fontSize: '13px', color: '#334155' }}>{car.km} km</span>}
+                    {car.fuel_type && <span style={{ fontSize: '13px', color: '#334155' }}>· {car.fuel_type}</span>}
+                    {car.power_kw && <span style={{ fontSize: '13px', color: '#334155' }}>· {car.power_kw} kW</span>}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '20px', fontWeight: '800', color: '#6366f1', letterSpacing: '-0.5px' }}>{car.price || '—'}</span>
+                    <span style={{ fontSize: '20px', fontWeight: '800', color: '#4f46e5', letterSpacing: '-0.5px' }}>{car.price || '—'}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {car.views > 0 && <span style={{ fontSize: '13px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '3px' }}><Eye size={11} /> {car.views}</span>}
-                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>{new Date(car.created_at).toLocaleDateString('de-DE')}</span>
+                      {car.views > 0 && <span style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '3px' }}><Eye size={11} /> {car.views}</span>}
+                      <span style={{ fontSize: '12px', color: '#475569' }}>{new Date(car.created_at).toLocaleDateString('de-DE')}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Details + Tools Buttons */}
                 <div style={{ padding: '0 14px 12px', display: 'flex', gap: '6px' }} onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setDetailVehicle(car)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', backgroundColor: '#f5f3ff', border: '1px solid #e9d5ff', color: '#6366f1', padding: '9px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s' }}
+                  <button onClick={() => setDetailVehicle(car)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', backgroundColor: '#f5f3ff', border: '1px solid #e9d5ff', color: '#4f46e5', padding: '9px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#ede9fe'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#f5f3ff'; }}
                   >
@@ -576,15 +577,15 @@ export default function InseratePage() {
           {/* Neues Inserat Kachel */}
           <Link href="/dashboard/listing" style={{ textDecoration: 'none' }}>
             <div style={{ backgroundColor: '#ffffff', border: '2px dashed #d8b4fe', borderRadius: '16px', minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color 0.2s, background 0.2s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#6366f1'; (e.currentTarget as HTMLDivElement).style.background = '#f5f3ff'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#4f46e5'; (e.currentTarget as HTMLDivElement).style.background = '#f5f3ff'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#d8b4fe'; (e.currentTarget as HTMLDivElement).style.background = '#ffffff'; }}
             >
               <div style={{ width: '48px', height: '48px', backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Plus size={22} style={{ color: '#6366f1' }} />
+                <Plus size={22} style={{ color: '#4f46e5' }} />
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: '#6366f1' }}>Neues Inserat</div>
-                <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '3px' }}>In 2 Minuten erstellt</div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#4f46e5' }}>Neues Inserat</div>
+                <div style={{ fontSize: '13px', color: '#475569', marginTop: '3px' }}>In 2 Minuten erstellt</div>
               </div>
             </div>
           </Link>
@@ -596,11 +597,11 @@ export default function InseratePage() {
         <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 150px', padding: '10px 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
             {['Fahrzeug', 'Preis', 'KM-Stand', 'Status', ''].map(h => (
-              <span key={h} style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{h}</span>
+              <span key={h} style={{ fontSize: '11px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{h}</span>
             ))}
           </div>
           {filtered.map((car, i) => {
-            const sc = statusStyle[car.status] || { bg: 'rgba(100,116,139,0.1)', color: '#64748b', dot: '#64748b' };
+            const sc = statusStyle[car.status] || { bg: 'rgba(100,116,139,0.1)', color: '#334155', dot: '#64748b' };
             return (
               <div key={car.id} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr 150px', padding: '12px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #f1f5f9' : 'none', alignItems: 'center', transition: 'background 0.15s', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f8fafc'}
@@ -613,19 +614,19 @@ export default function InseratePage() {
                   </div>
                   <div>
                     <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{car.brand || 'Unbekannt'}</div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                    <div style={{ fontSize: '12px', color: '#475569', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
                       <Calendar size={10} /> {new Date(car.created_at).toLocaleDateString('de-DE')}
                     </div>
                   </div>
                 </div>
-                <span style={{ fontSize: '14px', fontWeight: '700', color: '#6366f1' }}>{car.price || '—'}</span>
-                <span style={{ fontSize: '13px', color: '#64748b' }}>{car.km || '—'}</span>
+                <span style={{ fontSize: '14px', fontWeight: '700', color: '#4f46e5' }}>{car.price || '—'}</span>
+                <span style={{ fontSize: '13px', color: '#334155' }}>{car.km || '—'}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: sc.dot }} />
                   <span style={{ fontSize: '13px', fontWeight: '600', color: sc.color }}>{car.status}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setDetailVehicle(car)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e9d5ff', backgroundColor: '#f5f3ff', color: '#6366f1', cursor: 'pointer', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button onClick={() => setDetailVehicle(car)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #e9d5ff', backgroundColor: '#f5f3ff', color: '#4f46e5', cursor: 'pointer', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Eye size={11} /> Details
                   </button>
                   <button onClick={() => deleteVehicle(car.id)} style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

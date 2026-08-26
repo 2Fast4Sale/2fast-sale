@@ -94,7 +94,7 @@ function DashboardContent() {
       {!isMobile && (
         <div style={{ background:'#fff', borderBottom:'1px solid #e2e8f0', padding:`0 ${pad}`, display:'flex', alignItems:'center', justifyContent:'space-between', height:'60px' }}>
           <div>
-            <span style={{ fontSize:'13px', color:'#94a3b8', fontWeight:'500' }}>{greet} — </span>
+            <span style={{ fontSize:'13px', color:'#475569', fontWeight:'500' }}>{greet} — </span>
             <span style={{ fontSize:'13px', color:'#64748b', fontWeight:'500' }}>{today}</span>
           </div>
           <Link href="/dashboard/listing/step1" style={{ textDecoration:'none', display:'inline-flex', alignItems:'center', gap:'7px', background:'#4f46e5', color:'#fff', padding:'9px 18px', fontWeight:'700', fontSize:'13px', borderRadius:'4px' }}>
@@ -109,7 +109,7 @@ function DashboardContent() {
         {isMobile && (
           <div style={{ marginBottom:'16px' }}>
             <div style={{ fontSize:'16px', fontWeight:'800', color:'#0f172a' }}>{greet} 👋</div>
-            <div style={{ fontSize:'12px', color:'#94a3b8', marginTop:'2px' }}>{today}</div>
+            <div style={{ fontSize:'12px', color:'#475569', marginTop:'2px' }}>{today}</div>
           </div>
         )}
 
@@ -155,7 +155,7 @@ function DashboardContent() {
               <div style={{ color:s.accent }}>{s.icon}</div>
               <div>
                 <div style={{ fontSize: isMobile ? '26px' : '32px', fontWeight:'900', letterSpacing:'-2px', lineHeight:1, color:'#0f172a' }}>{s.value}</div>
-                <div style={{ fontSize:'10px', color:'#94a3b8', marginTop:'4px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.06em' }}>{s.label}</div>
+                <div style={{ fontSize:'10px', color:'#475569', marginTop:'4px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.06em' }}>{s.label}</div>
               </div>
             </div>
           ))}
@@ -171,7 +171,7 @@ function DashboardContent() {
             {!isMobile && (
               <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 110px 100px', padding:'10px 20px', background:'#f8fafc', borderBottom:'1px solid #e8ecf0' }}>
                 {['Fahrzeug', 'Preis', 'Kilometerstand', 'Status'].map(col => (
-                  <div key={col} style={{ fontSize:'11px', fontWeight:'700', color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</div>
+                  <div key={col} style={{ fontSize:'11px', fontWeight:'700', color:'#475569', textTransform:'uppercase', letterSpacing:'0.08em' }}>{col}</div>
                 ))}
               </div>
             )}
@@ -185,11 +185,11 @@ function DashboardContent() {
             )}
 
             {!loaded ? (
-              <div style={{ padding:'48px', textAlign:'center', color:'#94a3b8', fontSize:'14px' }}>Lädt…</div>
+              <div style={{ padding:'48px', textAlign:'center', color:'#475569', fontSize:'14px' }}>Lädt…</div>
             ) : vehicles.length === 0 ? (
               <div style={{ padding: isMobile ? '40px 20px' : '64px 40px', textAlign:'center' }}>
                 <div style={{ width:'52px', height:'52px', background:'#f1f5f9', border:'1px solid #e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', borderRadius:'4px' }}>
-                  <Car size={24} color="#94a3b8" />
+                  <Car size={24} color="#475569" />
                 </div>
                 <div style={{ fontSize:'17px', fontWeight:'800', color:'#0f172a', marginBottom:'8px' }}>Noch keine Inserate</div>
                 <p style={{ color:'#64748b', fontSize:'14px', marginBottom:'24px', lineHeight:1.6 }}>
@@ -215,7 +215,7 @@ function DashboardContent() {
                         </div>
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontSize:'14px', fontWeight:'700', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{car.brand}</div>
-                          <div style={{ fontSize:'12px', color:'#94a3b8', marginTop:'1px' }}>{car.date}</div>
+                          <div style={{ fontSize:'12px', color:'#475569', marginTop:'1px' }}>{car.date}</div>
                         </div>
                         <div style={{ textAlign:'right', flexShrink:0 }}>
                           <div style={{ fontSize:'14px', fontWeight:'800', color:'#4f46e5' }}>{car.price}</div>
@@ -243,7 +243,7 @@ function DashboardContent() {
                         </div>
                         <div style={{ minWidth:0 }}>
                           <div style={{ fontSize:'14px', fontWeight:'700', color:'#0f172a', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{car.brand}</div>
-                          <div style={{ fontSize:'12px', color:'#94a3b8', marginTop:'2px' }}>{car.date}</div>
+                          <div style={{ fontSize:'12px', color:'#475569', marginTop:'2px' }}>{car.date}</div>
                         </div>
                       </div>
                       <div style={{ fontSize:'15px', fontWeight:'800', color:'#4f46e5', letterSpacing:'-0.3px' }}>{car.price}</div>
@@ -272,7 +272,7 @@ function DashboardContent() {
 
             {vehicles.length > 0 && (
               <div style={{ padding: isMobile ? '10px 16px' : '11px 20px', borderTop:'1px solid #f1f5f9', background:'#fafbfc', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:'12px', color:'#94a3b8' }}>{total} Inserat{total !== 1 ? 'e' : ''}</span>
+                <span style={{ fontSize:'12px', color:'#475569' }}>{total} Inserat{total !== 1 ? 'e' : ''}</span>
                 <Link href="/dashboard/gallery" style={{ textDecoration:'none', fontSize:'13px', fontWeight:'700', color:'#6366f1', display:'flex', alignItems:'center', gap:'4px' }}>
                   Alle verwalten <ChevronRight size={13} />
                 </Link>
@@ -284,7 +284,7 @@ function DashboardContent() {
           {!isMobile && (
             <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
               <div style={{ background:'#0f172a', padding:'20px', borderRadius:'4px' }}>
-                <div style={{ fontSize:'11px', fontWeight:'700', color:'#334155', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'14px' }}>Ablauf</div>
+                <div style={{ fontSize:'11px', fontWeight:'700', color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'14px' }}>Ablauf</div>
                 {[
                   { n:'01', label:'FIN scannen',     sub:'Alle Daten auto.' },
                   { n:'02', label:'Fotos hochladen', sub:'KI-Hintergrund'   },
@@ -292,10 +292,10 @@ function DashboardContent() {
                   { n:'04', label:'Live schalten',   sub:'mobile.de & AS24' },
                 ].map((s, i) => (
                   <div key={i} style={{ display:'flex', gap:'14px', padding:'9px 0', borderBottom: i < 3 ? '1px solid #1e293b' : 'none' }}>
-                    <div style={{ fontSize:'11px', fontWeight:'800', color:'#334155', paddingTop:'2px', flexShrink:0 }}>{s.n}</div>
+                    <div style={{ fontSize:'11px', fontWeight:'800', color:'#94a3b8', paddingTop:'2px', flexShrink:0 }}>{s.n}</div>
                     <div>
                       <div style={{ fontSize:'13px', fontWeight:'700', color:'#e2e8f0' }}>{s.label}</div>
-                      <div style={{ fontSize:'11px', color:'#475569', marginTop:'1px' }}>{s.sub}</div>
+                      <div style={{ fontSize:'11px', color:'#94a3b8', marginTop:'1px' }}>{s.sub}</div>
                     </div>
                   </div>
                 ))}
@@ -318,7 +318,7 @@ function DashboardContent() {
               </div>
 
               <div style={{ background:'#fff', border:'1px solid #e2e8f0', padding:'18px', borderRadius:'4px' }}>
-                <div style={{ fontSize:'11px', fontWeight:'700', color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'12px' }}>Export-Ziele</div>
+                <div style={{ fontSize:'11px', fontWeight:'700', color:'#475569', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:'12px' }}>Export-Ziele</div>
                 {[
                   { name:'mobile.de',   color:'#f97316' },
                   { name:'AutoScout24', color:'#3b82f6' },
@@ -328,7 +328,7 @@ function DashboardContent() {
                     <span style={{ fontSize:'13px', fontWeight:'600', color:'#0f172a' }}>{p.name}</span>
                     <div style={{ display:'flex', alignItems:'center', gap:'5px' }}>
                       <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:p.color }} />
-                      <span style={{ fontSize:'11px', color:'#94a3b8' }}>Bereit</span>
+                      <span style={{ fontSize:'11px', color:'#475569' }}>Bereit</span>
                     </div>
                   </div>
                 ))}

@@ -42,7 +42,7 @@ const PLANS = [
     listingsSub: 'je Inserat',
     desc: 'Grundgebühr plus Einzelpreis. Passend bei wenigen Fahrzeugen.',
     icon: Sparkles,
-    color: '#64748b',
+    color: '#334155',
     bg: '#f8fafc',
     features: [
       'Fahrzeugschein-Scan',
@@ -117,7 +117,7 @@ function BilderRechner({ inklusive, farbe }: { inklusive: number; farbe: string 
         width: 28, height: 28, borderRadius: 7, flexShrink: 0,
         border: `1px solid ${aus ? '#e2e8f0' : '#cbd5e1'}`,
         background: '#fff', cursor: aus ? 'default' : 'pointer',
-        color: aus ? '#cbd5e1' : '#475569',
+        color: aus ? '#475569' : '#334155',
         fontSize: 16, fontWeight: 700, lineHeight: 1, fontFamily: F,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>{zeichen}</button>
@@ -127,7 +127,7 @@ function BilderRechner({ inklusive, farbe }: { inklusive: number; farbe: string 
     <div style={{
       marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9',
     }}>
-      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', marginBottom: 8 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
         Studio-Bilder je Inserat
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -150,16 +150,16 @@ function BilderRechner({ inklusive, farbe }: { inklusive: number; farbe: string 
               <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: farbe }}>
                 + {centAlsEuro(extraCent)}
               </span>
-              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8' }}>
+              <span style={{ display: 'block', fontSize: 11, color: '#475569' }}>
                 je Inserat
               </span>
             </>
           ) : (
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>alles enthalten</span>
+            <span style={{ fontSize: 12, color: '#475569' }}>alles enthalten</span>
           )}
         </span>
       </div>
-      <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 7 }}>
+      <div style={{ fontSize: 11.5, color: '#475569', marginTop: 7 }}>
         {inklusive} enthalten · jedes weitere {PREIS_EXTRA_BILD_CENT} Cent
       </div>
     </div>
@@ -237,7 +237,7 @@ function PlanCard({
           </div>
           <div>
             <div style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.3px' }}>{plan.name}</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginTop: '2px' }}>{plan.listings} {plan.listingsSub}</div>
+            <div style={{ fontSize: '11px', color: '#475569', fontWeight: '600', marginTop: '2px' }}>{plan.listings} {plan.listingsSub}</div>
           </div>
         </div>
 
@@ -248,13 +248,13 @@ function PlanCard({
           ) : price === 0 ? (
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
               <span style={{ fontSize: compact ? '38px' : '48px', fontWeight: '900', color: '#0f172a', letterSpacing: '-3px', lineHeight: 1 }}>0</span>
-              <span style={{ fontSize: '20px', fontWeight: '700', color: '#94a3b8' }}>€</span>
+              <span style={{ fontSize: '20px', fontWeight: '700', color: '#475569' }}>€</span>
             </div>
           ) : (
             <div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
                 <span style={{ fontSize: compact ? '38px' : '48px', fontWeight: '900', color: '#0f172a', letterSpacing: '-3px', lineHeight: 1 }}>{price % 1 === 0 ? price : price.toFixed(0)}</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#94a3b8' }}>€<span style={{ fontSize: '13px', fontWeight: '500', color: '#cbd5e1' }}>/Mo.</span></span>
+                <span style={{ fontSize: '16px', fontWeight: '700', color: '#475569' }}>€<span style={{ fontSize: '13px', fontWeight: '500', color: '#475569' }}>/Mo.</span></span>
               </div>
               {billing === 'yearly' && savedPct > 0 && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#16a34a', fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '8px', marginTop: '8px' }}>
@@ -263,7 +263,7 @@ function PlanCard({
               )}
             </div>
           )}
-          <p style={{ fontSize: '13px', color: '#94a3b8', margin: '10px 0 0', lineHeight: 1.6 }}>{plan.desc}</p>
+          <p style={{ fontSize: '13px', color: '#475569', margin: '10px 0 0', lineHeight: 1.6 }}>{plan.desc}</p>
         </div>
 
         {/* CTA */}
@@ -290,7 +290,7 @@ function PlanCard({
             <div style={{
               width: '100%', padding: '13px', borderRadius: '12px', textAlign: 'center',
               fontWeight: '600', fontSize: '14px', boxSizing: 'border-box' as const,
-              border: '1.5px dashed #e2e8f0', color: '#94a3b8',
+              border: '1.5px dashed #e2e8f0', color: '#475569',
             }}>
               Kostenlos verfügbar
             </div>
@@ -322,7 +322,7 @@ function PlanCard({
           {plan.missing.map(f => (
             <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
               <X size={13} color="#e2e8f0" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>{f}</span>
+              <span style={{ fontSize: '13px', color: '#475569', lineHeight: 1.5 }}>{f}</span>
             </div>
           ))}
         </div>
@@ -419,13 +419,13 @@ function PricingContent() {
 
         {/* ── Header ── */}
         <div style={{ textAlign: 'center', marginBottom: isMobile ? '28px' : '48px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: '#6366f1', fontSize: '11px', fontWeight: '700', padding: '5px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '16px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: '#4f46e5', fontSize: '11px', fontWeight: '700', padding: '5px 14px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '16px' }}>
             <Sparkles size={11} /> Preise
           </div>
           <h1 style={{ fontSize: isMobile ? '24px' : '36px', fontWeight: '900', margin: '0 0 10px', letterSpacing: '-1px', color: '#0f172a', lineHeight: 1.1 }}>
             Transparent. Fair. Ohne Abo-Fallen.
           </h1>
-          <p style={{ color: '#64748b', fontSize: '15px', margin: '0 0 32px', lineHeight: 1.6 }}>
+          <p style={{ color: '#334155', fontSize: '15px', margin: '0 0 32px', lineHeight: 1.6 }}>
             Privatperson oder Händler — du zahlst nur was du brauchst.
           </p>
 
@@ -436,7 +436,7 @@ function PricingContent() {
               { icon: Clock, text: 'Jederzeit kündbar' },
               { icon: CheckCircle2, text: 'Keine Mindestlaufzeit' },
             ].map(({ icon: Icon, text }) => (
-              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', fontWeight: '600' }}>
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#334155', fontWeight: '600' }}>
                 <Icon size={13} color="#10b981" /> {text}
               </div>
             ))}
@@ -558,7 +558,7 @@ function PricingContent() {
         {/* ── Divider ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '32px 0 24px' }}>
           <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-          <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.12em', whiteSpace: 'nowrap' }}>
             Händler & Unternehmen — Monats-Abos
           </span>
           <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
@@ -566,7 +566,7 @@ function PricingContent() {
 
         {/* ── Plan Grid ── */}
         {isMobile && (
-          <div style={{ textAlign: 'center', fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '8px', letterSpacing: '0.05em' }}>
+          <div style={{ textAlign: 'center', fontSize: '11px', color: '#475569', fontWeight: '600', marginBottom: '8px', letterSpacing: '0.05em' }}>
             ← Wischen zum Vergleichen →
           </div>
         )}
@@ -613,7 +613,7 @@ function PricingContent() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: '700', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', width: '30%' }}>Feature</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: '700', color: '#334155', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', width: '30%' }}>Feature</th>
                   {['Privat', 'Ohne Paket', 'Paket S', 'Paket M', 'Paket L'].map(n => (
                     <th key={n} style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '700', color: n === 'Paket M' ? '#7c3aed' : '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{n}</th>
                   ))}
@@ -676,7 +676,7 @@ function PricingContent() {
                   <ChevronDown size={15} color="#94a3b8" style={{ flexShrink: 0, transform: openFaq === i ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                 </button>
                 {openFaq === i && (
-                  <div style={{ padding: '0 18px 15px', fontSize: '13px', color: '#64748b', lineHeight: 1.7, borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ padding: '0 18px 15px', fontSize: '13px', color: '#334155', lineHeight: 1.7, borderTop: '1px solid #f1f5f9' }}>
                     {faq.a}
                   </div>
                 )}
@@ -701,7 +701,7 @@ function PricingContent() {
             </p>
             <a href="mailto:support@2fast4sale.de" style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px',
-              background: '#6366f1', color: '#fff', padding: '13px 28px',
+              background: '#4f46e5', color: '#fff', padding: '13px 28px',
               borderRadius: '10px', fontWeight: '700', textDecoration: 'none',
               fontSize: '14px', boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
             }}>

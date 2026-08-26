@@ -226,7 +226,19 @@ button {
   font-weight: 700;          /* 700 reicht für Inter — sieht sauberer aus als 800+ */
   letter-spacing: -0.8px;
   line-height: 1.2;
-  background: linear-gradient(110deg, #ffffff 0%, #93c5fd 50%, #a78bfa 100%);
+  /*
+   * Der Verlauf lief von Weiss ueber Hellblau nach Flieder — gemacht
+   * fuer dunklen Grund. Auf der jetzt hellen Seite war die Ueberschrift
+   * jeder Seite damit fast unsichtbar.
+   *
+   * Und sie faellt durch jedes Kontrastmessgeraet: Text mit
+   * `-webkit-text-fill-color: transparent` traegt seine Farbe im
+   * Hintergrundbild, wo keine Pruefung sie findet. Solche Stellen muss
+   * man ansehen, nicht messen.
+   *
+   * Jetzt von Schwarz zum Akzent — derselbe Effekt, nur andersherum.
+   */
+  background: linear-gradient(110deg, #000000 0%, #1e1b4b 55%, #4f46e5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

@@ -7,12 +7,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '../../../../lib/supabase/client';
+import { G } from '../../listing/gestaltung';
 
 const F = '"Inter", -apple-system, sans-serif';
 
 const BG_OPTIONS = [
   { id: 'studio_white',   label: 'Studio Weiß',     color: '#f8fafc', textColor: '#1e293b', tier: 'free'     },
-  { id: 'studio_grey',    label: 'Studio Grau',     color: '#64748b', textColor: '#fff',    tier: 'free'     },
+  { id: 'studio_grey',    label: 'Studio Grau',     color: '#334155', textColor: '#fff',    tier: 'free'     },
   { id: 'studio_dark',    label: 'Studio Dunkel',   color: '#1e293b', textColor: '#fff',    tier: 'free'     },
   { id: 'studio_navy',    label: 'Midnight Navy',   color: '#0f172a', textColor: '#60a5fa', tier: 'pro'      },
   { id: 'studio_beige',   label: 'Warm Beige',      color: '#d4c5a9', textColor: '#1e293b', tier: 'pro'      },
@@ -100,28 +101,28 @@ export default function DealerSettingsPage() {
       </div>
       <div>
         <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{title}</div>
-        {sub && <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{sub}</div>}
+        {sub && <div style={{ fontSize: '13px', color: '#334155', marginTop: '2px' }}>{sub}</div>}
       </div>
     </div>
   );
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '12px', color: '#64748b', fontFamily: F, background: '#f0f2f5' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', gap: '12px', color: '#334155', fontFamily: F, background: '#f0f2f5' }}>
       <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> Wird geladen…
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: '720px', margin: '0 auto', color: '#0f172a', fontFamily: F, minHeight: '100vh', background: '#f0f2f5' }}>
+    <div style={{ padding: '28px 32px', maxWidth: G.breite, margin: '0 auto', color: '#0f172a', fontFamily: F, minHeight: '100vh', background: '#f0f2f5' }}>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-        <Link href="/dashboard/settings" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', background: '#ffffff', border: '1px solid #e2e8f0', color: '#64748b', textDecoration: 'none', flexShrink: 0 }}>
+        <Link href="/dashboard/settings" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', background: '#ffffff', border: '1px solid #e2e8f0', color: '#334155', textDecoration: 'none', flexShrink: 0 }}>
           <ArrowLeft size={16} />
         </Link>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, letterSpacing: '-0.5px' }}>Händler-Profil</h1>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>Firmendaten, KI-Stil und Standard-Einstellungen</p>
+          <p style={{ margin: 0, color: '#334155', fontSize: '14px' }}>Firmendaten, KI-Stil und Standard-Einstellungen</p>
         </div>
       </div>
 
@@ -132,7 +133,7 @@ export default function DealerSettingsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
               <Building2 size={11} style={{ display: 'inline', marginRight: '5px' }} /> Autohaus / Firmenname *
             </label>
             <input style={inp} placeholder="z. B. Autohaus Müller GmbH"
@@ -143,7 +144,7 @@ export default function DealerSettingsPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
                 <User size={11} style={{ display: 'inline', marginRight: '5px' }} /> Ansprechpartner
               </label>
               <input style={inp} placeholder="Max Müller"
@@ -152,7 +153,7 @@ export default function DealerSettingsPage() {
                 onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
                 <Phone size={11} style={{ display: 'inline', marginRight: '5px' }} /> Telefon
               </label>
               <input style={inp} placeholder="+49 176 ..."
@@ -164,13 +165,13 @@ export default function DealerSettingsPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
                 <Mail size={11} style={{ display: 'inline', marginRight: '5px' }} /> E-Mail (Kontakt)
               </label>
               <input style={{ ...inp, opacity: 0.5, cursor: 'not-allowed' }} value={profile.email} disabled />
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
                 <Globe size={11} style={{ display: 'inline', marginRight: '5px' }} /> Website
               </label>
               <input style={inp} placeholder="https://autohaus-mueller.de"
@@ -181,7 +182,7 @@ export default function DealerSettingsPage() {
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.09em', display: 'block', marginBottom: '7px' }}>
               <MapPin size={11} style={{ display: 'inline', marginRight: '5px' }} /> Adresse
             </label>
             <input style={inp} placeholder="Musterstraße 1, 12345 Berlin"
@@ -201,7 +202,7 @@ export default function DealerSettingsPage() {
           'rgba(234,179,8,0.12)'
         )}
 
-        <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.12)', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px', fontSize: '14px', color: '#64748b', lineHeight: 1.7 }}>
+        <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.12)', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px', fontSize: '14px', color: '#334155', lineHeight: 1.7 }}>
           💡 Schreib einen Beispiel-Titel für ein konkretes Fahrzeug — genau so wie du ihn auf mobile.de haben möchtest. Die KI übernimmt Struktur, Sonderzeichen und Schreibweise.
         </div>
 
@@ -220,7 +221,7 @@ export default function DealerSettingsPage() {
 
         {aiTitle && (
           <div style={{ marginTop: '10px', padding: '10px 14px', background: 'rgba(234,179,8,0.05)', border: '1px solid rgba(234,179,8,0.1)', borderRadius: '10px' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Vorschau</div>
+            <div style={{ fontSize: '11px', color: '#334155', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Vorschau</div>
             <div style={{ fontSize: '16px', color: '#fde68a', fontWeight: '600' }}>{aiTitle}</div>
           </div>
         )}
@@ -235,7 +236,7 @@ export default function DealerSettingsPage() {
           'rgba(139,92,246,0.12)'
         )}
 
-        <div style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.12)', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px', fontSize: '14px', color: '#64748b', lineHeight: 1.7 }}>
+        <div style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.12)', borderRadius: '12px', padding: '14px 16px', marginBottom: '14px', fontSize: '14px', color: '#334155', lineHeight: 1.7 }}>
           💡 Schreib einfach einen kurzen Beispieltext — wie du normalerweise ein Auto beschreiben würdest. Sachlich, emotional, kurz, ausführlich — dein Stil.
         </div>
 
@@ -286,7 +287,7 @@ export default function DealerSettingsPage() {
                   </div>
                 )}
                 {locked && (
-                  <div style={{ position: 'absolute', top: '7px', right: '7px', fontSize: '9px', fontWeight: '700', background: b.tier === 'business' ? '#92400e' : 'rgba(139,92,246,0.85)', color: '#0f172a', padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase' }}>
+                  <div style={{ position: 'absolute', top: '7px', right: '7px', fontSize: '9px', fontWeight: '700', background: b.tier === 'business' ? '#92400e' : 'rgba(109,40,217,0.92)', color: '#ffffff', padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase' }}>
                     {b.tier.toUpperCase()}
                   </div>
                 )}
@@ -305,13 +306,13 @@ export default function DealerSettingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
             <div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#e8f1fa' }}>Firmenname als Wasserzeichen</div>
-              <div style={{ fontSize: '14px', color: '#64748b', marginTop: '3px' }}>
-                Zeigt „<span style={{ color: '#8b5cf6' }}>{profile.company || 'Dein Autohaus'}</span>" unten links auf jedem Foto
+              <div style={{ fontSize: '14px', color: '#334155', marginTop: '3px' }}>
+                Zeigt „<span style={{ color: '#7c3aed' }}>{profile.company || 'Dein Autohaus'}</span>" unten links auf jedem Foto
               </div>
             </div>
             <button
               onClick={() => setWatermark(w => !w)}
-              style={{ width: '48px', height: '26px', borderRadius: '13px', border: 'none', cursor: 'pointer', background: watermark ? '#8b5cf6' : '#1e293b', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+              style={{ width: '48px', height: '26px', borderRadius: '13px', border: 'none', cursor: 'pointer', background: watermark ? '#7c3aed' : '#1e293b', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
             >
               <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', transition: 'left 0.2s', left: watermark ? '25px' : '3px' }} />
             </button>
@@ -319,9 +320,9 @@ export default function DealerSettingsPage() {
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '12px' }}>
             <div style={{ fontSize: '14px', color: '#6b7280', flex: 1 }}>
-              Ab <strong style={{ color: '#8b5cf6' }}>Premium</strong> verfügbar.
+              Ab <strong style={{ color: '#7c3aed' }}>Premium</strong> verfügbar.
             </div>
-            <Link href="/dashboard/pricing" style={{ background: '#7c3aed', color: '#0f172a', padding: '7px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            <Link href="/dashboard/pricing" style={{ background: '#6d28d9', color: '#ffffff', padding: '7px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               Upgraden
             </Link>
           </div>

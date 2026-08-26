@@ -27,7 +27,8 @@ const BORD = G.linieLeise;
 const TH   = G.text;
 const TS   = G.leise;
 const TD   = G.blass;
-const IND  = '#6366f1';
+/* 6,3:1 auf Weiss. #6366f1 stand hier und schaffte nur 4,47:1. */
+const IND  = G.akzent;
 
 type Platform = 'mobile' | 'autoscout';
 type ViewMode = 'desktop' | 'phone';
@@ -67,12 +68,22 @@ function Confetti() {
 }
 
 /* ─── Score Ring ─────────────────────────────────────────────────────────── */
-function Ring({ score, size = 96 }: { score: number; size?: number }) {
+/**
+ * Der Ring steht an zwei Stellen — und die haben verschiedene Gründe.
+ *
+ * In der linken Spalte sitzt er auf Weiss, in der Schrittleiste oben
+ * auf dem dunklen Rahmen. Mit einem Farbsatz fuer beide war die Zahl
+ * an einer der beiden Stellen zwangslaeufig unlesbar: gemessen 1,76:1
+ * in der Schrittleiste.
+ */
+function Ring({ score, size = 96, aufDunkel = false }: { score: number; size?: number; aufDunkel?: boolean }) {
   const r = size/2 - 8, sw = 7, c = 2 * Math.PI * r;
-  const color = score >= 80 ? '#10b981' : score >= 55 ? '#f59e0b' : '#ef4444';
+  const color = aufDunkel
+    ? (score >= 80 ? G.rahmenGut : score >= 55 ? G.rahmenLuecke : G.rahmenFehler)
+    : (score >= 80 ? G.gut       : score >= 55 ? G.luecke       : G.fehler);
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={G.linieLeise} strokeWidth={sw} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={aufDunkel ? G.rahmenLinie : G.linieLeise} strokeWidth={sw} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={sw}
         strokeDasharray={`${(score/100)*c} ${c}`} strokeLinecap="round"
         style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)' }} />
@@ -176,6 +187,22 @@ function BrowserFrame({ url, children }: { url: string; children: React.ReactNod
   );
 }
 
+/* ════════════════════════════════════════════════════════════════════
+ *  Die beiden Portal-Vorschauen — mobile.de und AutoScout24
+ *
+ *  ACHTUNG: Die festen Farbwerte hier unten sind kein Versehen und
+ *  gehören NICHT an das Farbschema der Anwendung angeglichen.
+ *
+ *  Diese Blöcke bilden nach, wie das Inserat auf den echten Portalen
+ *  aussehen wird: das Orange von mobile.de (#ff6600), das Blau und
+ *  Graublau von AutoScout24 (#003781, #f56700, #7a8fa6). Der Händler
+ *  soll hier sein Inserat so sehen, wie der Käufer es sehen wird —
+ *  färbt man es in die eigenen Hausfarben um, ist es keine Vorschau
+ *  mehr, sondern eine Behauptung.
+ *
+ *  Wer hier Kontraste prüft, prüft die Portale, nicht diese Anwendung.
+ * ════════════════════════════════════════════════════════════════════ */
+
 /* ─── mobile.de listing ──────────────────────────────────────────────────── */
 function MobileDeListing({
   title, price, brand, km, year, fuel, gearbox, power, carColor, desc, equipment, photos,
@@ -193,7 +220,7 @@ function MobileDeListing({
   const fmtPs = power ? `${power} PS (${Math.round(Number(power)/1.36)} kW)` : '—';
   const fmtPrice = price ? `${Number(price).toLocaleString('de-DE')} €` : '—';
   return (
-    <div style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', background: '#fff', fontSize: '13px' }}>
+    <div data-portal="mobile.de" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', background: '#fff', fontSize: '13px' }}>
       {/* Top Nav */}
       <div style={{ background: '#ff6600', padding: '0 16px', height: '44px', display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ fontWeight: '900', color: '#fff', fontSize: '20px', letterSpacing: '-0.5px', fontFamily: '"Helvetica Neue", Arial, sans-serif' }}>
@@ -378,7 +405,7 @@ function AutoScoutListing({
   const fmtPrice = price ? `${Number(price).toLocaleString('de-DE')} €` : '—';
   const monthlyRate = price ? `${Math.round(Number(price) / 60).toLocaleString('de-DE')} €/Monat` : null;
   return (
-    <div style={{ fontFamily: '"Source Sans Pro", "Open Sans", Arial, sans-serif', background: '#fff', fontSize: '13px' }}>
+    <div data-portal="autoscout24" style={{ fontFamily: '"Source Sans Pro", "Open Sans", Arial, sans-serif', background: '#fff', fontSize: '13px' }}>
       {/* Header */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e0e5ed', padding: '0 16px', height: '48px', display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ fontWeight: '900', fontSize: '18px', letterSpacing: '-0.3px' }}>
@@ -699,7 +726,7 @@ function Step4Inner() {
           {brand || 'Fahrzeug'}<br />
           <span style={{ background: 'linear-gradient(135deg, #818cf8, #c4b5fd, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>ist bereit.</span>
         </h1>
-        <p style={{ color: G.leise, fontSize: '15px', margin: '0 0 40px', lineHeight: 1.7, maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
+        <p style={{ color: G.rahmenLeise, fontSize: '15px', margin: '0 0 40px', lineHeight: 1.7, maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
           Dein Inserat ist gespeichert. Ab September wird es automatisch auf{' '}
           <span style={{ color: '#ff6600', fontWeight: '700' }}>Mobile.de</span> und{' '}
           <span style={{ color: '#1a77c9', fontWeight: '700' }}>AutoScout24</span> erscheinen.
@@ -715,13 +742,13 @@ function Step4Inner() {
             <div key={sub} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '16px', padding: '16px 20px', textAlign: 'center', minWidth: '95px' }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>{icon}</div>
               <div style={{ fontSize: '26px', fontWeight: '900', color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>{val}</div>
-              <div style={{ fontSize: '10px', color: G.leise, marginTop: '3px' }}>{sub}</div>
+              <div style={{ fontSize: '10px', color: G.rahmenLeise, marginTop: '3px' }}>{sub}</div>
             </div>
           ))}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <button onClick={() => router.push('/dashboard')} style={{ padding: '15px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '13px', color: G.leise, fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: F, transition: 'background 0.2s' }}
+          <button onClick={() => router.push('/dashboard')} style={{ padding: '15px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '13px', color: G.rahmenLeise, fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: F, transition: 'background 0.2s' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}>
             Zum Dashboard
@@ -737,7 +764,7 @@ function Step4Inner() {
 
   /* ── Editor ─────────────────────────────────────────────────────────────── */
   const charCount = desc.length;
-  const qualColor = charCount > 500 ? '#10b981' : charCount > 250 ? '#3b82f6' : charCount > 100 ? '#f59e0b' : '#ef4444';
+  const qualColor = charCount > 500 ? G.gut : charCount > 250 ? G.akzent : charCount > 100 ? G.luecke : G.fehler;
   const qualLabel = charCount > 500 ? 'Sehr gut' : charCount > 250 ? 'Gut' : charCount > 100 ? 'OK' : 'Zu kurz';
 
   /*
@@ -773,23 +800,31 @@ function Step4Inner() {
     <div style={{ minHeight: '100vh', background: BG, fontFamily: F }}>
 
       {/* Header */}
-      <div style={{ background: CARD, borderBottom: `1px solid ${BORD}`, height: '58px', display: 'flex', alignItems: 'center', padding: '0 20px', position: 'sticky', top: 0, zIndex: 40, gap: '14px' }}>
-        <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: TS, cursor: 'pointer', fontSize: '13px', fontFamily: F, fontWeight: '600', padding: '6px 8px', borderRadius: '7px', flexShrink: 0 }}
+      <div style={{ background: G.rahmenFlaeche, borderBottom: `1px solid ${G.rahmenLinie}`, height: '58px', display: 'flex', alignItems: 'center', padding: '0 20px', position: 'sticky', top: 0, zIndex: 40, gap: '14px' }}>
+        <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: G.rahmenLeise, cursor: 'pointer', fontSize: '13px', fontFamily: F, fontWeight: '600', padding: '6px 8px', borderRadius: '7px', flexShrink: 0 }}
           onMouseEnter={e => (e.currentTarget.style.background = SURF)} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
           <ChevronLeft size={15} /> Zurück
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flex: 1, justifyContent: 'center' }}>
           {(isMobile ? ['Daten','Fotos','KI','Fertig'] : ['Fahrzeugdaten', 'Fotos', 'KI-Text', 'Fertigstellen']).map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: isMobile ? '4px 6px' : '4px 10px', borderRadius: '20px', background: i === 3 ? 'rgba(99,102,241,0.1)' : 'transparent', border: i === 3 ? '1px solid rgba(99,102,241,0.25)' : '1px solid transparent' }}>
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: i < 3 ? '#10b981' : IND, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '900', color: '#fff' }}>{i < 3 ? '✓' : '4'}</div>
-                {!isMobile && <span style={{ fontSize: '12px', fontWeight: i === 3 ? '700' : '500', color: i === 3 ? IND : '#10b981', whiteSpace: 'nowrap' }}>{s}</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: isMobile ? '4px 6px' : '4px 10px', borderRadius: '20px', background: i === 3 ? 'rgba(124,138,255,0.14)' : 'transparent', border: i === 3 ? `1px solid ${G.rahmenAkzent}44` : '1px solid transparent' }}>
+                {/*
+                  Dunkle Ziffer auf hellem Kreis, nicht weisse.
+
+                  Die Rahmenfarben sind hell, damit sie auf dem dunklen
+                  Grund lesbar sind — weisse Schrift darauf kommt dann
+                  auf 1,7:1. Der Grundton der Seite als Schriftfarbe
+                  ergibt 6,5:1.
+                */}
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: i < 3 ? G.rahmenGut : G.rahmenAkzent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '900', color: G.grund }}>{i < 3 ? '✓' : '4'}</div>
+                {!isMobile && <span style={{ fontSize: '12px', fontWeight: i === 3 ? '700' : '500', color: i === 3 ? G.rahmenAkzent : G.rahmenGut, whiteSpace: 'nowrap' }}>{s}</span>}
               </div>
-              {i < 3 && <ChevronRight size={11} color="#cbd5e1" />}
+              {i < 3 && <ChevronRight size={11} color={G.rahmenLinie} />}
             </div>
           ))}
         </div>
-        <div style={{ flexShrink: 0 }}><Ring score={score} size={48} /></div>
+        <div style={{ flexShrink: 0 }}><Ring score={score} size={48} aufDunkel /></div>
       </div>
 
       {/* 3-column → 1-column on mobile */}
@@ -802,7 +837,7 @@ function Step4Inner() {
           {/* Ring centered */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '18px', gap: '8px' }}>
             <Ring score={score} size={96} />
-            <div style={{ fontSize: '13px', fontWeight: '800', color: score >= 80 ? '#10b981' : score >= 55 ? '#f59e0b' : '#ef4444' }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', color: score >= 80 ? G.gut : score >= 55 ? G.luecke : G.fehler }}>
               {score >= 80 ? 'Top Inserat' : score >= 55 ? 'Sieht gut aus' : 'Fast fertig'}
             </div>
           </div>
@@ -811,14 +846,14 @@ function Step4Inner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
             {checks.map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '10px 11px', background: c.ok ? 'rgba(16,185,129,0.05)' : '#fafafa', border: `1px solid ${c.ok ? 'rgba(16,185,129,0.2)' : BORD}`, borderRadius: '10px', transition: 'all 0.4s' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: c.ok ? 'rgba(16,185,129,0.12)' : G.linieLeise, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: c.ok ? '#10b981' : TD, transition: 'all 0.4s' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: c.ok ? 'rgba(16,185,129,0.12)' : G.linieLeise, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: c.ok ? G.gut : TD, transition: 'all 0.4s' }}>
                   {c.ok ? <CheckCircle2 size={14} strokeWidth={2.5} /> : c.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: c.ok ? '#059669' : TH }}>{c.label}</div>
-                  <div style={{ fontSize: '10px', color: c.ok ? '#6ee7b7' : TD, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.detail}</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: c.ok ? G.gut : TH }}>{c.label}</div>
+                  <div style={{ fontSize: '10px', color: c.ok ? G.leise : TD, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.detail}</div>
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: c.ok ? '#10b981' : G.leise }}>+{c.pts}</span>
+                <span style={{ fontSize: '10px', fontWeight: '800', color: c.ok ? G.gut : G.leise }}>+{c.pts}</span>
               </div>
             ))}
           </div>
@@ -827,7 +862,7 @@ function Step4Inner() {
           <div style={{ padding: '14px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', borderRadius: '12px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontSize: '11px', color: G.leise, fontWeight: '700' }}>Inserat-Score</span>
-              <span style={{ fontSize: '13px', fontWeight: '900', color: score >= 80 ? '#10b981' : '#f59e0b' }}>{score}/100</span>
+              <span style={{ fontSize: '13px', fontWeight: '900', color: score >= 80 ? G.gut : G.luecke }}>{score}/100</span>
             </div>
             <div style={{ height: '7px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${score}%`, background: score >= 80 ? 'linear-gradient(90deg,#10b981,#34d399)' : score >= 55 ? 'linear-gradient(90deg,#f59e0b,#fbbf24)' : 'linear-gradient(90deg,#ef4444,#f87171)', borderRadius: '4px', transition: 'width 1s cubic-bezier(.4,0,.2,1)' }} />
@@ -846,15 +881,21 @@ function Step4Inner() {
             die Navigation darunter. */}
         <div style={{ padding: isMobile ? '18px 14px 200px' : '26px 26px 120px', overflowY: 'auto' }}>
           <div style={{ marginBottom: '22px' }}>
-            <h1 style={{ fontSize: '23px', fontWeight: '900', color: TH, margin: '0 0 3px', letterSpacing: '-0.6px' }}>Inserat fertigstellen</h1>
-            <p style={{ color: TS, fontSize: '13px', margin: 0 }}>{brand && <strong style={{ color: TH }}>{brand} · </strong>}{km && `${Number(km).toLocaleString('de-DE')} km · `}{editPrice && `${Number(editPrice).toLocaleString('de-DE')} €`}</p>
+            {/*
+              Der Kopf der mittleren Spalte sitzt direkt auf dem dunklen
+              Grund, nicht auf einer Karte — deshalb die Rahmenfarben.
+              Mit TH/TS stand hier dunkler Text auf dunklem Grund, etwa
+              1,1:1: sichtbar nur, wenn man weiss, dass da etwas steht.
+            */}
+            <h1 style={{ fontSize: '23px', fontWeight: '900', color: G.rahmenText, margin: '0 0 3px', letterSpacing: '-0.6px' }}>Inserat fertigstellen</h1>
+            <p style={{ color: G.rahmenLeise, fontSize: '13px', margin: 0 }}>{brand && <strong style={{ color: G.rahmenText }}>{brand} · </strong>}{km && `${Number(km).toLocaleString('de-DE')} km · `}{editPrice && `${Number(editPrice).toLocaleString('de-DE')} €`}</p>
           </div>
 
           {/* Titel */}
           <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: '14px', padding: '18px', marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '9px' }}>
               <label style={{ fontSize: '13px', fontWeight: '700', color: TH, display: 'flex', alignItems: 'center', gap: '5px' }}><TagIcon size={12} color={IND} /> Inserat-Titel</label>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: title.length >= 40 && title.length <= 80 ? '#10b981' : title.length > 80 ? '#f59e0b' : TD }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: title.length >= 40 && title.length <= 80 ? G.gut : title.length > 80 ? G.luecke : TD }}>
                 {title.length}/80{title.length >= 40 && title.length <= 80 ? ' · Optimal' : title.length > 80 ? ' · Kürzen' : ''}
               </span>
             </div>
@@ -904,7 +945,7 @@ function Step4Inner() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <button onClick={copyText} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 11px', background: copied ? 'rgba(16,185,129,0.08)' : SURF, border: `1px solid ${copied ? 'rgba(16,185,129,0.2)' : BORD}`, borderRadius: '7px', color: copied ? '#10b981' : TS, fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: F, transition: 'all 0.2s' }}>
+                <button onClick={copyText} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 11px', background: copied ? 'rgba(16,185,129,0.08)' : SURF, border: `1px solid ${copied ? 'rgba(16,185,129,0.2)' : BORD}`, borderRadius: '7px', color: copied ? G.gut : TS, fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: F, transition: 'all 0.2s' }}>
                   {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied ? 'Kopiert!' : 'Kopieren'}
                 </button>
                 <button onClick={regenerate} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 11px', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.17)', borderRadius: '7px', color: IND, fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}>
@@ -952,20 +993,20 @@ function Step4Inner() {
           )}
 
           {error && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '10px', color: '#ef4444', fontSize: '13px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '10px', color: G.fehler, fontSize: '13px' }}>
               <AlertTriangle size={14} /> {error}
             </div>
           )}
         </div>
 
         {/* COL 3: Live Preview — hidden on mobile */}
-        <div style={{ borderLeft: `1px solid ${BORD}`, background: '#edf0f4', padding: '18px 16px 120px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'block' }}>
+        <div style={{ borderLeft: `1px solid ${BORD}`, background: G.erhoben, padding: '18px 16px 120px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'block' }}>
 
           {/* Controls */}
           <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
             <div style={{ display: 'flex', gap: '3px', background: 'rgba(0,0,0,0.08)', borderRadius: '9px', padding: '3px', flex: 1 }}>
               {([['mobile','mobile.de'],['autoscout','AutoScout24']] as [Platform,string][]).map(([id,label]) => (
-                <button key={id} onClick={() => setPlatform(id)} style={{ flex: 1, padding: '6px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontFamily: F, fontSize: '11px', fontWeight: '700', transition: 'all 0.2s', background: platform === id ? '#fff' : 'transparent', color: platform === id ? (id === 'mobile' ? '#ff6600' : '#003566') : TD, boxShadow: platform === id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>{label}</button>
+                <button key={id} onClick={() => setPlatform(id)} style={{ flex: 1, padding: '6px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontFamily: F, fontSize: '11px', fontWeight: '700', transition: 'all 0.2s', background: platform === id ? '#fff' : 'transparent', color: platform === id ? (id === 'mobile' ? '#c2410c' : '#003566') : G.gedämpft, boxShadow: platform === id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>{label}</button>
               ))}
             </div>
             <div style={{ display: 'flex', gap: '2px', background: 'rgba(0,0,0,0.08)', borderRadius: '9px', padding: '3px' }}>
@@ -975,7 +1016,7 @@ function Step4Inner() {
             </div>
           </div>
 
-          <div style={{ fontSize: '10px', fontWeight: '700', color: TD, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '700', color: G.gedämpft, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '14px' }}>
             {platform === 'mobile' ? 'mobile.de' : 'AutoScout24'} · {viewMode === 'desktop' ? 'Desktop' : 'iPhone'} Ansicht
           </div>
 
@@ -996,13 +1037,13 @@ function Step4Inner() {
       {/* Bottom Bar */}
       {/* Auf dem Handy ueber die Dashboard-Navigation (56 px, zIndex 200)
           heben, sonst liegt die Leiste darunter und ist nicht antippbar. */}
-      <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderTop: `1px solid ${BORD}`, padding: isMobile ? '11px 14px' : '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 50, gap: '10px' }}>
+      <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: `${G.rahmenFlaeche}f5`, backdropFilter: 'blur(20px)', borderTop: `1px solid ${G.rahmenLinie}`, padding: isMobile ? '11px 14px' : '11px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 50, gap: '10px' }}>
         <div style={{ display: 'flex', gap: '7px' }}>
           <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '10px 14px', background: SURF, border: `1px solid ${BORD}`, borderRadius: '9px', color: TS, fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}><ChevronLeft size={14} /> Zurück</button>
-          <button onClick={() => save('Entwurf')} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '10px 15px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '9px', color: '#d97706', fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}><Save size={13} /> Entwurf</button>
+          <button onClick={() => save('Entwurf')} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '10px 15px', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.30)', borderRadius: '9px', color: G.rahmenLuecke, fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}><Save size={13} /> Entwurf</button>
         </div>
         <div style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
-          <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#ff6600', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><Send size={13} /> Mobile.de</button>
+          <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#c2410c', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><Send size={13} /> Mobile.de</button>
           <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#003566', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><ExternalLink size={13} /> AutoScout24</button>
           <button onClick={() => save('Aktiv')} disabled={saving}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px', background: saving ? 'rgba(99,102,241,0.45)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: '10px', fontSize: '14px', fontWeight: '900', cursor: saving ? 'wait' : 'pointer', fontFamily: F, boxShadow: saving ? 'none' : '0 4px 24px rgba(99,102,241,0.45)', letterSpacing: '-0.2px', transition: 'all 0.2s' }}

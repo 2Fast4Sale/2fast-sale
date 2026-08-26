@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Werkzeuge und Wegwerfdaten aus der Entwicklung
+#
+# .testkonto.json enthaelt ein Passwort im Klartext — es darf unter
+# keinen Umstaenden ins Repository. Die .mjs-Dateien daneben legen
+# Konten an, loeschen Datensaetze oder starten einen Browser; sie
+# gehoeren zum Arbeiten an der Anwendung, nicht zur Anwendung.
+.testkonto.json
+.testsitzung*
+.devserver.log
+bild.mjs
+testkonto.mjs
+farben-messen.mjs
+kuendigungen-aufraeumen.mjs
+
+# Bildschirmaufnahmen aus dem Pruefen
+.*.png
