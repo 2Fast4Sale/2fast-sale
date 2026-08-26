@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
+import { BRAND_NAMES } from '../../../../lib/carDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
 import { type VehicleKind } from '../../../../lib/envkv';
 import { G } from '../gestaltung';
@@ -346,6 +347,10 @@ export default function Showroom() {
   const [envkvOffen, setEnvkvOffen]       = useState(false);
   /** Der eingelesene Schein in gross, zum Nachlesen einzelner Felder. */
   const [scheinGross, setScheinGross]     = useState(false);
+  /** Zeigt alle 69 Marken statt der zwoelf haeufigsten. */
+  const [alleMarkenOffen, setAlleMarkenOffen] = useState(false);
+  /** Zeigt alle Modelle der Marke statt der ersten acht. */
+  const [modelleOffen, setModelleOffen]   = useState(false);
 
   /*
    * Verbrauchsangaben: Pflicht zeigt sie immer. Freiwillig geoeffnet
@@ -665,8 +670,9 @@ export default function Showroom() {
                   </div>
                   {/* Entweder Schnellauswahl oder Liste, nie beides. */}
                   {!markeSuche ? (
+                    <>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: 8 }}>
-                      {TOP_MARKEN.map(m => (
+                      {(alleMarkenOffen ? BRAND_NAMES : TOP_MARKEN).map(m => (
                         <button key={m} type="button"
                           onClick={() => { setzen('brand', m); setzen('model', ''); setMarkeOffen(false); }}
                           style={{
@@ -683,6 +689,30 @@ export default function Showroom() {
                         </button>
                       ))}
                     </div>
+
+                    {/*
+                      Die zwölf häufigen zuerst, alle neunundsechzig auf
+                      Knopfdruck.
+
+                      Die Suche fand die übrigen zwar schon — aber nur,
+                      wenn man wusste, dass es sie gibt. Wer einen Dacia
+                      hereinbekommt und ihn in der Kachelansicht nicht
+                      sieht, tippt ihn eher von Hand ein, als auf gut
+                      Glück zu suchen. Und von Hand getippt heisst:
+                      "Dacia", "DACIA" oder "dacia", je nach Tag.
+                    */}
+                    <button type="button"
+                      onClick={() => setAlleMarkenOffen(!alleMarkenOffen)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        padding: '10px', border: 'none', borderTop: `1px solid ${F.linieLeise}`,
+                        background: 'transparent', cursor: 'pointer',
+                        fontFamily: F.schrift, fontSize: 12.5, fontWeight: 600, color: F.akzent,
+                      }}>
+                      <ChevronDown size={13} style={{ transform: alleMarkenOffen ? 'rotate(180deg)' : 'none' }} />
+                      {alleMarkenOffen ? 'Nur die häufigsten' : `Alle ${BRAND_NAMES.length} Marken`}
+                    </button>
+                    </>
                   ) : (
                     <div>
                       {e.markenSuchen(markeSuche).slice(0, 60).map(m => (
@@ -735,6 +765,44 @@ export default function Showroom() {
               <Eingabe erkannt={erkannt.has('model')} wert={data.model} aendern={v => setzen('model', v)}
                 platzhalter={e.modelle[0] ?? 'Golf VII'}
                 hinweis={data.brand ? undefined : 'erst Marke wählen'} />
+
+              {/*
+                Die Modelle der gewählten Marke zum Anklicken.
+                854 Modelle liegen in der Datenbank; sie standen bisher
+                nur als Platzhalter im Feld — man musste den Namen
+                kennen und richtig schreiben. Ein falsch getipptes
+                "Megane" statt "Mégane" findet bei mobile.de niemand.
+
+                Das Feld bleibt trotzdem frei beschreibbar: Für
+                Sondermodelle und was nach dem letzten Datenstand
+                erschienen ist, hilft keine Liste.
+
+                Erst ab einer gewählten Marke, und nur solange das Feld
+                leer ist — wer schon getippt hat, will nicht von einer
+                Liste überdeckt werden.
+              */}
+              {data.brand && !data.model && e.modelle.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 9 }}>
+                  {(modelleOffen ? e.modelle : e.modelle.slice(0, 8)).map(m => (
+                    <button key={m} type="button" onClick={() => setzen('model', m)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 7, cursor: 'pointer',
+                        border: `1px solid ${F.linie}`, background: 'transparent',
+                        color: F.gedämpft, fontFamily: F.schrift, fontSize: 12.5,
+                      }}>{m}</button>
+                  ))}
+                  {e.modelle.length > 8 && (
+                    <button type="button" onClick={() => setModelleOffen(!modelleOffen)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 7, cursor: 'pointer',
+                        border: 'none', background: 'transparent',
+                        color: F.akzent, fontFamily: F.schrift, fontSize: 12.5, fontWeight: 600,
+                      }}>
+                      {modelleOffen ? 'weniger' : `alle ${e.modelle.length}`}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         } />
