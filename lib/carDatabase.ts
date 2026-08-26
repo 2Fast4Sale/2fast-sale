@@ -568,6 +568,266 @@ export const CAR_DATABASE: CarBrand[] = [
     country: 'CN',
     models: ['C10', 'T03'],
   },
+  {
+    name: 'Daihatsu',
+    country: 'JP',
+    models: ['Charade', 'Copen', 'Cuore', 'Materia', 'Move', 'Sirion', 'Terios', 'YRV'],
+  },
+  {
+    name: 'Acura',
+    country: 'US',
+    models: ['ILX', 'MDX', 'RDX', 'TLX', 'NSX'],
+  },
+  {
+    name: 'Buick',
+    country: 'US',
+    models: ['Enclave', 'Encore', 'Envision', 'LaCrosse', 'Regal'],
+  },
+  {
+    name: 'GMC',
+    country: 'US',
+    models: ['Acadia', 'Canyon', 'Savana', 'Sierra', 'Terrain', 'Yukon'],
+  },
+  {
+    name: 'Hummer',
+    country: 'US',
+    models: ['H1', 'H2', 'H3'],
+  },
+  {
+    name: 'Pontiac',
+    country: 'US',
+    models: ['Firebird', 'GTO', 'Solstice', 'Trans Am'],
+  },
+  {
+    name: 'RAM',
+    country: 'US',
+    models: ['1500', '2500', '3500', 'ProMaster'],
+  },
+  {
+    name: 'Corvette',
+    country: 'US',
+    models: ['C5', 'C6', 'C7', 'C8', 'Stingray'],
+  },
+  {
+    name: 'Rivian',
+    country: 'US',
+    models: ['R1S', 'R1T'],
+  },
+  {
+    name: 'Lucid',
+    country: 'US',
+    models: ['Air', 'Gravity'],
+  },
+  {
+    name: 'Fisker',
+    country: 'US',
+    models: ['Karma', 'Ocean'],
+  },
+  {
+    name: 'Rover',
+    country: 'GB',
+    models: ['25', '45', '75', '200', '400', '600', '800', 'Streetwise'],
+  },
+  {
+    name: 'MG Rover',
+    country: 'GB',
+    models: ['MGF', 'MG TF', 'MG ZR', 'MG ZS', 'MG ZT'],
+  },
+  {
+    name: 'Talbot',
+    country: 'FR',
+    models: ['Horizon', 'Samba', 'Solara', 'Tagora'],
+  },
+  {
+    name: 'Trabant',
+    country: 'DE',
+    models: ['601', '1.1'],
+  },
+  {
+    name: 'Wartburg',
+    country: 'DE',
+    models: ['311', '353', '1.3'],
+  },
+  {
+    name: 'Borgward',
+    country: 'DE',
+    models: ['BX5', 'BX7', 'Isabella'],
+  },
+  {
+    name: 'Wiesmann',
+    country: 'DE',
+    models: ['GT MF4', 'GT MF5', 'Roadster MF3', 'Roadster MF4'],
+  },
+  {
+    name: 'Artega',
+    country: 'DE',
+    models: ['GT', 'Karo', 'Scalo'],
+  },
+  {
+    name: 'e.GO',
+    country: 'DE',
+    models: ['Life', 'Life Cross'],
+  },
+  {
+    name: 'Caterham',
+    country: 'GB',
+    models: ['Seven 160', 'Seven 270', 'Seven 360', 'Seven 420', 'Seven 620'],
+  },
+  {
+    name: 'Donkervoort',
+    country: 'NL',
+    models: ['D8', 'D8 GTO', 'F22'],
+  },
+  {
+    name: 'Westfield',
+    country: 'GB',
+    models: ['Megabusa', 'SEight', 'Sport 250'],
+  },
+  {
+    name: 'Aixam',
+    country: 'FR',
+    models: ['City', 'Coupé', 'Crossline', 'Crossover', 'e-City', 'Minauto'],
+  },
+  {
+    name: 'Ligier',
+    country: 'FR',
+    models: ['Ambra', 'IXO', 'JS50', 'JS60', 'Nova'],
+  },
+  {
+    name: 'Microcar',
+    country: 'FR',
+    models: ['Cargo', 'Due', 'M.Go', 'MC1', 'MC2'],
+  },
+  {
+    name: 'Casalini',
+    country: 'IT',
+    models: ['M10', 'M14', 'M20', 'Sulky'],
+  },
+  {
+    name: 'Iveco',
+    country: 'IT',
+    models: ['Daily', 'Eurocargo', 'Massif'],
+  },
+  {
+    name: 'Piaggio',
+    country: 'IT',
+    models: ['Ape', 'Porter', 'Porter Maxxi'],
+  },
+  {
+    name: 'Multicar',
+    country: 'DE',
+    models: ['Fumo', 'M26', 'M27', 'Tremo'],
+  },
+  {
+    name: 'Great Wall',
+    country: 'CN',
+    models: ['Hover', 'Steed', 'Wingle'],
+  },
+  {
+    name: 'Haval',
+    country: 'CN',
+    models: ['H6', 'Jolion'],
+  },
+  {
+    name: 'DFSK',
+    country: 'CN',
+    models: ['Fengon 500', 'Glory 500', 'Glory 580', 'K01', 'K05'],
+  },
+  {
+    name: 'Seres',
+    country: 'CN',
+    models: ['3', '5', '7'],
+  },
+  {
+    name: 'Zeekr',
+    country: 'CN',
+    models: ['001', '007', 'X'],
+  },
+  {
+    name: 'Voyah',
+    country: 'CN',
+    models: ['Courage', 'Dream', 'Free'],
+  },
+  {
+    name: 'Hongqi',
+    country: 'CN',
+    models: ['E-HS9', 'EHS7', 'H9'],
+  },
+  {
+    name: 'Skywell',
+    country: 'CN',
+    models: ['BE11'],
+  },
+  {
+    name: 'Jaecoo',
+    country: 'CN',
+    models: ['5', '7', '8'],
+  },
+  {
+    name: 'Omoda',
+    country: 'CN',
+    models: ['5', '7', '9', 'E5'],
+  },
+  {
+    name: 'Tata',
+    country: 'IN',
+    models: ['Aria', 'Indica', 'Nano', 'Safari', 'Xenon'],
+  },
+  {
+    name: 'Mahindra',
+    country: 'IN',
+    models: ['Bolero', 'Goa', 'KUV100', 'Pik Up', 'XUV500'],
+  },
+  {
+    name: 'Proton',
+    country: 'MY',
+    models: ['Gen-2', 'Impian', 'Persona', 'Satria', 'Savvy'],
+  },
+  {
+    name: 'VinFast',
+    country: 'VN',
+    models: ['VF 6', 'VF 7', 'VF 8', 'VF 9'],
+  },
+  {
+    name: 'Koenigsegg',
+    country: 'SE',
+    models: ['Agera', 'CC8S', 'Gemera', 'Jesko', 'Regera'],
+  },
+  {
+    name: 'Pagani',
+    country: 'IT',
+    models: ['Huayra', 'Utopia', 'Zonda'],
+  },
+  {
+    name: 'Ariel',
+    country: 'GB',
+    models: ['Atom', 'Nomad'],
+  },
+  {
+    name: 'KTM',
+    country: 'AT',
+    models: ['X-Bow GT', 'X-Bow GT-XR', 'X-Bow R'],
+  },
+  {
+    name: 'Radical',
+    country: 'GB',
+    models: ['RXC', 'SR3', 'SR8'],
+  },
+  {
+    name: 'Noble',
+    country: 'GB',
+    models: ['M12', 'M600'],
+  },
+  {
+    name: 'TVR',
+    country: 'GB',
+    models: ['Cerbera', 'Chimaera', 'Griffith', 'Sagaris', 'Tuscan'],
+  },
+  {
+    name: 'De Tomaso',
+    country: 'IT',
+    models: ['Deauville', 'Longchamp', 'Pantera'],
+  },
 ];
 
 /** Nur die Markennamen als sortierte Liste */

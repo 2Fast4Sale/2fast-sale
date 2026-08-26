@@ -275,8 +275,26 @@ function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt
      */
     const erledigt = fertig === true && !!zusammenfassung;
     return (
-      <section style={{ borderTop: `1px solid ${F.linieLeise}`, padding: '13px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+      <section style={{ borderTop: `1px solid ${F.linieLeise}` }}>
+        {/*
+          Die ganze Zeile ist der Knopf, nicht nur das Wort rechts.
+
+          Vorher liess sich ein Abschnitt allein über "öffnen" am
+          rechten Rand aufklappen — ein Ziel von vierzig Pixeln am Ende
+          einer achthundert Pixel breiten Zeile. Wer auf den Pfeil oder
+          den Titel klickte, bei dem passierte nichts, und das liest
+          sich wie ein Fehler.
+
+          Deshalb ist die Zeile selbst ein `button`. "öffnen" bleibt
+          sichtbar, ist aber nur noch Beschriftung — ein Knopf im Knopf
+          wäre ungültiges HTML und für Vorleseprogramme unbrauchbar.
+        */}
+        <button type="button" onClick={() => setSelbstGeklappt(false)}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'baseline', gap: 12,
+            padding: '13px 0', background: 'none', border: 'none',
+            cursor: 'pointer', textAlign: 'left', fontFamily: F.schrift,
+          }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
             {erledigt
               ? <CheckCircle2 size={13} color={F.gut} />
@@ -287,12 +305,10 @@ function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt
             flex: 1, minWidth: 0, fontSize: 12.5, color: F.leise,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{erledigt ? zusammenfassung : inhalt}</span>
-          <button type="button" onClick={() => setSelbstGeklappt(false)}
-            style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
-                     fontFamily: F.schrift, fontSize: 12.5, color: F.akzent, padding: 0 }}>
+          <span style={{ flexShrink: 0, fontSize: 12.5, color: F.akzent }}>
             {erledigt ? 'ändern' : 'öffnen'}
-          </button>
-        </div>
+          </span>
+        </button>
       </section>
     );
   }
@@ -306,11 +322,32 @@ function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt
           die Seite wie eine einzige lange Liste wirkte und man beim
           Scrollen nicht merkte, in welchem Abschnitt man ist.
         */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <span style={{ width: 3, height: 15, borderRadius: 2, background: F.akzent }} />
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
-                       color: F.text }}>{titel}</h2>
-        </div>
+        {/*
+          Klappbare Abschnitte lassen sich auch über die Überschrift
+          schliessen — dasselbe Ziel, das sie öffnet. Bei Abschnitten,
+          die immer offen bleiben, ist die Überschrift kein Knopf: Ein
+          Klick, der nichts tut, ist schlimmer als keiner.
+
+          Nur der Titel, nicht die ganze Zeile: Rechts steht bei
+          manchen Abschnitten ein eigener Knopf, und Knopf in Knopf
+          geht nicht.
+        */}
+        {(startZu || (fertig && zusammenfassung)) ? (
+          <button type="button" onClick={() => setSelbstGeklappt(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 9, padding: 0,
+                     background: 'none', border: 'none', cursor: 'pointer',
+                     fontFamily: F.schrift, textAlign: 'left' }}>
+            <span style={{ width: 3, height: 15, borderRadius: 2, background: F.akzent }} />
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
+                         color: F.text }}>{titel}</h2>
+          </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ width: 3, height: 15, borderRadius: 2, background: F.akzent }} />
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px',
+                         color: F.text }}>{titel}</h2>
+          </div>
+        )}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           {rechts}
           {/*

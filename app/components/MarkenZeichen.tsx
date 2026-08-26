@@ -31,6 +31,7 @@ interface Props {
 const GEZEICHNET = new Set([
   'bmw', 'mercedes', 'mercedes-benz', 'audi', 'volkswagen', 'vw',
   'opel', 'toyota', 'renault', 'citroën', 'citroen', 'mitsubishi', 'hyundai',
+  'volvo', 'nissan', 'skoda', 'škoda', 'ford', 'seat', 'fiat', 'dacia', 'mazda',
 ]);
 
 export function hatZeichen(marke: string): boolean {
@@ -134,6 +135,96 @@ export default function MarkenZeichen({ marke, groesse = 26, farbe }: Props) {
           <ellipse cx="24" cy="24" rx="20" ry="13" stroke={c} strokeWidth="2.6" />
           <path d="M17 17 Q17 24 24 24 Q31 24 31 31"
                 stroke={c} strokeWidth="3" strokeLinecap="round" fill="none" />
+        </svg>
+      );
+
+    /*
+     * Ab hier die Marken, die im deutschen Bestand häufig vorkommen.
+     *
+     * Ausgewählt wurde nach Zeichenbarkeit, nicht nur nach Häufigkeit:
+     * Aufgenommen ist, was sich als geometrische Andeutung erkennen
+     * lässt. Ein Löwe im Wappen oder ein Schriftzug lässt sich nicht
+     * vereinfachen, ohne entweder unkenntlich oder zur Kopie zu werden
+     * — dort steht weiterhin nur der Name, und das ist ehrlicher als
+     * eine schlechte Nachzeichnung.
+     */
+
+    case 'volvo':
+      /* Eisen-Symbol: Kreis mit Pfeil nach schräg oben. */
+      return (
+        <svg {...gemeinsam} aria-label="Volvo">
+          <circle cx="21" cy="27" r="15" stroke={c} strokeWidth="3" />
+          <path d="M32 16 L43 5 M35 5 L43 5 L43 13"
+                stroke={c} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+      );
+
+    case 'nissan':
+      /* Kreis mit waagerechtem Band über die volle Breite. */
+      return (
+        <svg {...gemeinsam} aria-label="Nissan">
+          <circle cx="24" cy="24" r="19" stroke={c} strokeWidth="2.6" />
+          <path d="M2 18 L46 18 M2 30 L46 30" stroke={c} strokeWidth="2.6" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'skoda':
+    case 'škoda':
+      /* Geflügelter Pfeil, stark vereinfacht. */
+      return (
+        <svg {...gemeinsam} aria-label="Škoda">
+          <circle cx="24" cy="24" r="19" stroke={c} strokeWidth="2.6" />
+          <path d="M13 30 L30 30 L36 18 L24 22 L18 14 L16 24 Z"
+                stroke={c} strokeWidth="2.4" strokeLinejoin="round" fill="none" />
+        </svg>
+      );
+
+    case 'ford':
+      /* Liegendes Oval mit Anfangsbuchstaben. */
+      return (
+        <svg {...gemeinsam} aria-label="Ford">
+          <ellipse cx="24" cy="24" rx="21" ry="12.5" stroke={c} strokeWidth="2.6" />
+          <path d="M18 17 L18 31 M18 17 L29 17 M18 24 L26 24"
+                stroke={c} strokeWidth="2.8" strokeLinecap="round" fill="none" />
+        </svg>
+      );
+
+    case 'seat':
+      /* Stilisiertes S aus zwei Bögen. */
+      return (
+        <svg {...gemeinsam} aria-label="SEAT">
+          <path d="M35 14 Q24 8 16 15 Q9 22 20 25 Q31 28 24 34 Q17 40 11 33"
+                stroke={c} strokeWidth="3.4" strokeLinecap="round" fill="none" />
+        </svg>
+      );
+
+    case 'fiat':
+      /* Wappenschild, wie es die Marke seit je trägt. */
+      return (
+        <svg {...gemeinsam} aria-label="Fiat">
+          <path d="M8 8 L40 8 L40 27 Q40 38 24 43 Q8 38 8 27 Z"
+                stroke={c} strokeWidth="2.6" strokeLinejoin="round" fill="none" />
+          <path d="M18 19 L18 31 M18 19 L29 19 M18 25 L26 25"
+                stroke={c} strokeWidth="2.6" strokeLinecap="round" fill="none" />
+        </svg>
+      );
+
+    case 'dacia':
+      /* Rechteckiges Emblem mit angedeutetem Bogen. */
+      return (
+        <svg {...gemeinsam} aria-label="Dacia">
+          <rect x="5" y="13" width="38" height="22" rx="5" stroke={c} strokeWidth="2.6" />
+          <path d="M15 29 Q24 15 33 29" stroke={c} strokeWidth="2.8" strokeLinecap="round" fill="none" />
+        </svg>
+      );
+
+    case 'mazda':
+      /* Oval mit zwei aufsteigenden Flügeln. */
+      return (
+        <svg {...gemeinsam} aria-label="Mazda">
+          <ellipse cx="24" cy="24" rx="20" ry="14" stroke={c} strokeWidth="2.6" />
+          <path d="M12 27 Q24 13 24 24 Q24 13 36 27"
+                stroke={c} strokeWidth="2.6" strokeLinecap="round" fill="none" />
         </svg>
       );
 
