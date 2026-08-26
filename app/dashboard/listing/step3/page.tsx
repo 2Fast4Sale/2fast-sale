@@ -131,28 +131,35 @@ function Step3Inner() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Fahrzeug-Card */}
-          <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+          {/*
+            Die Karte war die letzte dunkle Fläche ausserhalb des
+            Startbildschirms. Ein Foto wirkt auf dunklem Grund zwar
+            besser — aber eine einzelne dunkle Karte mitten auf einer
+            hellen Seite sieht aus wie ein Fehler, und meistens füllt
+            das Foto die Fläche ohnehin ganz aus.
+          */}
+          <div style={{ background: G.flaeche, border: `1px solid ${G.linieLeise}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
             {/* Foto */}
             <div style={{ height: '180px', background: photo ? 'transparent' : 'rgba(99,102,241,0.08)', position: 'relative', overflow: 'hidden' }}>
               {photo ? (
                 <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
-                  <Car size={40} color="#334155" style={{ opacity: 0.3 }} />
-                  <div style={{ fontSize: '12px', color: G.rahmenLeise }}>Fahrzeugvorschau</div>
+                  <Car size={40} color={G.leise} style={{ opacity: 0.35 }} />
+                  <div style={{ fontSize: '12px', color: G.leise }}>Fahrzeugvorschau</div>
                 </div>
               )}
               {/* Gradient overlay */}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(transparent, #0f172a)' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', background: 'linear-gradient(transparent, rgba(255,255,255,0.92))' }} />
               {/* Badge */}
-              <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(99,102,241,0.9)', backdropFilter: 'blur(8px)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#fff', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ position: 'absolute', top: '12px', right: '12px', background: G.akzent, backdropFilter: 'blur(8px)', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', color: '#fff', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Sparkles size={10} /> KI aktiv
               </div>
             </div>
 
             {/* Info */}
             <div style={{ padding: '18px 20px 20px' }}>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: '#fff', letterSpacing: '-0.4px', marginBottom: '4px' }}>
+              <div style={{ fontSize: '18px', fontWeight: '800', color: G.text, letterSpacing: '-0.4px', marginBottom: '4px' }}>
                 {brand || 'Fahrzeug'}
                 {year ? ` · ${year}` : ''}
               </div>
@@ -280,9 +287,9 @@ function Tag({ label, accent }: { label: string; accent?: boolean }) {
   return (
     <span style={{
       fontSize: '11px', fontWeight: '700',
-      color:   accent ? '#fbbf24' : 'rgba(255,255,255,0.7)',
-      background: accent ? 'rgba(251,191,36,0.15)' : 'rgba(255,255,255,0.08)',
-      border: `1px solid ${accent ? 'rgba(251,191,36,0.3)' : 'rgba(255,255,255,0.1)'}`,
+      color:   accent ? G.luecke : G.leise,
+      background: accent ? G.luekeSchleier : G.erhoben,
+      border: `1px solid ${accent ? `${G.luecke}40` : G.linieLeise}`,
       borderRadius: '6px', padding: '3px 8px', whiteSpace: 'nowrap',
     }}>
       {label}

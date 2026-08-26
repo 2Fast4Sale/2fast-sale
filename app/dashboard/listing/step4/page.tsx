@@ -618,8 +618,26 @@ function Step4Inner() {
   const [photos,    setPhotos]    = useState<string[]>([]);
   const [isMobile,  setIsMobile]  = useState(false);
 
+  /**
+   * Reicht der Platz für drei Spalten nebeneinander?
+   *
+   * Das Raster stand auf `248px 1fr 520px`: Die äusseren Spalten sind
+   * fest, die Mitte bekommt den Rest. Auf einem 1120 Pixel breiten
+   * Fenster blieben der Mitte damit rund hundert Pixel — die
+   * Überschrift brach nach jedem Wort um, Preis und Beschreibung waren
+   * abgeschnitten. Auffallen konnte das keiner Kontrastmessung: Die
+   * Farben stimmten, der Text war nur nicht mehr zu erkennen.
+   *
+   * Unterhalb der Schwelle rutscht die Vorschau unter den Inhalt,
+   * statt ihn zu erdrücken.
+   */
+  const [eng, setEng] = useState(false);
+
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => {
+      setIsMobile(window.innerWidth < 768);
+      setEng(window.innerWidth < 1400);
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
@@ -828,7 +846,26 @@ function Step4Inner() {
       </div>
 
       {/* 3-column → 1-column on mobile */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '248px 1fr 520px', minHeight: 'calc(100vh - 58px)' }}>
+      {/*
+        Feste Randspalten waren das Problem: Bei "248px 1fr 520px"
+        bekommen aussen beide ihren Platz und die Mitte den Rest — auf
+        einem 1120 Pixel breiten Fenster blieben ihr rund hundert
+        Pixel. Die Überschrift brach nach jedem Wort um, Preis und
+        Beschreibung waren abgeschnitten.
+
+        Mit `minmax` gibt jede Spalte nach: Die Mitte bekommt
+        mindestens 460 Pixel, die Vorschau darf von 520 auf 300
+        schrumpfen. Sie wird dadurch kleiner, bleibt aber sichtbar —
+        und darauf kommt es hier an, denn sie ist der Grund, warum der
+        Händler diesen Schritt überhaupt ansieht.
+      */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr'
+          : eng ? '208px minmax(420px, 1fr) minmax(300px, 420px)'
+                : '248px minmax(460px, 1fr) 520px',
+        minHeight: 'calc(100vh - 58px)',
+      }}>
 
         {/* COL 1: Checklist — hidden on mobile */}
         <div style={{ borderRight: `1px solid ${BORD}`, background: CARD, padding: '22px 16px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'flex', flexDirection: 'column', gap: '0' }}>
@@ -999,8 +1036,21 @@ function Step4Inner() {
           )}
         </div>
 
-        {/* COL 3: Live Preview — hidden on mobile */}
-        <div style={{ borderLeft: `1px solid ${BORD}`, background: G.erhoben, padding: '18px 16px 120px', position: 'sticky', top: '58px', height: 'calc(100vh - 58px)', overflowY: 'auto', display: isMobile ? 'none' : 'block' }}>
+        {/*
+          Dritte Spalte: die Vorschau.
+
+          Bei genug Platz steht sie rechts und bleibt beim Scrollen
+          stehen. Wird es eng, rutscht sie unter den Inhalt und läuft
+          über beide Spalten — dort darf sie dann auch mitscrollen,
+          sonst klebte sie mitten auf der Seite fest.
+        */}
+        <div style={{
+          borderLeft: `1px solid ${BORD}`,
+          background: G.erhoben, padding: eng ? '18px 10px 120px' : '18px 16px 120px',
+          position: 'sticky', top: '58px',
+          height: 'calc(100vh - 58px)', overflowY: 'auto',
+          display: isMobile ? 'none' : 'block',
+        }}>
 
           {/* Controls */}
           <div style={{ display: 'flex', gap: '6px', marginBottom: '14px' }}>
