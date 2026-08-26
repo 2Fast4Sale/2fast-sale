@@ -767,6 +767,66 @@ export default function Showroom() {
         } />
 
         {/*
+          Die restlichen Pflichtangaben — zusammen, nicht verstreut.
+
+          Getriebe, Karosserieform und Umsatzsteuer standen vorher in
+          drei verschiedenen Abschnitten weiter unten, zwischen lauter
+          freiwilligen Feldern. Wer die Seite von oben abarbeitete,
+          hatte nach den Eckdaten das Gefühl, fertig zu sein, und stiess
+          erst in der Fussleiste auf "Fehlt noch: Getriebe,
+          Karosserieform, Umsatzsteuer".
+
+          Alle sechs Pflichtangaben stehen jetzt in den ersten drei
+          Abschnitten. Was danach kommt, ist Kür.
+
+          Die drei haben ausserdem etwas gemeinsam: Keine davon steht im
+          Fahrzeugschein. Der Scan kann sie nicht liefern, sie kommen
+          immer von Hand — daher der Titel. Solange sie leer sind, steht
+          an ihnen "Pflicht"; das ist die dringendere Auskunft und
+          verdrängt den Hinweis "trägst du ein".
+        */}
+        <Block titel="Das trägst du selbst ein"
+          fertig={!!data.gearbox && !!data.bodyType && !!data.vatType}
+          zusammenfassung={zusammen(
+            data.gearbox,
+            data.bodyType,
+            data.vatType === 'ausgewiesen' ? 'MwSt. ausweisbar' : data.vatType === 'differenz' ? '§ 25a' : '',
+          )}
+          kinder={
+            <div style={{ display: 'grid', gap: 18 }}>
+              <div>
+                {/* Der Fahrzeugschein nennt kein Getriebe. */}
+                <Beschriftung text="Getriebe" luecke={!data.gearbox} selbst erledigt={!!data.gearbox} />
+                <Wahl optionen={GETRIEBE} wert={data.gearbox} beiWahl={v => setzen('gearbox', data.gearbox === v ? '' : v)} />
+              </div>
+
+              <div>
+                <Beschriftung text="Karosserieform" luecke={!data.bodyType} selbst erledigt={!!data.bodyType} />
+                <Wahl optionen={KAROSSERIE} wert={data.bodyType}
+                  beiWahl={v => setzen('bodyType', data.bodyType === v ? '' : v)} />
+              </div>
+
+              <div>
+                <Beschriftung text="Umsatzsteuer" luecke={!data.vatType} selbst erledigt={!!data.vatType} />
+                <Wahl
+                  optionen={['ausweisbar', 'Differenzbesteuert § 25a']}
+                  wert={data.vatType === 'ausgewiesen' ? 'ausweisbar'
+                      : data.vatType === 'differenz' ? 'Differenzbesteuert § 25a' : ''}
+                  beiWahl={v => setzen('vatType', v === 'ausweisbar' ? 'ausgewiesen' : 'differenz')} />
+                <p style={{ margin: '7px 0 0', fontSize: 12.5, color: F.leise, lineHeight: 1.6 }}>
+                  {/*
+                    Der Satz gehoert dazu. Wer die beiden Begriffe nicht
+                    taeglich benutzt, raet sonst — und ein falscher Wert
+                    kostet den gewerblichen Kaeufer, der danach filtert.
+                  */}
+                  Von Privat angekauft? Dann fast immer § 25a.
+                </p>
+              </div>
+            </div>
+          }
+        />
+
+        {/*
           Steht bewusst weit oben.
           Vorher war dieser Block der letzte der Seite — dabei ist er das
           Einzige, was der Scan NICHT liefern kann und was die Qualitaet
@@ -804,12 +864,8 @@ export default function Showroom() {
               <Beschriftung text="Kraftstoff" />
               <Wahl optionen={KRAFTSTOFFE} wert={data.fuelType} beiWahl={v => setzen('fuelType', data.fuelType === v ? '' : v)} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
-              <div>
-                {/* Der Fahrzeugschein nennt kein Getriebe — das kommt immer von Hand. */}
-                <Beschriftung text="Getriebe" luecke={!data.gearbox} selbst erledigt={!!data.gearbox} />
-                <Wahl optionen={GETRIEBE} wert={data.gearbox} beiWahl={v => setzen('gearbox', data.gearbox === v ? '' : v)} />
-              </div>
+            {/* Das Getriebe steht jetzt oben bei den Pflichtangaben. */}
+            <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr', gap: 20 }}>
               <div>
                 <Beschriftung text="Leistung" />
                 <Eingabe erkannt={erkannt.has('powerKw')} einheit="PS" wert={data.powerKw}
@@ -825,46 +881,21 @@ export default function Showroom() {
         } />
 
         {/*
-          Was mobile.de verlangt.
-          Fuenf Felder, ohne die sich dort kein Inserat anlegen laesst —
-          nachzulesen in deren CSV-Schnittstelle. Sie stehen zusammen und
-          mit dieser Ueberschrift, damit klar ist, warum sie da sind: Es
-          sind nicht unsere Fragen.
+          Was hier bleibt, ist bei mobile.de gefordert, aber schnell
+          beantwortet: drei Ja-Nein-Fragen. Karosserieform und
+          Umsatzsteuer sind nach oben zu den übrigen Pflichtangaben
+          gewandert — sie kosten Überlegung und gehören dorthin, wo der
+          Händler noch bei der Sache ist.
         */}
-        <Block titel="Für mobile.de erforderlich"
-          fertig={!!data.bodyType && !!data.vatType}
+        <Block titel="Zustand"
+          fertig
           zusammenfassung={zusammen(
-            data.bodyType,
-            data.vatType === 'ausgewiesen' ? 'MwSt. ausweisbar' : data.vatType === 'differenz' ? '§ 25a' : '',
             data.damaged ? 'beschädigt' : 'unfallfrei',
             data.metallic && 'Metallic',
             data.warranty && 'mit Garantie',
           )}
           kinder={
             <div style={{ display: 'grid', gap: 18 }}>
-              <div>
-                <Beschriftung text="Karosserieform" luecke={!data.bodyType} selbst erledigt={!!data.bodyType} />
-                <Wahl optionen={KAROSSERIE} wert={data.bodyType}
-                  beiWahl={v => setzen('bodyType', data.bodyType === v ? '' : v)} />
-              </div>
-
-              <div>
-                <Beschriftung text="Umsatzsteuer" luecke={!data.vatType} selbst erledigt={!!data.vatType} />
-                <Wahl
-                  optionen={['ausweisbar', 'Differenzbesteuert § 25a']}
-                  wert={data.vatType === 'ausgewiesen' ? 'ausweisbar'
-                      : data.vatType === 'differenz' ? 'Differenzbesteuert § 25a' : ''}
-                  beiWahl={v => setzen('vatType', v === 'ausweisbar' ? 'ausgewiesen' : 'differenz')} />
-                <p style={{ margin: '7px 0 0', fontSize: 12.5, color: F.leise, lineHeight: 1.6 }}>
-                  {/*
-                    Der Satz gehoert dazu. Wer die beiden Begriffe nicht
-                    taeglich benutzt, raet sonst — und ein falscher Wert
-                    kostet den gewerblichen Kaeufer, der danach filtert.
-                  */}
-                  Von Privat angekauft? Dann fast immer § 25a.
-                </p>
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr 1fr', gap: 20 }}>
                 <div>
                   <Beschriftung text="Zustand" />
