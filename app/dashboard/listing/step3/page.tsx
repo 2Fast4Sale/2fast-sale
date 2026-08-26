@@ -1,9 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles, CheckCircle2, Loader2, Zap, TrendingUp, Target, Search, Globe, FileText, Car } from 'lucide-react';
 import { entwurfId } from '../../../../lib/entwurf';
+import { useSitzungsText } from '../../../../lib/sitzungsspeicher';
 import { G } from '../gestaltung';
 
 /*
@@ -45,17 +46,19 @@ function Step3Inner() {
   const color   = searchParams.get('color')   || '';
   const power   = searchParams.get('power')   || '';
 
-  // Foto aus sessionStorage
-  const [photo, setPhoto] = useState<string | null>(null);
-  useEffect(() => {
+  /*
+   * Das erste Foto aus dem Sitzungsspeicher — abgeleitet, nicht in den
+   * Zustand geschrieben. Vorher tat das ein Effekt beim Einhängen, was
+   * die Seite zweimal rendern liess und von React beanstandet wird.
+   */
+  const rohFotos = useSitzungsText('listing_photos');
+  const photo = useMemo<string | null>(() => {
+    if (!rohFotos) return null;
     try {
-      const raw = sessionStorage.getItem('listing_photos');
-      if (raw) {
-        const arr = JSON.parse(raw) as string[];
-        if (arr[0]) setPhoto(arr[0]);
-      }
-    } catch { /* ignore */ }
-  }, []);
+      const arr = JSON.parse(rohFotos) as string[];
+      return arr[0] ?? null;
+    } catch { return null; }
+  }, [rohFotos]);
 
   // Dots animation
   useEffect(() => {

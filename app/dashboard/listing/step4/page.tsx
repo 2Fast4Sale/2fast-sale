@@ -1,13 +1,14 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSitzungsText } from '../../../../lib/sitzungsspeicher';
 import type { EnvkvData } from '../../../../lib/envkv';
 import {
   Sparkles, Save, ChevronLeft, CheckCircle2, Copy, RefreshCw,
-  Send, Car, Gauge, Fuel, Loader2, Zap, Tag as TagIcon,
+  Send, Loader2, Zap, Tag as TagIcon,
   AlertTriangle, Shield, Image as ImgIcon, Euro,
-  ChevronRight, ExternalLink, Globe, Star, Smartphone, Monitor,
+  ChevronRight, ExternalLink, Star, Smartphone, Monitor,
   Phone, Check, BarChart2, Lock,
 } from 'lucide-react';
 import { entwurfId, entwurfBeenden } from '../../../../lib/entwurf';
@@ -219,6 +220,20 @@ function MobileDeListing({
   const fmtKm = km ? `${Number(km).toLocaleString('de-DE')} km` : '—';
   const fmtPs = power ? `${power} PS (${Math.round(Number(power)/1.36)} kW)` : '—';
   const fmtPrice = price ? `${Number(price).toLocaleString('de-DE')} €` : '—';
+
+  /*
+   * Eine gleichbleibende Nummer aus Titel und Marke.
+   *
+   * Neunstellig wie bei mobile.de. Die Rechnung ist keine Kunst — sie
+   * muss nur aus derselben Eingabe immer dasselbe machen, damit die
+   * Nummer beim Tippen stehenbleibt.
+   */
+  const inseratNummer = useMemo(() => {
+    let h = 0;
+    for (const z of `${brand}|${title}`) h = (h * 31 + z.charCodeAt(0)) >>> 0;
+    return 100000000 + (h % 900000000);
+  }, [brand, title]);
+
   return (
     <div data-portal="mobile.de" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', background: '#fff', fontSize: '13px' }}>
       {/* Top Nav */}
@@ -380,7 +395,21 @@ function MobileDeListing({
               {[1,2,3,4,5].map(i => <Star key={i} size={12} fill={i <= 4 ? '#ff6600' : 'none'} color="#ff6600" />)}
               <span style={{ fontSize: '11px', color: '#777', marginLeft: '4px' }}>4,8 (127 Bewertungen)</span>
             </div>
-            <div style={{ fontSize: '11px', color: '#555' }}>Inserat-ID: {Math.floor(Math.random() * 900000000 + 100000000)}</div>
+            {/*
+              Die Nummer wird aus dem Titel abgeleitet, nicht gewürfelt.
+
+              Hier stand `Math.random()` mitten im Render. Das ergibt bei
+              jedem Tastendruck eine neue Inserat-Nummer — die Vorschau
+              flackerte also, während der Händler den Titel tippt. Und
+              beim Vorrendern auf dem Server kommt eine andere Zahl
+              heraus als im Browser, was React beim Hydrieren als
+              Abweichung meldet.
+
+              Aus demselben Fahrzeug entsteht jetzt immer dieselbe
+              Nummer. Sie ist erfunden — die echte vergibt mobile.de —,
+              aber sie soll wenigstens stillhalten.
+            */}
+            <div style={{ fontSize: '11px', color: '#555' }}>Inserat-ID: {inseratNummer}</div>
           </div>
         </div>
       </div>
@@ -605,7 +634,6 @@ function Step4Inner() {
   const rawDesc  = searchParams.get('desc')    ?? '';
 
   const [desc,      setDesc]      = useState(() => { try { return decodeURIComponent(rawDesc); } catch { return ''; } });
-  const [title,     setTitle]     = useState('');
   const [editPrice, setEditPrice] = useState(price);
   const [saving,    setSaving]    = useState(false);
   const [savedId,   setSavedId]   = useState<string | null>(null);
@@ -614,9 +642,38 @@ function Step4Inner() {
   const [done,      setDone]      = useState(false);
   const [platform,  setPlatform]  = useState<Platform>('mobile');
   const [viewMode,  setViewMode]  = useState<ViewMode>('desktop');
-  const [step1,     setStep1]     = useState<Record<string, unknown> & { envkv?: Partial<EnvkvData> }>({});
-  const [photos,    setPhotos]    = useState<string[]>([]);
   const [isMobile,  setIsMobile]  = useState(false);
+  /** Welches Foto oben gross zu sehen ist. 0 ist das Titelbild. */
+  const [grossesBild, setGrossesBild] = useState(0);
+
+  /*
+   * Was der vorherige Schritt abgelegt hat — abgeleitet, nicht in den
+   * Zustand kopiert. Ein Effekt beim Einhängen tat das vorher und
+   * liess die Seite zweimal rendern.
+   */
+  const rohStep1 = useSitzungsText('listing_step1');
+  const step1 = useMemo<Record<string, unknown> & { envkv?: Partial<EnvkvData> }>(() => {
+    if (!rohStep1) return {};
+    try { return JSON.parse(rohStep1); } catch { return {}; }
+  }, [rohStep1]);
+
+  const rohFotos = useSitzungsText('listing_photos');
+  const photos = useMemo<string[]>(() => {
+    if (!rohFotos) return [];
+    try { const a = JSON.parse(rohFotos); return Array.isArray(a) ? a : []; } catch { return []; }
+  }, [rohFotos]);
+
+  /*
+   * Der Titel: Vorschlag aus Schritt 1, bis der Händler selbst tippt.
+   *
+   * `null` heisst "noch nicht angefasst". Damit braucht es keinen
+   * Effekt, der den Vorschlag nachträglich in den Zustand schreibt —
+   * und es gibt keinen Moment, in dem das Feld leer dasteht, obwohl
+   * ein Vorschlag vorliegt.
+   */
+  const [titelEingabe, setTitelEingabe] = useState<string | null>(null);
+  const title = titelEingabe ?? ((step1.suggestedTitle as string) || '');
+  const setTitle = setTitelEingabe;
 
   /**
    * Reicht der Platz für drei Spalten nebeneinander?
@@ -643,11 +700,6 @@ function Step4Inner() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  useEffect(() => {
-    try { const r = sessionStorage.getItem('listing_step1'); if (r) { const d = JSON.parse(r); setStep1(d); if (d.suggestedTitle && !title) setTitle(d.suggestedTitle); } } catch {/* */}
-    try { const r = sessionStorage.getItem('listing_photos'); if (r) setPhotos(JSON.parse(r)); } catch {/* */}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const equipment: string[] = (step1.equipment as string[]) || [];
 
@@ -928,6 +980,60 @@ function Step4Inner() {
             <p style={{ color: G.rahmenLeise, fontSize: '13px', margin: 0 }}>{brand && <strong style={{ color: G.rahmenText }}>{brand} · </strong>}{km && `${Number(km).toLocaleString('de-DE')} km · `}{editPrice && `${Number(editPrice).toLocaleString('de-DE')} €`}</p>
           </div>
 
+          {/*
+            Die Fotos zuerst und gross — so, wie ein Inserat anfängt.
+
+            Sie standen vorher als 70 mal 54 Pixel grosse Kacheln ganz
+            unten, hinter Titel, Preis, Beschreibung und Ausstattung.
+            Damit war das Auffälligste am Inserat das Unauffälligste auf
+            dieser Seite. Und es ist der Teil, für den der Händler
+            bezahlt: Die Studiobilder sind das Produkt, nicht der Text.
+
+            Aufgebaut wie eine Inseratsseite: ein grosses Titelbild,
+            darunter die übrigen zum Anklicken.
+          */}
+          {photos.length > 0 && (
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{
+                position: 'relative', width: '100%', aspectRatio: '4/3',
+                borderRadius: '14px', overflow: 'hidden',
+                border: `1px solid ${BORD}`, background: G.erhoben,
+              }}>
+                <img src={photos[grossesBild] ?? photos[0]} alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {grossesBild === 0 && (
+                  <div style={{
+                    position: 'absolute', top: '10px', left: '10px',
+                    background: 'rgba(0,0,0,0.72)', color: '#fff',
+                    fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                    padding: '4px 9px', borderRadius: '5px', textTransform: 'uppercase',
+                  }}>Titelbild</div>
+                )}
+                <div style={{
+                  position: 'absolute', bottom: '10px', right: '10px',
+                  background: 'rgba(0,0,0,0.72)', color: '#fff',
+                  fontSize: '11px', fontWeight: 600, padding: '4px 9px', borderRadius: '5px',
+                }}>{grossesBild + 1} / {photos.length}</div>
+              </div>
+
+              {photos.length > 1 && (
+                <div style={{ display: 'flex', gap: '7px', marginTop: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {photos.map((src, i) => (
+                    <button key={i} type="button" onClick={() => setGrossesBild(i)}
+                      style={{
+                        width: '84px', height: '62px', flexShrink: 0, padding: 0,
+                        borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
+                        border: `2px solid ${i === grossesBild ? IND : BORD}`,
+                        background: 'none',
+                      }}>
+                      <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Titel */}
           <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: '14px', padding: '18px', marginBottom: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '9px' }}>
@@ -1013,21 +1119,7 @@ function Step4Inner() {
             </div>
           )}
 
-          {/* Fotos */}
-          {photos.length > 0 && (
-            <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: '14px', padding: '18px', marginBottom: '12px' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: TH, marginBottom: '11px', display: 'flex', alignItems: 'center', gap: '5px' }}><ImgIcon size={12} color={IND} /> Fotos <span style={{ fontSize: '11px', fontWeight: '600', color: TD }}>· {photos.length} hochgeladen</span></div>
-              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-                {photos.slice(0,9).map((src,i) => (
-                  <div key={i} style={{ width: '70px', height: '54px', borderRadius: '7px', overflow: 'hidden', border: `2px solid ${i === 0 ? IND : BORD}`, position: 'relative', flexShrink: 0 }}>
-                    <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                    {i === 0 && <div style={{ position: 'absolute', bottom: '2px', left: '2px', background: IND, borderRadius: '3px', padding: '1px 4px', fontSize: '9px', color: '#fff', fontWeight: '700' }}>Cover</div>}
-                  </div>
-                ))}
-                {photos.length > 9 && <div style={{ width: '70px', height: '54px', borderRadius: '7px', background: G.linieLeise, border: `1px solid ${BORD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: TS, fontWeight: '700' }}>+{photos.length - 9}</div>}
-              </div>
-            </div>
-          )}
+          {/* Die Fotos stehen jetzt oben, gross — siehe dort. */}
 
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '10px', color: G.fehler, fontSize: '13px' }}>

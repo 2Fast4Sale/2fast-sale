@@ -5,13 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Upload, X, ChevronRight, ChevronLeft, Camera,
   CheckCircle2, Loader2,
-  Wand2, AlertCircle, Droplets, Lock,
+  Wand2, Eye, AlertCircle, Droplets, Lock,
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
-import VorherNachher from '../../../components/VorherNachher';
 import { G } from '../gestaltung';
+import { useDauerText } from '../../../../lib/sitzungsspeicher';
 import { entwurfId } from '../../../../lib/entwurf';
 
 /*
@@ -207,6 +207,15 @@ function Step2Inner() {
 
   const [photos, setPhotos]           = useState<Photo[]>([]);
   const [dragging, setDragging]       = useState(false);
+  /*
+   * Zeigt alle Bilder als Original statt als Studiobild.
+   *
+   * Der frühere Schieberegler pro Bild war bei wenigen Fotos nett und
+   * bei dreiundvierzig eine Zumutung.
+   */
+  const [zeigeOriginale, setZeigeOriginale] = useState(false);
+  /** Über welchem Bild die Maus gerade steht — zeigt dort das Original. */
+  const [ueberfahren, setUeberfahren] = useState<string | null>(null);
   const [bulkProcessing, setBulk]     = useState(false);
   const [lightbox, setLightbox]       = useState<string | null>(null);
   const [equipState, setEquipState]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -215,7 +224,8 @@ function Step2Inner() {
   const [watermarkOn, setWatermarkOn] = useState(() =>
     typeof window !== 'undefined' ? localStorage.getItem('watermark_enabled') !== 'false' : true
   );
-  const [plan, setPlan] = useState<string>('free');
+  /* Der Plan aus dem Browserspeicher, den das Layout aktuell haelt. */
+  const plan = useDauerText('dealer_plan', 'free');
   const [captureOpen, setCaptureOpen] = useState(false);
 
   // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px hoch).
@@ -247,12 +257,6 @@ function Step2Inner() {
     const gesamt = photos.filter(p => p.studio).length;
     return { gesamt, ...studioAufteilung(gesamt, paketId) };
   })();
-
-  // Plan aus localStorage holen (wird vom Layout aktuell gehalten)
-  useEffect(() => {
-    const p = typeof window !== 'undefined' ? localStorage.getItem('dealer_plan') || 'free' : 'free';
-    setPlan(p);
-  }, []);
 
   const processedCount = photos.filter(p => p.processed).length;
   const totalCount     = photos.length;
@@ -714,9 +718,39 @@ function Step2Inner() {
               <span style={{ fontSize: '13px', fontWeight: '600', color: TS }}>
                 {photos.length} Foto{photos.length !== 1 ? 's' : ''} · Erste Bild = Titelbild
               </span>
-              <button onClick={() => setPhotos([])} style={{ fontSize: '13px', color: G.fehler, background: 'none', border: 'none', cursor: 'pointer', fontFamily: F }}>
-                Alle entfernen
-              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {/*
+                  Vergleich für alle Bilder auf einmal.
+
+                  Vorher hatte jedes bearbeitete Foto einen eigenen
+                  Schieberegler. Bei zwei Fotos ist das nett, bei
+                  dreiundvierzig ist es Arbeit: Der Händler will wissen,
+                  ob die Bearbeitung insgesamt getaugt hat, und nicht
+                  dreiundvierzigmal einen Regler ziehen.
+
+                  Ein Klick stellt alle um. Für den Blick auf ein
+                  einzelnes Bild genügt es, mit der Maus darüberzugehen.
+                */}
+                {photos.some(p => p.processed) && (
+                  <button onClick={() => setZeigeOriginale(!zeigeOriginale)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      fontSize: '13px', fontWeight: '600', fontFamily: F, cursor: 'pointer',
+                      padding: '6px 12px', borderRadius: '8px',
+                      background: zeigeOriginale ? G.akzentSchleier : 'transparent',
+                      border: `1px solid ${zeigeOriginale ? G.akzent : G.linieLeise}`,
+                      color: zeigeOriginale ? G.akzent : G.leise,
+                    }}>
+                    <Eye size={14} />
+                    {zeigeOriginale ? 'Studio-Bilder zeigen' : 'Originale zeigen'}
+                  </button>
+                )}
+
+                <button onClick={() => setPhotos([])} style={{ fontSize: '13px', color: G.fehler, background: 'none', border: 'none', cursor: 'pointer', fontFamily: F }}>
+                  Alle entfernen
+                </button>
+              </div>
             </div>
 
             {/* Erklaert, warum nicht alle Fotos ins Studio kommen */}
@@ -759,7 +793,7 @@ function Step2Inner() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '14px' }}>
               {photos.map((p, i) => {
                 const hasIssues = p.issues.length > 0;
                 const borderColor = hasIssues && !p.processed
@@ -783,10 +817,31 @@ function Step2Inner() {
                     nirgends zu sehen, weil das Original nach der Bearbeitung
                     einfach verschwand.
                   */}
-                  {p.processed ? (
-                    <VorherNachher vorher={p.preview} nachher={p.processed} />
-                  ) : (
-                    <img src={p.preview} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hasIssues ? 'brightness(0.75)' : 'none' }} alt="" />
+                  {/*
+                    Ein Bild, kein Schieberegler.
+
+                    Gezeigt wird das Studiobild; das Original erscheint,
+                    solange die Maus darüber steht oder der Schalter
+                    oben auf "Originale" steht. Der Vergleich ist damit
+                    eine Bewegung statt einer Bedienhandlung — und
+                    funktioniert bei dreiundvierzig Fotos genauso wie
+                    bei zweien.
+                  */}
+                  <img
+                    src={p.processed && !zeigeOriginale && ueberfahren !== p.id ? p.processed : p.preview}
+                    onMouseEnter={() => p.processed && setUeberfahren(p.id)}
+                    onMouseLeave={() => setUeberfahren(null)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hasIssues && !p.processed ? 'brightness(0.75)' : 'none' }}
+                    alt="" />
+
+                  {/* Sagt, was man gerade sieht — sonst rät man beim Vergleichen. */}
+                  {p.processed && (zeigeOriginale || ueberfahren === p.id) && (
+                    <div style={{
+                      position: 'absolute', top: '8px', left: '8px',
+                      background: 'rgba(0,0,0,0.72)', color: '#fff',
+                      fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+                      padding: '3px 8px', borderRadius: '5px', textTransform: 'uppercase',
+                    }}>Original</div>
                   )}
 
                   {/* Analysiere... */}
