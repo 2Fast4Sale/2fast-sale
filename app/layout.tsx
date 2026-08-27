@@ -20,6 +20,17 @@ export const metadata: Metadata = {
     description: "Fahrzeugschein abfotografieren, Fotos ins Studio setzen, Beschreibung erzeugen lassen. Fertiges Inserat als Fotopaket und PDF.",
     type: "website",
   },
+  /*
+   * Solange die Seite im Testbetrieb ist, soll sie in keiner Suche
+   * auftauchen. Sie bleibt erreichbar — wer die Adresse hat, kommt
+   * hin —, aber niemand stolpert zufaellig darueber.
+   *
+   * ZUM AUFHEBEN VOR DEM START: diesen robots-Block loeschen und
+   * app/robots.ts loeschen. Danach dauert es Tage bis Wochen, bis
+   * Google die Seite wieder aufnimmt — also rechtzeitig vorher, nicht
+   * am Tag des Starts.
+   */
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
