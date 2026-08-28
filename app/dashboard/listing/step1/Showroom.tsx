@@ -282,9 +282,32 @@ function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt
   luecke?: boolean;
 }) {
   const [selbstGeklappt, setSelbstGeklappt] = useState<boolean | null>(null);
+
+  /*
+   * "Fertig" klappt nur beim ersten Zeichnen zu, nicht waehrend des
+   * Tippens.
+   *
+   * Vorher war der Wert lebendig: Der Block "Eckdaten" gilt als fertig,
+   * sobald Preis UND Kilometerstand gefuellt sind. Stand der Preis
+   * schon da, wurde die Bedingung mit der ersten Ziffer des
+   * Kilometerstands wahr — und der Block klappte dem Haendler unter
+   * den Fingern weg, mitten im Wort. Dasselbe bei "Fahrzeug" beim
+   * ersten Zeichen der Erstzulassung.
+   *
+   * Gemeint war etwas anderes: Wer zu einem bereits ausgefuellten
+   * Entwurf zurueckkommt, soll die erledigten Abschnitte
+   * zusammengefaltet vorfinden. Das ist eine Frage des Zustands beim
+   * Oeffnen, nicht des Zustands in dieser Sekunde.
+   *
+   * `startZu` bleibt bewusst lebendig: Ob die Verbrauchsangaben
+   * Pflicht sind, haengt an der Kraftstoffart und kann sich waehrend
+   * des Ausfuellens aendern.
+   */
+  const [fertigBeimOeffnen] = useState(() => fertig === true && !!zusammenfassung);
+
   const zu = luecke
     ? false
-    : selbstGeklappt ?? (startZu === true || (fertig === true && !!zusammenfassung));
+    : selbstGeklappt ?? (startZu === true || fertigBeimOeffnen);
 
   if (zu) {
     /*
