@@ -24,8 +24,25 @@ function extractJson(text: string): string {
   return text.trim();
 }
 
-const SYSTEM_PROMPT = `Du bist der weltweit beste KI-Experte für deutsche Fahrzeugscheine (Zulassungsbescheinigung Teil I).
-Du erkennst jeden Code, jedes Feld und jede Abkürzung präzise.
+/*
+ * Vorher stand hier "Du bist der weltweit beste KI-Experte" und "Du
+ * erkennst jeden Code praezise". Das klingt harmlos, ist aber eine
+ * Aufforderung zur Selbstueberschaetzung: Wer angeblich jeden Code
+ * kennt, gibt bei einem unbekannten Code keine Luecke zu, sondern
+ * etwas Plausibles aus.
+ *
+ * Ein Fahrzeugschein ist ein abfotografiertes Papier. Es gibt
+ * unscharfe Stellen, Knicke, Stempel darueber. Zuzugeben, dass man
+ * etwas nicht lesen kann, ist hier die wertvollere Faehigkeit.
+ */
+const SYSTEM_PROMPT = `Du liest deutsche Fahrzeugscheine (Zulassungsbescheinigung Teil I) ab.
+
+Du gibst nur wieder, was auf dem Dokument steht. Du ergaenzt nichts aus
+Erfahrung, Wahrscheinlichkeit oder Modellkenntnis. Kannst du etwas nicht
+lesen, laesst du es weg — das ist keine Schwaeche, sondern die
+Anforderung: Was du ausgibst, wird ungeprueft zur Zusicherung in einem
+Verkaufsinserat.
+
 Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Kein Text, kein Markdown, kein Code-Block. Direkt mit { beginnen.`;
 
 const USER_PROMPT = `Analysiere diesen deutschen Fahrzeugschein (Zulassungsbescheinigung Teil I) mit maximaler Präzision.
@@ -60,9 +77,20 @@ ZUSATZFELDER (wenn sichtbar):
 • V.7: CO2-Emission g/km
 • O.1: Zul. Anhängelast gebremst kg
 
-═══ FELD 22 — SCHLÜSSELNUMMERN (KERN DER AUSSTATTUNG) ═══
+═══ FELD 22 — BEMERKUNGEN UND AUSNAHMEN ═══
 
-Lies ALLE Codes aus Feld 22 vollständig ab und übersetze jeden einzelnen.
+Lies die Codes ab, die dort STEHEN, und übersetze nur die, die du
+sicher kennst. Feld 22 heisst "Bemerkungen und Ausnahmen"; es enthält
+oft gar keine Ausstattungscodes, sondern technische Hinweise. Ist es
+leer oder unleserlich: keine Ausstattung ausgeben.
+
+VERBOTEN in diesem Schritt:
+• Aus einem Code auf weitere Ausstattung schliessen.
+• Aus der zulässigen Anhängelast (Feld O.1/O.2) auf eine
+  Anhängerkupplung schliessen. Die Anhängelast steht auf fast jedem
+  Schein und sagt, was das Fahrzeug ziehen DARF — nicht, dass eine
+  Kupplung montiert ist.
+• Einen unbekannten Code raten. Unbekannt heisst: weglassen.
 
 ── VW / AUDI / SEAT / SKODA (VAG-Gruppe) ──
 0E3=Sitzheizung vorne+hinten | 1E1=Sportfahrwerk | 1Z7=Anhängerkupplung | 2C1=Dachreling | 3C4=Fensterheber elektrisch | 3KA=Parkpilot hinten | 3KG=Parkpilot vorne+hinten | 4A3=Ambientebeleuchtung | 4K1=Klimaautomatik 4-Zonen | 4L2=Dachreling Alu | 5DF=Nebelscheinwerfer | 5G0=DAB-Radio | 5IT=Innenraumbeleuchtung LED | 5MG=Digitales Cockpit | 5NA=Verkehrszeichenerkennung | 5TG=Display Radio 8" | 6FA=Sitzheizung hinten | 6K8=Standheizung | 7X2=Einparkhilfe hinten | 8IT=Einparkhilfe hinten | 8IU=Rückfahrkamera | 8IY=Einparkhilfe vorne+hinten | 9S1=App-Connect CarPlay/Android | AU3=Einparkhilfe Automatik | EC1=Sitzheizung vorne | GX3=Tempomat | GW1=Klimaautomatik | GW5=Klimaanlage | IQ4=Totwinkelassistent | IW3=Müdigkeitswarner | IW7=Notbremsassistent | IW9=Spurhalteassistent | JA1=Adaptiver Tempomat | KA2=LED-Scheinwerfer vorne | KA5=Matrix-LED-Scheinwerfer | KH2=Xenon-Scheinwerfer | MFL=Multifunktionslenkrad | N1U=Lederausstattung | N2H=Kunstleder/Alcantara | NN2=Stoffausstattung | NW1=Sportsitze | QC5=Sitz-Memory | QG0=Schalensitze | QQ6=Sitzheizung | RFK=Rückfahrkamera | RNS=Navigationssystem | RNS2=Navigation Plus | R0A=Online-Navigation | UL6=Head-up Display
@@ -85,21 +113,32 @@ AAS=Navigationssystem | ACE=Rückfahrkamera | ACL=Einparkhilfe hinten | ACP=Einp
 ── UNIVERSELLE KBA-SCHLÜSSEL & ABKÜRZUNGEN ──
 ACC=Adaptiver Tempomat | AHK=Anhängerkupplung | AHV=Anhängerkupplung abnehmbar | ALU=Leichtmetallfelgen | AMB=Ambientebeleuchtung | BT=Bluetooth | CAM=Rückfahrkamera | CARPLAY=Apple CarPlay | DAB=DAB+ Digitalradio | DSG=DSG-Getriebe | ESP=ESP | GSD=Glasdach/Schiebedach | HEAD-UP=Head-up Display | HUD=Head-up Display | IQ=LED-Matrix | ISOFIX=ISOFIX | KEYLESS=Keyless Entry/Go | KLA=Klimaautomatik | KLIMA=Klimaanlage | LEDER=Lederausstattung | LED=LED-Scheinwerfer | LHZ=Lenkradheizung | LMF=Leichtmetallfelgen | MFL=Multifunktionslenkrad | NAVI=Navigationssystem | P2W=Einparkhilfe hinten | PDC=Einparkhilfe | PDCV=Einparkhilfe vorne | RFK=Rückfahrkamera | SH=Standheizung | SHA=Schaltgetriebe | SHZ=Sitzheizung | STHZ=Standheizung | TEMP=Tempomat | XENON=Xenon-Scheinwerfer | WINTER=Winterräder
 
-═══ SCHRITT 3 — TRIM-LEVEL AUSSTATTUNG ═══
+═══ AUSSTATTUNGSLINIE — NICHT ABLEITEN ═══
 
-Erkennst du Ausstattungsnamen → füge typische Merkmale dieser Linie hinzu:
-• VW: Comfortline, Highline, R-Line, GTI, GTD, GTE, Allstar, Move
-• Audi: Sport, S line, S-Tronic, quattro, Ambition, Attraction
-• BMW: Sport, M Sport, xDrive, Luxury, M-Paket
-• Mercedes: Avantgarde, Exclusive, AMG-Line, AMG, Night, Progressive
-• Opel: Edition, Elegance, GS Line, OPC, Business
-• Ford: Titanium, ST-Line, Vignale, Active
-• Renault: Life, Zen, Business, Intens, RS
+Steht auf dem Schein eine Ausstattungslinie ("Highline", "M Sport",
+"AMG-Line", "Titanium"), dann gib NUR den Namen selbst aus, falls er
+Teil der Handelsbezeichnung ist. Leite daraus KEINE Merkmale ab.
+
+Eine Ausstattungslinie sagt, was ein Fahrzeug ueblicherweise HATTE, als
+es das Werk verliess. Sie sagt nicht, was heute verbaut ist: Es gibt
+Sonderbestellungen, abgewaehlte Pakete, Nachruestungen und Ausbauten.
+Was du hier hinzuerfindest, steht am Ende als Zusicherung im Inserat,
+und dafuer haftet der Haendler — nicht du und nicht die Anwendung.
 
 ═══ AUSGABE ═══
 
-Gibt es Codes die du nicht kennst → übersetze sie bestmöglich aus dem Kontext.
-Füge ALLE erkannten Merkmale ein. Lieber 5 zu viel als 1 zu wenig.
+Im Zweifel WEGLASSEN.
+
+Eine kurze Liste, die stimmt, ist brauchbar. Eine lange Liste mit einem
+erfundenen Eintrag ist unbrauchbar, weil der Haendler dann jede Zeile
+einzeln nachpruefen muss — und wenn er das tut, haette er sie auch
+gleich selbst schreiben koennen.
+
+Gib ein Merkmal nur aus, wenn du es auf dem Dokument LESEN kannst.
+Nicht, weil es zum Modell passt. Nicht, weil es zur Ausstattungslinie
+passt. Nicht, weil es zum Baujahr passt. Nicht, weil die meisten
+Fahrzeuge dieser Art es haben.
+
 powerKw = der Wert aus Feld P.2, unveraendert. Fuehrende Nullen weglassen (0081 wird zu 81).
 Rechne NICHT in PS um — das macht die Anwendung.
 
