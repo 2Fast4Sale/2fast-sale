@@ -49,6 +49,11 @@ PFLICHTFELDER (immer ausfüllen):
   Ausstattungscodes, keine Türenzahl.
 • Feld 14 / 14.1 ("Emissionsklasse" oder "zu 14"): Schadstoffklasse → "Euro 4" | "Euro 5" | "Euro 6" | "Euro 6d-Temp" | "Euro 6d"
 • Antriebsart, falls erkennbar → "Frontantrieb" | "Heckantrieb" | "Allrad"
+• Feld 4 ("Fahrzeugklasse und Aufbau"): Gib den Aufbau GENAU SO zurueck,
+  wie er dort steht — Buchstabencode und/oder Text, z.B. "AC", "AC0002",
+  "AA LIMOUSINE", "KOMBILIMOUSINE". Nicht deuten, nicht uebersetzen,
+  nicht auf eine Verkaufskategorie umrechnen. Das macht die Anwendung.
+  Steht dort nichts Lesbares: null.
 
 ZUSATZFELDER (wenn sichtbar):
 • T: Höchstgeschwindigkeit km/h
@@ -118,6 +123,7 @@ Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
   "doors": 5,
   "emissionClass": "Euro 6d",
   "driveType": "Frontantrieb",
+  "aufbau": "AC KOMBILIMOUSINE",
   "equipment": ["alle erkannten Merkmale auf Deutsch, mind. 15 wenn irgendwie möglich"]
 }`;
 
@@ -197,6 +203,45 @@ export async function POST(req: Request) {
      * darueber ist ein Lesefehler und wird verworfen — ein leeres Feld ist
      * besser als eine falsche Zahl, die der Haendler ungeprueft uebernimmt.
      */
+    /*
+     * Karosserieform aus Feld 4 — aber nur, wo sie eindeutig ist.
+     *
+     * Der Fahrzeugschein kennt die EU-Aufbauarten AA bis AG. Sie sind
+     * groeber als die Kategorien der Verkaufsportale, und an einer
+     * Stelle gehen sie gar nicht auf: Ein SUV hat keinen eigenen Code.
+     * Ein Tiguan ist als AC (Kombi) oder AF (Mehrzweckfahrzeug)
+     * eingetragen — genau wie ein Passat Variant oder ein Touran.
+     *
+     * Deshalb werden nur die vier eindeutigen Faelle uebernommen. Bei
+     * AB, AC und AF bleibt das Feld leer und der Haendler waehlt
+     * selbst. Das ist unbequemer als eine Vorbelegung, aber eine
+     * falsche Karosserieform im Inserat faellt niemandem auf und steht
+     * am Ende trotzdem drin.
+     */
+    /*
+     * `\bAA\d*\b` statt `\bAA\b`: In Feld 4 steht der Code oft mit
+     * angehaengter Ziffernfolge ("AA0002"). Zwischen Buchstabe und
+     * Ziffer liegt keine Wortgrenze, ein blosses `\bAA\b` findet ihn
+     * dort also nicht.
+     *
+     * "Pritsche" steht bewusst nicht dabei, obwohl es zu AG passt: Ein
+     * Pritschenwagen ist im Verkauf eher ein Transporter als ein
+     * Gelaendewagen. Im Zweifel lieber leer.
+     */
+    const AUFBAU: Array<[RegExp, string]> = [
+      [/\bAE\d*\b|kabrio|cabrio|roadster/i,        'Cabrio / Roadster'],
+      [/\bAD\d*\b|coup[ée]/i,                      'Coupé'],
+      [/\bAG\d*\b|pick.?up/i,                      'SUV / Geländewagen'],
+      [/\bAA\d*\b|stufenheck|(?<!kombi)limousine/i,'Limousine'],
+    ];
+    const aufbau = typeof result.aufbau === 'string' ? result.aufbau.trim() : '';
+    delete result.aufbau;
+    if (aufbau) {
+      const treffer = AUFBAU.find(([muster]) => muster.test(aufbau));
+      if (treffer) result.bodyType = treffer[1];
+      else console.log('[scan-doc] Aufbau nicht eindeutig, Feld bleibt leer:', aufbau);
+    }
+
     const kw = Number(result.powerKw);
     const ccm = Number(result.displacementCcm);
 

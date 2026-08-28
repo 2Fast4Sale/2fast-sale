@@ -274,6 +274,8 @@ export function useEntwurf() {
             doors: nimm('doors', d.doors != null ? String(d.doors) : '', p.doors),
             emissionClass: nimm('emissionClass', d.emissionClass ?? '', p.emissionClass),
             driveType: nimm('driveType', d.driveType ?? '', p.driveType),
+            // Aus Feld 4 (Aufbau), nur wo eindeutig — siehe scan-doc.
+            bodyType: nimm('bodyType', d.bodyType ?? '', p.bodyType),
             equipment: Array.isArray(d.equipment)
               ? [...new Set([...p.equipment, ...d.equipment])] : p.equipment,
           };

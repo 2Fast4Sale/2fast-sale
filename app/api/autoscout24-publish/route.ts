@@ -3,6 +3,7 @@ import {
   as24MarkenId, as24ModellId, as24KarosserieId, as24Kraftstoff,
   as24Getriebe, as24FarbeId, as24EuronormId,
 } from '../../../lib/as24Uebersetzung';
+import { istAusgewiesen } from '../../../lib/mobileUebersetzung';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,8 +100,11 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
     nutzlast.prices = {
       public: {
         price: preis, currency: 'EUR', isNegotiable: false,
-        /* § 25a: Differenzbesteuert, also fuer den Kaeufer nicht absetzbar. */
-        isTaxDeductible: formData.vatType === 'ausweisbar',
+        /* § 25a: Differenzbesteuert, also fuer den Kaeufer nicht absetzbar.
+         * Der gespeicherte Wert heisst 'ausgewiesen'; "ausweisbar" ist nur
+         * die Beschriftung im Formular. Vergleich deshalb ueber
+         * istAusgewiesen(), gemeinsam mit der mobile.de-Seite. */
+        isTaxDeductible: istAusgewiesen(formData.vatType || ''),
       },
     };
   } else fehlt.push('Preis');

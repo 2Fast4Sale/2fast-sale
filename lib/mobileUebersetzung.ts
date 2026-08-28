@@ -105,5 +105,23 @@ export function mobileTueren(anzahl: number): string | undefined {
  * ausgewaehlt hatte.
  */
 export function mobileUmsatzsteuer(vatType: string): { vatRate?: string } {
-  return gleich(vatType) === 'ausweisbar' ? { vatRate: '19.00' } : {};
+  return istAusgewiesen(vatType) ? { vatRate: '19.00' } : {};
+}
+
+/**
+ * Regelbesteuert (Umsatzsteuer ausweisbar) oder nicht?
+ *
+ * Der gespeicherte Wert heisst 'ausgewiesen'. Im Formular steht
+ * daneben "ausweisbar" — das ist die Beschriftung, nicht der Wert.
+ * Beim ersten Anlauf habe ich auf die Beschriftung geprueft; damit
+ * traf die Bedingung nie zu und jedes Fahrzeug waere als
+ * differenzbesteuert ins Inserat gegangen.
+ *
+ * Deshalb steht der Vergleich an genau einer Stelle, und beide
+ * Schreibweisen zaehlen -- falls doch einmal die Beschriftung
+ * durchgereicht wird, ist das Ergebnis dasselbe statt still falsch.
+ */
+export function istAusgewiesen(vatType: string): boolean {
+  const k = gleich(vatType);
+  return k === 'ausgewiesen' || k === 'ausweisbar';
 }
