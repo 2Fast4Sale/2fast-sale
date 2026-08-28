@@ -156,7 +156,16 @@ function Beschriftung({ text, luecke, selbst, erledigt }: {
 }) {
   const zeigeSelbst = selbst && !erledigt;
   return (
-    <div style={{
+    <div
+      /*
+       * Merkzeichen fuer "Weiter": Bleibt eine Pflichtangabe leer,
+       * springt die Seite zur ersten Luecke. Die Sprungmarke sass in
+       * der aelteren Fassung an dieser Stelle und ging beim Umbau
+       * verloren -- die Suche fand nichts und es passierte gar nichts,
+       * was von aussen aussieht, als sei der Knopf kaputt.
+       */
+      data-luecke={luecke ? 'true' : undefined}
+      style={{
       display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7,
       fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
       color: luecke ? F.luecke : zeigeSelbst ? F.akzent : F.leise,
@@ -244,7 +253,7 @@ function Wahl({ optionen, wert, beiWahl }: {
  * Wer selbst aufklappt, dessen Entscheidung gilt und schlaegt die
  * Automatik, bis er wieder zuklappt.
  */
-function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt }: {
+function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt, luecke }: {
   titel: string; kinder: React.ReactNode; rechts?: React.ReactNode;
   fertig?: boolean; zusammenfassung?: string;
   /**
@@ -258,9 +267,24 @@ function Block({ titel, kinder, rechts, fertig, zusammenfassung, startZu, inhalt
   startZu?: boolean;
   /** Was in einem zugeklappten, noch leeren Block steckt. */
   inhalt?: string;
+  /**
+   * Hier drin fehlt eine Pflichtangabe — dann bleibt der Block offen.
+   *
+   * Ein zugeklappter Block rendert seine Kinder gar nicht. Wer auf
+   * "Weiter" drueckt und die Luecke steckt in einem zugeklappten
+   * Abschnitt, bekommt sonst weder einen Sprung noch eine Markierung
+   * zu sehen — die Stelle existiert in diesem Moment nicht.
+   *
+   * Der Wert kommt aus `fehler` und ist deshalb erst nach einem
+   * erfolglosen "Weiter" gesetzt. Waehrend des Ausfuellens bleibt
+   * alles zu, was zu sein soll.
+   */
+  luecke?: boolean;
 }) {
   const [selbstGeklappt, setSelbstGeklappt] = useState<boolean | null>(null);
-  const zu = selbstGeklappt ?? (startZu === true || (fertig === true && !!zusammenfassung));
+  const zu = luecke
+    ? false
+    : selbstGeklappt ?? (startZu === true || (fertig === true && !!zusammenfassung));
 
   if (zu) {
     /*
@@ -667,6 +691,7 @@ export default function Showroom() {
 
         {/* Fahrzeug + Eckdaten nebeneinander */}
         <Block titel="Fahrzeug"
+          luecke={!!e.fehler.brand}
           fertig={!!data.brand && !!data.model && !!data.firstRegistration}
           zusammenfassung={zusammen(
             [data.brand, data.model].filter(Boolean).join(' '),
@@ -845,6 +870,7 @@ export default function Showroom() {
         } />
 
         <Block titel="Eckdaten"
+          luecke={!!e.fehler.km || !!e.fehler.price}
           fertig={!!data.price && !!data.km}
           zusammenfassung={zusammen(
             data.price && `${zahl(data.price)} €`,
@@ -891,6 +917,7 @@ export default function Showroom() {
           verdrängt den Hinweis "trägst du ein".
         */}
         <Block titel="Das trägst du selbst ein"
+          luecke={!!e.fehler.gearbox || !!e.fehler.bodyType || !!e.fehler.vatType}
           fertig={!!data.gearbox && !!data.bodyType && !!data.vatType}
           zusammenfassung={zusammen(
             data.gearbox,

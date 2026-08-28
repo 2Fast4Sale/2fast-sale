@@ -314,8 +314,21 @@ export function useEntwurf() {
     setFehler(e);
     if (Object.keys(e).length > 0) {
       setBlattOffen(true);
-      requestAnimationFrame(() =>
-        document.querySelector('[data-luecke="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+      /*
+       * Zwei Bilder warten, nicht eines.
+       *
+       * Das Setzen der Fehler klappt zugeklappte Bloecke mit Luecken
+       * erst auf (siehe `luecke` in Block). Nach einem einzelnen
+       * requestAnimationFrame kann React noch nicht fertig gezeichnet
+       * haben — dann sucht die Abfrage eine Stelle, die es in diesem
+       * Moment noch nicht gibt, findet nichts und springt nirgendwo
+       * hin.
+       */
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const ziel = document.querySelector('[data-luecke="true"]');
+        if (!ziel) return;
+        ziel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }));
       return;
     }
     setUnterwegs(true);
