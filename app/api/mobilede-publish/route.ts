@@ -1,90 +1,143 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { mobileMarkenWert, mobileModellWert } from '../../../lib/carDatabase';
+import {
+  mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
+  mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
+} from '../../../lib/mobileUebersetzung';
 
 export const dynamic = 'force-dynamic';
 
-const MAKE_MAP: Record<string, string> = {
-  volkswagen: 'VW', vw: 'VW',
-  bmw: 'BMW',
-  mercedes: 'MERCEDES', 'mercedes-benz': 'MERCEDES',
-  audi: 'AUDI',
-  ford: 'FORD',
-  opel: 'OPEL',
-  toyota: 'TOYOTA',
-  hyundai: 'HYUNDAI',
-  kia: 'KIA',
-  skoda: 'SKODA', 
-  seat: 'SEAT',
-  renault: 'RENAULT',
-  peugeot: 'PEUGEOT',
-  citroen: 'CITROEN',
-  nissan: 'NISSAN',
-  honda: 'HONDA',
-  mazda: 'MAZDA',
-  volvo: 'VOLVO',
-  fiat: 'FIAT',
-  mitsubishi: 'MITSUBISHI',
-  suzuki: 'SUZUKI',
-  subaru: 'SUBARU',
-  jeep: 'JEEP',
-  tesla: 'TESLA',
-  porsche: 'PORSCHE',
-  mini: 'MINI',
-  dacia: 'DACIA',
-  alfa: 'ALFA ROMEO', 'alfa romeo': 'ALFA ROMEO',
-  smart: 'SMART',
-  land: 'LAND ROVER', 'land rover': 'LAND ROVER',
-  jaguar: 'JAGUAR',
-  chrysler: 'CHRYSLER',
-  dodge: 'DODGE',
-};
+const BASIS = 'https://services.mobile.de/seller-api';
 
-const FUEL_MAP: Record<string, string> = {
-  benzin: 'PETROL', petrol: 'PETROL', super: 'PETROL',
-  diesel: 'DIESEL',
-  elektro: 'ELECTRICITY', electric: 'ELECTRICITY', strom: 'ELECTRICITY',
-  hybrid: 'HYBRID',
-  lpg: 'LPG', autogas: 'LPG',
-  erdgas: 'CNG', cng: 'CNG',
-  'plug-in-hybrid': 'HYBRID',
-  'plug-in hybrid': 'HYBRID',
-};
-
-function parseMake(brand: string): { make: string; model: string; modelDescription: string } {
-  const parts = brand.trim().split(/\s+/);
-  const firstWord = parts[0].toLowerCase();
-  const twoWords = (parts.slice(0, 2).join(' ')).toLowerCase();
-
-  let make = MAKE_MAP[twoWords] || MAKE_MAP[firstWord] || parts[0].toUpperCase();
-  let modelParts: string[];
-
-  if (MAKE_MAP[twoWords]) {
-    modelParts = parts.slice(2);
-  } else {
-    modelParts = parts.slice(1);
-  }
-
-  const model = modelParts[0]?.toUpperCase() || 'MODELL';
-  const modelDescription = brand.slice(0, 48);
-
-  return { make, model, modelDescription };
-}
-
-function parseFirstRegistration(raw: string): string {
-  // Expects "TT.MM.JJJJ", "MM.JJJJ", "JJJJ-MM", "JJJJMM"
-  if (!raw) return '';
-  const s = raw.trim();
-  // DD.MM.YYYY
+/** Erstzulassung im Format yyyyMM, wie mobile.de es erwartet. */
+function erstzulassung(roh: string): string {
+  const s = (roh || '').trim();
   const ddmmyyyy = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
   if (ddmmyyyy) return `${ddmmyyyy[3]}${ddmmyyyy[2].padStart(2, '0')}`;
-  // MM.YYYY
   const mmyyyy = s.match(/^(\d{1,2})\.(\d{4})$/);
   if (mmyyyy) return `${mmyyyy[2]}${mmyyyy[1].padStart(2, '0')}`;
-  // YYYY-MM
   const yyyymm = s.match(/^(\d{4})-(\d{2})$/);
   if (yyyymm) return `${yyyymm[1]}${yyyymm[2]}`;
-  // Already YYYYMM
   if (/^\d{6}$/.test(s)) return s;
   return '';
+}
+
+const zahl = (roh: unknown): number =>
+  parseFloat(String(roh ?? '').replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+
+const ganzzahl = (roh: unknown): number =>
+  parseInt(String(roh ?? '').replace(/[^\d]/g, ''), 10) || 0;
+
+interface FormData {
+  brand?: string; model?: string; vin?: string; firstRegistration?: string;
+  km?: string; price?: string; fuelType?: string; gearbox?: string;
+  powerKw?: string; displacementCcm?: string; color?: string; seats?: string;
+  bodyType?: string; damaged?: boolean; emissionClass?: string;
+  doors?: string; vatType?: string; metallic?: boolean; previousOwners?: string;
+}
+
+/**
+ * Baut das Inserat und sammelt dabei, was fehlt.
+ *
+ * Getrennt vom Versenden, damit sich beides einzeln betrachten
+ * laesst -- und weil ohne Zugangsdaten das Bauen der einzige Teil
+ * ist, den man ueberhaupt pruefen kann.
+ */
+function inseratBauen(formData: FormData, description?: string) {
+  const fehlt: string[] = [];
+  const inserat: Record<string, unknown> = { vehicleClass: 'Car' };
+
+  const marke = (formData.brand || '').trim();
+  if (marke) inserat.make = mobileMarkenWert(marke);
+  else fehlt.push('Marke');
+
+  /*
+   * Fuer die Fahrzeugklasse Car ist model ein Pflichtfeld
+   * ("model-empty"). Vorher zerlegte die Route das Markenfeld und
+   * schrieb das Ergebnis in Grossbuchstaben -- also "GOLF" statt
+   * "Golf", was mobile.de ablehnt. Fand sie gar nichts, schickte sie
+   * das Wort "MODELL" als Modellnamen.
+   */
+  const modell = (formData.model || '').trim();
+  if (modell) inserat.model = mobileModellWert(marke, modell);
+  else fehlt.push('Modell');
+
+  /*
+   * modelDescription ist zugleich die Ueberschrift des Inserats.
+   * Hoechstens 48 Zeichen, und weder Telefonnummer noch E-Mail noch
+   * Adresse duerfen darin stehen -- sonst lehnt mobile.de ab
+   * (modeldescription-contains-phone / -email / -url).
+   */
+  const titel = [marke, modell].filter(Boolean).join(' ').trim();
+  if (titel) inserat.modelDescription = titel.slice(0, 48);
+
+  const kategorie = mobileKategorie(formData.bodyType || '');
+  if (kategorie) inserat.category = kategorie;
+  else fehlt.push(formData.bodyType ? `Karosserieform "${formData.bodyType}" unbekannt` : 'Karosserieform');
+
+  const kraftstoff = mobileKraftstoff(formData.fuelType || '');
+  if (kraftstoff) inserat.fuel = kraftstoff;
+  else fehlt.push(formData.fuelType ? `Kraftstoff "${formData.fuelType}" unbekannt` : 'Kraftstoff');
+
+  const getriebe = mobileGetriebe(formData.gearbox || '');
+  if (getriebe) inserat.gearbox = getriebe;
+  else fehlt.push('Getriebe');
+
+  /* Neu- oder Gebrauchtwagen. Ohne Erstzulassung gilt es als neu. */
+  const km = ganzzahl(formData.km);
+  const erst = erstzulassung(formData.firstRegistration || '');
+  inserat.condition = !erst && km <= 1000 ? 'NEW' : 'USED';
+  if (erst) inserat.firstRegistration = erst;
+  else if (inserat.condition === 'USED') fehlt.push('Erstzulassung');
+
+  if (km > 0) inserat.mileage = km;
+  else if (inserat.condition === 'USED') fehlt.push('Kilometerstand');
+
+  /* Pflichtfeld (damageunrepaired-empty), stand vorher fest auf false. */
+  inserat.damageUnrepaired = Boolean(formData.damaged);
+
+  const preis = zahl(formData.price);
+  if (preis > 0) {
+    inserat.price = {
+      consumerPriceGross: preis.toFixed(2),
+      type: 'FIXED',
+      currency: 'EUR',
+      ...mobileUmsatzsteuer(formData.vatType || ''),
+    };
+  } else fehlt.push('Preis');
+
+  const kw = ganzzahl(formData.powerKw);
+  if (kw > 0) inserat.power = kw;
+  const ccm = ganzzahl(formData.displacementCcm);
+  if (ccm > 0) inserat.cubicCapacity = ccm;
+  const sitze = ganzzahl(formData.seats);
+  if (sitze > 0) inserat.seats = sitze;
+  const tueren = mobileTueren(ganzzahl(formData.doors));
+  if (tueren) inserat.doors = tueren;
+  const vorbesitzer = ganzzahl(formData.previousOwners);
+  if (vorbesitzer > 0 && inserat.condition === 'USED') inserat.numberOfPreviousOwners = vorbesitzer;
+
+  if (formData.vin) inserat.vin = formData.vin.toUpperCase();
+  const farbe = mobileFarbe(formData.color || '');
+  if (farbe) inserat.exteriorColor = farbe;
+  if (formData.metallic) inserat.metallic = true;
+  const norm = mobileEuronorm(formData.emissionClass || '');
+  if (norm) inserat.emissionClass = norm;
+
+  if (description) inserat.description = description.slice(0, 5000);
+
+  /*
+   * EnVKV: Bei Neuwagen sind Verbrauch, CO2-Wert und CO2-Klasse
+   * gesetzlich vorgeschrieben; ohne sie lehnt mobile.de ab
+   * ("envkv-values-required"). Das Formular erfasst die Werte
+   * bereits, die Uebergabe fehlt hier aber noch -- deshalb als
+   * fehlende Angabe melden statt still ein falsches Inserat bauen.
+   */
+  if (inserat.condition === 'NEW') {
+    fehlt.push('EnVKV-Angaben für Neuwagen (noch nicht angebunden)');
+  }
+
+  return { inserat, fehlt };
 }
 
 export async function POST(req: NextRequest) {
@@ -92,106 +145,106 @@ export async function POST(req: NextRequest) {
   const password = process.env.MOBILEDE_API_PASSWORD;
   const sellerId = process.env.MOBILEDE_SELLER_ID;
 
-  if (!username || !password || !sellerId) {
-    return NextResponse.json(
-      { error: 'mobile.de API-Zugangsdaten nicht konfiguriert. Bitte MOBILEDE_API_USERNAME, MOBILEDE_API_PASSWORD und MOBILEDE_SELLER_ID in .env.local eintragen.' },
-      { status: 500 }
-    );
+  const { formData, description, images, trockenlauf } = await req.json();
+  const { inserat, fehlt } = inseratBauen(formData || {}, description);
+
+  /* Ohne Zugangsdaten zeigen, was rausginge, statt nur zu meckern. */
+  if (trockenlauf || !username || !password || !sellerId) {
+    return NextResponse.json({
+      trockenlauf: true,
+      grund: trockenlauf ? 'angefordert' : 'MOBILEDE_API_USERNAME/PASSWORD/SELLER_ID nicht gesetzt',
+      fehlendeAngaben: fehlt,
+      wuerdeSenden: inserat,
+    }, { status: trockenlauf ? 200 : 503 });
   }
 
-  const { formData, description, images } = await req.json();
+  if (fehlt.length > 0) {
+    return NextResponse.json(
+      { error: 'Angaben unvollständig', fehlendeAngaben: fehlt },
+      { status: 400 },
+    );
+  }
 
   const authHeader = 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
-  const baseHeaders = {
-    Authorization: authHeader,
-    Accept: 'application/vnd.de.mobile.api+json',
-  };
+  const kopf = { Authorization: authHeader, Accept: 'application/vnd.de.mobile.api+json' };
 
-  // -- 1. Upload images ------------------------------------------
-  const imageRefs: Array<{ ref: string }> = [];
+  /*
+   * Bilder zuerst, dann das Inserat mit den Verweisen darin -- so
+   * empfiehlt es die Dokumentation ausdruecklich.
+   *
+   * mobile.de nimmt nur JPG und hoechstens 2 MB je Bild. Das ist eng:
+   * Ein Studio-Bild kann darueber liegen. Zu grosse Bilder werden
+   * hier uebersprungen und gemeldet, statt den ganzen Aufruf
+   * scheitern zu lassen.
+   */
+  const GRENZE = 2 * 1024 * 1024;
+  const bildVerweise: Array<{ ref: string }> = [];
+  const bildFehler: string[] = [];
 
-  for (const base64Image of (images as string[]).slice(0, 15)) {
+  for (const [i, bild] of (((images as string[]) || [])).entries()) {
     try {
-      const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Data, 'base64');
-
-      const uploadRes = await fetch('https://services.mobile.de/seller-api/images', {
-        method: 'POST',
-        headers: { ...baseHeaders, 'Content-Type': 'image/jpeg' },
-        body: buffer,
-      });
-
-      if (uploadRes.ok) {
-        const data = await uploadRes.json();
-        imageRefs.push({ ref: data.ref });
-      } else {
-        console.error('Image upload failed:', uploadRes.status, await uploadRes.text());
+      if (/^data:image\/png/i.test(bild)) {
+        bildFehler.push(`Bild ${i + 1}: PNG, mobile.de nimmt nur JPG`);
+        continue;
       }
-    } catch (err) {
-      console.error('Image upload error:', err);
+      const rumpf = Buffer.from(bild.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+      if (rumpf.length > GRENZE) {
+        bildFehler.push(`Bild ${i + 1}: ${Math.round(rumpf.length / 1024)} KB, Grenze sind 2048 KB`);
+        continue;
+      }
+      const antwort = await fetch(`${BASIS}/images`, {
+        method: 'POST',
+        headers: { ...kopf, 'Content-Type': 'image/jpeg' },
+        body: rumpf,
+      });
+      if (antwort.ok) {
+        const daten = await antwort.json();
+        if (daten.ref) bildVerweise.push({ ref: daten.ref });
+      } else {
+        bildFehler.push(`Bild ${i + 1}: abgelehnt (${antwort.status})`);
+      }
+    } catch {
+      bildFehler.push(`Bild ${i + 1}: konnte nicht gelesen werden`);
     }
   }
+  if (bildVerweise.length > 0) inserat.images = bildVerweise;
 
-  // -- 2. Build ad payload ---------------------------------------
-  const { make, model, modelDescription } = parseMake(formData.brand || 'Fahrzeug');
-  const firstReg = parseFirstRegistration(formData.firstRegistration || '');
-  const priceRaw = parseFloat((formData.price || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-  const kmRaw = parseInt((formData.km || '0').replace(/[^\d]/g, '')) || 0;
-  const fuel = FUEL_MAP[(formData.fuelType || '').toLowerCase()] || 'PETROL';
-  const powerKw = parseInt(formData.powerKw) || undefined;
-  const ccm = parseInt(formData.displacementCcm) || undefined;
-
-  const adPayload: Record<string, unknown> = {
-    vehicleClass: 'Car',
-    category: 'Limousine',
-    make,
-    model,
-    modelDescription,
-    condition: 'USED',
-    fuel,
-    damageUnrepaired: false,
-    price: {
-      consumerPriceGross: priceRaw.toFixed(2),
-      vatRate: '19.00',
-      type: 'FIXED',
-      currency: 'EUR',
+  /*
+   * X-Mobile-Insertion-Request-Id macht das Anlegen wiederholbar:
+   * Bricht die Verbindung ab, weiss man nicht, ob das Inserat
+   * entstanden ist. Mit derselben Kennung antwortet mobile.de beim
+   * zweiten Versuch mit 303 und verweist auf das bereits angelegte
+   * Inserat, statt ein zweites zu erzeugen.
+   */
+  const antwort = await fetch(`${BASIS}/sellers/${sellerId}/ads`, {
+    method: 'POST',
+    headers: {
+      ...kopf,
+      'Content-Type': 'application/vnd.de.mobile.api+json',
+      'X-Mobile-Insertion-Request-Id': crypto.randomUUID(),
     },
-  };
+    body: JSON.stringify(inserat),
+  });
 
-  if (firstReg) adPayload.firstRegistration = firstReg;
-  if (kmRaw > 0) adPayload.mileage = kmRaw;
-  if (powerKw) adPayload.power = powerKw;
-  if (ccm) adPayload.cubicCapacity = ccm;
-  if (formData.vin) adPayload.vin = formData.vin;
-  if (parseInt(formData.seats || '0') > 0) adPayload.seats = parseInt(formData.seats);
-  if (description) adPayload.description = description.slice(0, 5000);
-  if (imageRefs.length > 0) adPayload.images = imageRefs;
-
-  // -- 3. Create ad ----------------------------------------------
-  const createRes = await fetch(
-    `https://services.mobile.de/seller-api/sellers/${sellerId}/ads`,
-    {
-      method: 'POST',
-      headers: { ...baseHeaders, 'Content-Type': 'application/vnd.de.mobile.api+json' },
-      body: JSON.stringify(adPayload),
-    }
-  );
-
-  if (!createRes.ok) {
-    const errorText = await createRes.text();
-    let errorBody: unknown;
-    try { errorBody = JSON.parse(errorText); } catch { errorBody = errorText; }
+  if (!antwort.ok && antwort.status !== 303) {
+    const text = await antwort.text();
+    let koerper: unknown;
+    try { koerper = JSON.parse(text); } catch { koerper = text; }
     return NextResponse.json(
-      { error: `mobile.de API Fehler (${createRes.status})`, details: errorBody },
-      { status: createRes.status }
+      { error: `mobile.de hat abgelehnt (${antwort.status})`, details: koerper, bildFehler },
+      { status: antwort.status },
     );
   }
 
-  // Extract mobileAdId from Location header
-  const location = createRes.headers.get('Location') || '';
-  const mobileAdId = location.split('/').pop() || '';
-  const adUrl = `https://suchen.mobile.de/fahrzeuge/details.html?id=${mobileAdId}`;
-  const dealerUrl = `https://portal.mobile.de/insertions/${mobileAdId}`;
+  const ort = antwort.headers.get('Location') || '';
+  const mobileAdId = ort.split('/').pop() || '';
 
-  return NextResponse.json({ mobileAdId, adUrl, dealerUrl, imagesUploaded: imageRefs.length });
+  return NextResponse.json({
+    mobileAdId,
+    bereitsVorhanden: antwort.status === 303,
+    adUrl: `https://suchen.mobile.de/fahrzeuge/details.html?id=${mobileAdId}`,
+    dealerUrl: `https://portal.mobile.de/insertions/${mobileAdId}`,
+    imagesUploaded: bildVerweise.length,
+    bildFehler,
+  });
 }
