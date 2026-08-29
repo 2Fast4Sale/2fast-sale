@@ -4,6 +4,7 @@ import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
 } from '../../../lib/mobileUebersetzung';
+import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ interface FormData {
   powerKw?: string; displacementCcm?: string; color?: string; seats?: string;
   bodyType?: string; damaged?: boolean; emissionClass?: string;
   doors?: string; vatType?: string; metallic?: boolean; previousOwners?: string;
+  equipment?: string[];
 }
 
 /**
@@ -123,6 +125,21 @@ function inseratBauen(formData: FormData, description?: string) {
   if (formData.metallic) inserat.metallic = true;
   const norm = mobileEuronorm(formData.emissionClass || '');
   if (norm) inserat.emissionClass = norm;
+
+  /*
+   * Ausstattung: bei mobile.de keine Liste, sondern einzelne Felder
+   * des Inserats.
+   *
+   * Nur Felder setzen, die noch leer sind. Heute ueberschneidet sich
+   * nichts — kein Ausstattungsmerkmal zielt auf ein Feld, das oben
+   * schon gefuellt wird. Aber "heute nicht" ist kein Zustand, auf den
+   * man baut: Kommt spaeter ein Merkmal dazu, das auf `metallic` oder
+   * `interiorType` zeigt, gewinnt die ausdrueckliche Auswahl des
+   * Haendlers und nicht das Haekchen.
+   */
+  for (const [feld, wert] of Object.entries(mobileAusstattung(formData.equipment || []))) {
+    if (inserat[feld] === undefined) inserat[feld] = wert;
+  }
 
   if (description) inserat.description = description.slice(0, 5000);
 

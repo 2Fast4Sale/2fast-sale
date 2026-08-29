@@ -4,6 +4,7 @@ import {
   as24Getriebe, as24FarbeId, as24EuronormId,
 } from '../../../lib/as24Uebersetzung';
 import { istAusgewiesen } from '../../../lib/mobileUebersetzung';
+import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,7 @@ interface FormData {
   km?: string; price?: string; fuelType?: string; gearbox?: string;
   powerKw?: string; displacementCcm?: string; color?: string; seats?: string;
   bodyType?: string; damaged?: boolean; emissionClass?: string;
-  doors?: string; vatType?: string;
+  doors?: string; vatType?: string; equipment?: string[];
 }
 
 /**
@@ -130,6 +131,14 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   if (farbe) nutzlast.bodyColor = Number(farbe);
   const norm = as24EuronormId(formData.emissionClass || '');
   if (norm) nutzlast.euEmissionStandard = Number(norm);
+
+  /*
+   * Ausstattung: eine Liste von Kennungen. Was der Haendler selbst
+   * eingetippt hat und in keiner Liste steht, faellt hier weg — es
+   * steht im Beschreibungstext.
+   */
+  const ausstattung = as24Ausstattung(formData.equipment || []);
+  if (ausstattung.length > 0) nutzlast.equipment = ausstattung;
 
   if (description) nutzlast.description = description.slice(0, 5000);
   if (imageIds.length > 0) nutzlast.images = imageIds.map(id => ({ id }));
