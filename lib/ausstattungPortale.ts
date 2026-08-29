@@ -2,25 +2,30 @@
  * Wohin jedes Ausstattungsmerkmal bei den Portalen gehoert.
  *
  * NICHT VON HAND AENDERN — erzeugt von ausstattung-zuordnen.mjs.
- * Stand: 2026-08-28
+ * Stand: 2026-08-29
  *
  * Die beiden Portale loesen dasselbe verschieden:
  *
  *   AutoScout24  eine Liste "Equipment" mit 131 Kennungen
- *   mobile.de    fuer fast jedes Merkmal ein EIGENES FELD im Inserat
+ *   mobile.de    fuer fast jedes Merkmal ein EIGENES FELD im Inserat,
+ *                manches in Aufzaehlungen (parkingAssistants, radio)
  *
- * 109 Merkmale insgesamt.
- * 5 nur bei AutoScout24, 8 nur bei mobile.de.
- * 25 bei keinem von beiden — die koennen nur in die freie
- * Beschreibung, und die Oberflaeche sollte das sagen, statt den
- * Haendler ein Haekchen setzen zu lassen, das nirgends ankommt.
+ * 133 Merkmale insgesamt:
+ *   96 gehen an beide Portale
+ *   1 nur an AutoScout24
+ *   11 nur an mobile.de
+ *   25 an keines — die koennen nur in die freie Beschreibung
+ *
+ * Alle Kennungen und Aufzaehlungswerte sind gegen die echten Listen
+ * geprueft (as24Referenzen.ts, mobileWerte.ts, equipmentDatabase.ts).
+ * Der Erzeuger bricht ab, sobald einer nicht existiert.
  */
 
 export type MobileZiel =
   /** Eigenes Ja/Nein-Feld: { abs: true } */
   | { art: 'schalter'; feld: string }
-  /** Ein Wert in einer Liste: parkingAssistants: ['REAR_SENSORS'] */
-  | { art: 'liste'; feld: string; wert: string }
+  /** Werte in einer Liste: parkingAssistants: ['FRONT_SENSORS', 'REAR_SENSORS'] */
+  | { art: 'liste'; feld: string; werte: string[] }
   /** Ein Wert in einer Auswahl: climatisation: 'AUTOMATIC_CLIMATISATION' */
   | { art: 'auswahl'; feld: string; wert: string };
 
@@ -48,7 +53,7 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   /* Beifahrerairbag */
   { id: 'airbag_beifahrer',
     as24: '3', /* Passenger-side airbag */
-    mobile: { art: 'auswahl', feld: 'airbag', wert: 'DRIVER_AND_PASSENGER_AIRBAG' }, },
+    mobile: { art: 'auswahl', feld: 'airbag', wert: 'FRONT_AIRBAGS' }, },
   /* Seitenairbags */
   { id: 'airbag_seite',
     as24: '32', /* Side airbag */
@@ -70,23 +75,23 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   /* Einparkhilfe hinten */
   { id: 'einparkhilfe_h',
     as24: '129', /* Parking assist system sensors rear */
-    mobile: { art: 'liste', feld: 'parkingAssistants', wert: 'REAR_SENSORS' }, },
+    mobile: { art: 'liste', feld: 'parkingAssistants', werte: ['REAR_SENSORS'] }, },
   /* Einparkhilfe vorne */
   { id: 'einparkhilfe_v',
     as24: '128', /* Parking assist system sensors front */
-    mobile: { art: 'liste', feld: 'parkingAssistants', wert: 'FRONT_SENSORS' }, },
+    mobile: { art: 'liste', feld: 'parkingAssistants', werte: ['FRONT_SENSORS'] }, },
   /* Einparkhilfe vorne & hinten */
   { id: 'einparkhilfe_360',
     as24: '128', /* Parking assist system sensors front */
-    mobile: { art: 'liste', feld: 'parkingAssistants', wert: 'FRONT_AND_REAR_SENSORS' }, },
+    mobile: { art: 'liste', feld: 'parkingAssistants', werte: ['FRONT_SENSORS', 'REAR_SENSORS'] }, },
   /* Rückfahrkamera */
   { id: 'rueckfahrkamera',
     as24: '130', /* Parking assist system camera */
-    mobile: { art: 'liste', feld: 'parkingAssistants', wert: 'REAR_VIEW_CAM' }, },
+    mobile: { art: 'liste', feld: 'parkingAssistants', werte: ['REAR_VIEW_CAM'] }, },
   /* 360°-Kamera */
   { id: 'kamera_360',
     as24: '187', /* 360° camera */
-    mobile: { art: 'liste', feld: 'parkingAssistants', wert: 'CAM_360_DEGREES' }, },
+    mobile: { art: 'liste', feld: 'parkingAssistants', werte: ['CAM_360_DEGREES'] }, },
   /* Notbremsassistent */
   { id: 'notbremse',
     as24: '148', /* Emergency brake assistant */
@@ -113,6 +118,25 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'notfallbremse_v',
     as24: '232', /* Distance warning system */
     mobile: { art: 'schalter', feld: 'distanceWarningSystem' }, },
+  /* ISOFIX Beifahrersitz */
+  { id: 'isofix_beifahrer',
+    mobile: { art: 'schalter', feld: 'passengerSeatIsofixPoint' }, },
+  /* Traktionskontrolle */
+  { id: 'traktionskontrolle',
+    as24: '31', /* Traction control */
+    mobile: { art: 'schalter', feld: 'tractionControlSystem' }, },
+  /* Elektr. Wegfahrsperre */
+  { id: 'wegfahrsperre',
+    as24: '26', /* Immobilizer */
+    mobile: { art: 'schalter', feld: 'immobilizer' }, },
+  /* Notrufsystem */
+  { id: 'notrufsystem',
+    as24: '149', /* Emergency system */
+    mobile: { art: 'schalter', feld: 'emergencyCallSystem' }, },
+  /* Gepäckraumabtrennung */
+  { id: 'gepaeckraumabtrennung',
+    as24: '226', /* Cargo barrier */
+    mobile: { art: 'schalter', feld: 'cargoBarrier' }, },
   /* Tempomat */
   { id: 'tempomat',
     as24: '38', /* Cruise control */
@@ -128,7 +152,7 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   /* Einparkassistent */
   { id: 'einparkassistent',
     as24: '131', /* Parking assist system self-steering */
-    mobile: { art: 'liste', feld: 'parkingAssistants', wert: 'AUTOMATIC_PARKING' }, },
+    mobile: { art: 'liste', feld: 'parkingAssistants', werte: ['AUTOMATIC_PARKING'] }, },
   /* Spurführungsassistent */
   { id: 'spurführung', },
   /* Fernlichtassistent */
@@ -143,6 +167,18 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'head_up',
     as24: '123', /* Heads-up display */
     mobile: { art: 'schalter', feld: 'headUpDisplay' }, },
+  /* Geschwindigkeitsbegrenzer */
+  { id: 'tempo_limiter',
+    as24: '227', /* Speed limit control system */
+    mobile: { art: 'schalter', feld: 'speedLimiter' }, },
+  /* Regensensor */
+  { id: 'regensensor',
+    as24: '127', /* Rain sensor */
+    mobile: { art: 'schalter', feld: 'automaticRainSensor' }, },
+  /* Schaltwippen */
+  { id: 'schaltwippen',
+    as24: '151', /* Shift paddles */
+    mobile: { art: 'schalter', feld: 'paddleShifters' }, },
   /* Klimaanlage */
   { id: 'klima',
     as24: '5', /* Air conditioning */
@@ -153,7 +189,8 @@ export const PORTAL_ZIELE: PortalZiel[] = [
     mobile: { art: 'auswahl', feld: 'climatisation', wert: 'AUTOMATIC_CLIMATISATION' }, },
   /* Vierzonen-Klimaautomatik */
   { id: 'klima_4zone',
-    as24: '243', /* Automatic climate control, 4 zones */ },
+    as24: '243', /* Automatic climate control, 4 zones */
+    mobile: { art: 'auswahl', feld: 'climatisation', wert: 'AUTOMATIC_CLIMATISATION_4_ZONES' }, },
   /* Sitzheizung */
   { id: 'sitzheizung',
     as24: '34', /* Seat heating */
@@ -224,6 +261,33 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'ambientelicht',
     as24: '219', /* Ambient lighting */
     mobile: { art: 'schalter', feld: 'ambientLighting' }, },
+  /* Armlehne */
+  { id: 'armlehne',
+    as24: '134', /* Armrest */
+    mobile: { art: 'schalter', feld: 'armRest' }, },
+  /* Lordosenstütze */
+  { id: 'lordosenstuetze',
+    as24: '143', /* Lumbar support */
+    mobile: { art: 'schalter', feld: 'lumbarSupport' }, },
+  /* Lederlenkrad */
+  { id: 'lederlenkrad',
+    as24: '142', /* Leather steering wheel */
+    mobile: { art: 'schalter', feld: 'leatherSteeringWheel' }, },
+  /* Elektr. Fensterheber */
+  { id: 'el_fensterheber',
+    as24: '13', /* Power windows */
+    mobile: { art: 'schalter', feld: 'electricWindows' }, },
+  /* Außenspiegel elektr. anklappbar */
+  { id: 'spiegel_anklappbar',
+    mobile: { art: 'schalter', feld: 'foldingExteriorMirrors' }, },
+  /* Servolenkung */
+  { id: 'servolenkung',
+    as24: '12', /* Power steering */
+    mobile: { art: 'schalter', feld: 'powerAssistedSteering' }, },
+  /* Freisprecheinrichtung */
+  { id: 'freisprech',
+    as24: '124', /* Hands-free equipment */
+    mobile: { art: 'schalter', feld: 'handsFreePhoneSystem' }, },
   /* Navigationssystem */
   { id: 'navi',
     as24: '23', /* Navigation system */
@@ -245,7 +309,7 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   /* DAB+ Digitalradio */
   { id: 'dab',
     as24: '138', /* Digital radio */
-    mobile: { art: 'liste', feld: 'radio', wert: 'DAB_RADIO' }, },
+    mobile: { art: 'liste', feld: 'radio', werte: ['DAB_RADIO'] }, },
   /* USB-Anschluss */
   { id: 'usb',
     as24: '161', /* USB */
@@ -274,6 +338,18 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'connect', },
   /* Fond-Entertainment-System */
   { id: 'rear_entertainment', },
+  /* Bordcomputer */
+  { id: 'bordcomputer',
+    as24: '41', /* On-board computer */
+    mobile: { art: 'schalter', feld: 'onBoardComputer' }, },
+  /* Tuner/Radio */
+  { id: 'tuner_radio',
+    as24: '10', /* Radio */
+    mobile: { art: 'liste', feld: 'radio', werte: ['TUNER'] }, },
+  /* Musikstreaming integriert */
+  { id: 'musikstreaming',
+    as24: '228', /* Integrated music streaming */
+    mobile: { art: 'schalter', feld: 'integratedMusicStreaming' }, },
   /* LED-Scheinwerfer */
   { id: 'led',
     as24: '140', /* LED Headlights */
@@ -284,14 +360,16 @@ export const PORTAL_ZIELE: PortalZiel[] = [
     mobile: { art: 'auswahl', feld: 'headlightType', wert: 'XENON_HEADLIGHTS' }, },
   /* Matrix-LED / Laser-Scheinwerfer */
   { id: 'matrix_led',
-    as24: '213', /* Laser headlights */ },
+    as24: '213', /* Laser headlights */
+    mobile: { art: 'auswahl', feld: 'headlightType', wert: 'LASER_HEADLIGHTS' }, },
   /* LED-Tagfahrlicht */
   { id: 'tagfahrlicht',
     as24: '141', /* LED Daytime Running Lights */
-    mobile: { art: 'auswahl', feld: 'daytimeRunningLamps', wert: 'LED_DAYTIME_RUNNING_LIGHTS' }, },
+    mobile: { art: 'auswahl', feld: 'daytimeRunningLamps', wert: 'LED_RUNNING_LIGHTS' }, },
   /* Kurvenlicht / adaptives Licht */
   { id: 'kurven_licht',
-    as24: '118', /* Adaptive headlights */ },
+    as24: '118', /* Adaptive headlights */
+    mobile: { art: 'auswahl', feld: 'bendingLightsType', wert: 'ADAPTIVE_BENDING_LIGHTS' }, },
   /* LED-Rückleuchten */
   { id: 'led_rueck', },
   /* Lichtsensor */
@@ -302,15 +380,23 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'nebellicht',
     as24: '19', /* Fog lights */
     mobile: { art: 'schalter', feld: 'frontFogLights' }, },
+  /* Blendfreies Fernlicht */
+  { id: 'blendfrei_fernlicht',
+    as24: '214', /* Glare-free high beam headlights */
+    mobile: { art: 'schalter', feld: 'glareFreeHighBeam' }, },
+  /* Scheinwerferreinigung */
+  { id: 'scheinwerferreinigung',
+    as24: '190', /* Headlight washer system */
+    mobile: { art: 'schalter', feld: 'headlightWasherSystem' }, },
   /* Lederausstattung */
   { id: 'leder',
     mobile: { art: 'auswahl', feld: 'interiorType', wert: 'LEATHER' }, },
   /* Kunstleder / Alcantara */
   { id: 'kunstleder',
-    mobile: { art: 'auswahl', feld: 'interiorType', wert: 'PART_LEATHER' }, },
+    mobile: { art: 'auswahl', feld: 'interiorType', wert: 'IMITATION_LEATHER' }, },
   /* Stoffausstattung */
   { id: 'stoff',
-    mobile: { art: 'auswahl', feld: 'interiorType', wert: 'CLOTH' }, },
+    mobile: { art: 'auswahl', feld: 'interiorType', wert: 'FABRIC' }, },
   /* Sportsitze */
   { id: 'sitze_vorne_sport',
     as24: '117', /* Sport seats */
@@ -364,7 +450,7 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   /* Anhängerkupplung */
   { id: 'anhaengerkupplung',
     as24: '20', /* Trailer hitch */
-    mobile: { art: 'auswahl', feld: 'trailerCouplingType', wert: 'FIX' }, },
+    mobile: { art: 'auswahl', feld: 'trailerCouplingType', wert: 'TRAILER_COUPLING_FIX' }, },
   /* Dachreling */
   { id: 'dachreling',
     as24: '27', /* Roof rack */
@@ -379,7 +465,20 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'zweifarb', },
   /* Notrad / Reifenreparaturset */
   { id: 'tiefformat_reifen',
-    as24: '217', /* Emergency tyre repair kit */ },
+    as24: '217', /* Emergency tyre repair kit */
+    mobile: { art: 'auswahl', feld: 'breakdownService', wert: 'REPAIR_KIT' }, },
+  /* Abgedunkelte Scheiben */
+  { id: 'scheiben_abgedunkelt',
+    as24: '54', /* Tinted windows */
+    mobile: { art: 'schalter', feld: 'tintedWindows' }, },
+  /* Sommerreifen */
+  { id: 'sommerreifen',
+    as24: '210', /* Summer tyres */
+    mobile: { art: 'schalter', feld: 'summerTires' }, },
+  /* Sportpaket */
+  { id: 'sportpaket',
+    as24: '112', /* Sport package */
+    mobile: { art: 'schalter', feld: 'sportPackage' }, },
   /* Allradantrieb */
   { id: 'allrad', },
   /* Hinterradantrieb */
@@ -406,6 +505,9 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   /* Herstellergarantie */
   { id: 'garantie',
     mobile: { art: 'schalter', feld: 'warranty' }, },
+  /* Nichtraucher-Fahrzeug */
+  { id: 'nichtraucher',
+    mobile: { art: 'schalter', feld: 'nonSmokerVehicle' }, },
 ];
 
 const NACH_ID = new Map(PORTAL_ZIELE.map(z => [z.id, z]));
@@ -415,11 +517,12 @@ export function portalZiel(id: string): PortalZiel | undefined {
 }
 
 /**
- * Merkmale, die bei KEINEM Portal ankommen.
+ * Merkmale, die bei KEINEM Portal als Haekchen ankommen.
  *
- * Nicht dasselbe wie "unwichtig": Dachhimmel, Dekore und die
- * Zollgroesse der Felgen interessieren Kaeufer sehr wohl. Sie gehoeren
- * nur in den Beschreibungstext statt in ein Haekchen.
+ * Nicht dasselbe wie "unwichtig": Sitzzahl, Antriebsart und Getriebe
+ * stehen in eigenen Feldern des Inserats. Dachhimmel, Dekore und die
+ * Zollgroesse der Felgen gehoeren dagegen wirklich nur in den
+ * Beschreibungstext.
  */
 export function nurBeschreibung(id: string): boolean {
   const z = NACH_ID.get(id);

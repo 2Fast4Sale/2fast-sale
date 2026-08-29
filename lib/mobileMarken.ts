@@ -2,7 +2,7 @@
  * Marken und Modelle, wie mobile.de sie führt.
  *
  * NICHT VON HAND ÄNDERN — erzeugt von refdaten-holen.mjs.
- * Stand: 2026-08-26
+ * Stand: 2026-08-29
  * Quelle: https://services.mobile.de/refdata/classes/Car/makes
  *
  * Zwei Werte je Eintrag, und das ist der ganze Sinn der Sache:

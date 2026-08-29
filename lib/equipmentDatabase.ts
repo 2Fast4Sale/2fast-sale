@@ -42,6 +42,11 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'bergab',           label: 'Bergabfahrhilfe',                        aliases: ['hill descent control', 'hdc', 'bergabfahrt-assistent', 'hill start assist'] },
       { id: 'berganfahrhilfe',  label: 'Berganfahrhilfe',                        aliases: ['hill hold', 'hill start control', 'berganfahr-assistent'] },
       { id: 'notfallbremse_v',  label: 'Kollisionswarner',                       aliases: ['forward collision warning', 'frontkollisionswarner', 'pre-collision', 'forward alert'] },
+      { id: 'isofix_beifahrer', label: 'ISOFIX Beifahrersitz',                      aliases: ['isofix vorne', 'isofix passenger', 'beifahrer isofix'] },
+      { id: 'traktionskontrolle', label: 'Traktionskontrolle',                        aliases: ['asr', 'traction control', 'antriebsschlupfregelung', 'tcs'] },
+      { id: 'wegfahrsperre',   label: 'Elektr. Wegfahrsperre',                     aliases: ['wegfahrsperre', 'immobilizer', 'elektronische wegfahrsperre'] },
+      { id: 'notrufsystem',    label: 'Notrufsystem',                              aliases: ['ecall', 'e-call', 'emergency call', 'notruf'] },
+      { id: 'gepaeckraumabtrennung', label: 'Gepäckraumabtrennung',                      aliases: ['trennnetz', 'laderaumabtrennung', 'cargo barrier', 'hundegitter'] },
     ],
   },
   {
@@ -56,6 +61,9 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'fernlicht_auto',   label: 'Fernlichtassistent',                     aliases: ['automatic high beam', 'high beam assist', 'fernlicht-assistent', 'auto-fernlicht'] },
       { id: 'nachtsicht',       label: 'Nachtsichtkamera',                       aliases: ['night vision', 'nacht-vision', 'nightview'] },
       { id: 'head_up',          label: 'Head-up Display',                        aliases: ['head up display', 'hud', 'windschutzscheibenanzeige', 'head-up-display'] },
+      { id: 'tempo_limiter',   label: 'Geschwindigkeitsbegrenzer',                 aliases: ['speed limiter', 'limiter', 'tempolimit'] },
+      { id: 'regensensor',     label: 'Regensensor',                               aliases: ['rain sensor', 'regen sensor', 'scheibenwischer automatik'] },
+      { id: 'schaltwippen',    label: 'Schaltwippen',                              aliases: ['paddle shifter', 'shift paddles', 'wippen am lenkrad'] },
     ],
   },
   {
@@ -83,6 +91,13 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'el_spiegel',       label: 'Elektrisch einstell- und klappbare Außenspiegel', aliases: ['electric mirrors', 'elektrische spiegel', 'el. spiegel', 'auto dimming mirror'] },
       { id: 'spiegel_abblend',  label: 'Automatisch abblendende Spiegel',        aliases: ['auto dimming', 'selbstabblendend', 'innen/außenspiegel abblendend'] },
       { id: 'ambientelicht',    label: 'Ambientebeleuchtung',                    aliases: ['ambient light', 'innenbeleuchtung', 'ambiente-beleuchtung', 'interior lighting'] },
+      { id: 'armlehne',        label: 'Armlehne',                                  aliases: ['mittelarmlehne', 'armrest', 'armauflage'] },
+      { id: 'lordosenstuetze', label: 'Lordosenstütze',                            aliases: ['lumbar support', 'lendenwirbelstuetze', 'lordose'] },
+      { id: 'lederlenkrad',    label: 'Lederlenkrad',                              aliases: ['leather steering wheel', 'lenkrad leder'] },
+      { id: 'el_fensterheber', label: 'Elektr. Fensterheber',                      aliases: ['elektrische fensterheber', 'power windows', 'fensterheber elektrisch'] },
+      { id: 'spiegel_anklappbar', label: 'Außenspiegel elektr. anklappbar',           aliases: ['anklappbare aussenspiegel', 'folding mirrors', 'spiegel anklappbar'] },
+      { id: 'servolenkung',    label: 'Servolenkung',                              aliases: ['power steering', 'lenkhilfe', 'servo'] },
+      { id: 'freisprech',      label: 'Freisprecheinrichtung',                     aliases: ['hands-free', 'handsfree', 'freisprechanlage', 'telefonvorbereitung'] },
     ],
   },
   {
@@ -103,6 +118,9 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'digital_cockpit',  label: 'Digitales Cockpit',                      aliases: ['digital instrument cluster', 'virtual cockpit', 'digitales kombiinstrument', 'TFT display', 'full digital display'] },
       { id: 'connect',          label: 'Connected Services / App Connect',       aliases: ['connected car', 'onstar', 'bmw connected', 'mercedes me', 'myskoda', 'remote app', 'smartphone integration'] },
       { id: 'rear_entertainment',label: 'Fond-Entertainment-System',             aliases: ['rear screen', 'rear entertainment', 'fond bildschirm', 'backseat entertainment'] },
+      { id: 'bordcomputer',    label: 'Bordcomputer',                              aliases: ['on-board computer', 'reisecomputer', 'bordrechner'] },
+      { id: 'tuner_radio',     label: 'Tuner/Radio',                               aliases: ['radio', 'autoradio', 'tuner'] },
+      { id: 'musikstreaming',  label: 'Musikstreaming integriert',                 aliases: ['spotify', 'integrated music streaming', 'streaming'] },
     ],
   },
   {
@@ -117,6 +135,8 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'led_rueck',        label: 'LED-Rückleuchten',                       aliases: ['led tail lights', 'led rear lights', 'led heck'] },
       { id: 'licht_sensor',     label: 'Lichtsensor',                            aliases: ['automatic lights', 'light sensor', 'automatisches licht', 'regensensor und lichtsensor'] },
       { id: 'nebellicht',       label: 'Nebelscheinwerfer',                      aliases: ['fog lights', 'nebelleuchten', 'fog lamp'] },
+      { id: 'blendfrei_fernlicht', label: 'Blendfreies Fernlicht',                     aliases: ['glare-free high beam', 'matrix fernlicht', 'blendfrei'] },
+      { id: 'scheinwerferreinigung', label: 'Scheinwerferreinigung',                     aliases: ['sra', 'headlight washer', 'scheinwerferwaschanlage'] },
     ],
   },
   {
@@ -154,6 +174,9 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'metallic',         label: 'Metallic-Lackierung',                    aliases: ['metallic paint', 'metallic farbe', 'metallic lackierung'] },
       { id: 'zweifarb',         label: 'Zweifarbige Lackierung',                 aliases: ['bicolor', 'two tone', 'kontrast dach', 'dach in kontrastfarbe'] },
       { id: 'tiefformat_reifen', label: 'Notrad / Reifenreparaturset',           aliases: ['spare wheel', 'notrad', 'runflat', 'run-flat reifen', 'repair kit'] },
+      { id: 'scheiben_abgedunkelt', label: 'Abgedunkelte Scheiben',                     aliases: ['privacy glass', 'tinted windows', 'dunkle scheiben', 'sonnenschutzverglasung'] },
+      { id: 'sommerreifen',    label: 'Sommerreifen',                              aliases: ['summer tyres', 'sommerraeder'] },
+      { id: 'sportpaket',      label: 'Sportpaket',                                aliases: ['sport package', 'm-paket', 's line', 'amg-line'] },
     ],
   },
   {
@@ -172,6 +195,7 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
       { id: 'scheckh',          label: 'Scheckheftgepflegt',                     aliases: ['service history', 'wartungsbuch', 'full service history', 'shp', 'gepflegte servicehistorie'] },
       { id: 'neuwertig',        label: 'Neuwertig / 1. Hand',                    aliases: ['1 hand', 'erstbesitzer', 'one owner', 'first owner', 'ersthand'] },
       { id: 'garantie',         label: 'Herstellergarantie',                     aliases: ['manufacturer warranty', 'garantie vorhanden', 'fabriksgarantie', 'restgarantie'] },
+      { id: 'nichtraucher',    label: 'Nichtraucher-Fahrzeug',                     aliases: ['nichtraucher', 'non smoker', 'rauchfrei'] },
     ],
   },
 ];
