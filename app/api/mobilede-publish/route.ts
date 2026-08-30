@@ -5,6 +5,8 @@ import {
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
 } from '../../../lib/mobileUebersetzung';
 import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
+import { mobileEnvkv } from '../../../lib/mobileEnvkv';
+import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +39,7 @@ interface FormData {
   doors?: string; vatType?: string; metallic?: boolean; previousOwners?: string;
   equipment?: string[];
   leermasseKg?: string; anhaengelastGebremstKg?: string; anhaengelastUngebremstKg?: string;
+  envkv?: EnvkvData;
 }
 
 /**
@@ -160,12 +163,23 @@ function inseratBauen(formData: FormData, description?: string) {
   /*
    * EnVKV: Bei Neuwagen sind Verbrauch, CO2-Wert und CO2-Klasse
    * gesetzlich vorgeschrieben; ohne sie lehnt mobile.de ab
-   * ("envkv-values-required"). Das Formular erfasst die Werte
-   * bereits, die Uebergabe fehlt hier aber noch -- deshalb als
-   * fehlende Angabe melden statt still ein falsches Inserat bauen.
+   * ("envkv-values-required").
+   *
+   * Geprueft wird mit derselben Funktion wie im Formular, damit
+   * "Weiter" und der Upload nicht verschiedener Meinung sein koennen.
+   * Angegebene Werte werden immer uebertragen, auch bei einem
+   * Gebrauchtwagen -- wer sie freiwillig einträgt, will sie im Inserat
+   * sehen.
    */
-  if (inserat.condition === 'NEW') {
-    fehlt.push('EnVKV-Angaben für Neuwagen (noch nicht angebunden)');
+  const envkv = formData.envkv;
+  if (envkv) {
+    const pruefung = validateEnvkv(envkv, formData.fuelType || '');
+    if (pruefung.required && !pruefung.complete) {
+      fehlt.push(`EnVKV: ${pruefung.missing.join(', ')}`);
+    }
+    Object.assign(inserat, mobileEnvkv(envkv, formData.fuelType || ''));
+  } else if (inserat.condition === 'NEW') {
+    fehlt.push('EnVKV-Angaben für Neuwagen');
   }
 
   return { inserat, fehlt };
