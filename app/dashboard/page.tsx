@@ -180,7 +180,7 @@ function DashboardContent() {
             {isMobile && (
               <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontSize:'13px', fontWeight:'700', color:'#0f172a' }}>Meine Inserate</span>
-                <Link href="/dashboard/gallery" style={{ textDecoration:'none', fontSize:'12px', fontWeight:'600', color:'#6366f1', display:'flex', alignItems:'center', gap:'3px' }}>Alle <ChevronRight size={12} /></Link>
+                <Link href="/dashboard/gallery" style={{ textDecoration:'none', fontSize:'12px', fontWeight:'600', color:'#4f46e5', display:'flex', alignItems:'center', gap:'3px' }}>Alle <ChevronRight size={12} /></Link>
               </div>
             )}
 
@@ -257,12 +257,12 @@ function DashboardContent() {
                 })}
 
                 <Link href="/dashboard/listing/step1"
-                  style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:'12px', padding: isMobile ? '12px 16px' : '12px 20px', color:'#6366f1', borderTop:'1px solid #f1f5f9' }}
+                  style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:'12px', padding: isMobile ? '12px 16px' : '12px 20px', color:'#4f46e5', borderTop:'1px solid #f1f5f9' }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fafaff'}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
                 >
                   <div style={{ width: isMobile ? '56px' : '64px', height: isMobile ? '40px' : '44px', flexShrink:0, border:'1px dashed #c7d2fe', background:'#f5f3ff', display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'2px' }}>
-                    <Plus size={15} color="#6366f1" />
+                    <Plus size={15} color="#4f46e5" />
                   </div>
                   <span style={{ fontSize:'14px', fontWeight:'600' }}>Weiteres Inserat erstellen</span>
                   <ArrowRight size={14} style={{ marginLeft:'auto' }} />
@@ -273,7 +273,7 @@ function DashboardContent() {
             {vehicles.length > 0 && (
               <div style={{ padding: isMobile ? '10px 16px' : '11px 20px', borderTop:'1px solid #f1f5f9', background:'#fafbfc', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                 <span style={{ fontSize:'12px', color:'#475569' }}>{total} Inserat{total !== 1 ? 'e' : ''}</span>
-                <Link href="/dashboard/gallery" style={{ textDecoration:'none', fontSize:'13px', fontWeight:'700', color:'#6366f1', display:'flex', alignItems:'center', gap:'4px' }}>
+                <Link href="/dashboard/gallery" style={{ textDecoration:'none', fontSize:'13px', fontWeight:'700', color:'#4f46e5', display:'flex', alignItems:'center', gap:'4px' }}>
                   Alle verwalten <ChevronRight size={13} />
                 </Link>
               </div>
