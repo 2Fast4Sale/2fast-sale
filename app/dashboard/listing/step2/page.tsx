@@ -1006,7 +1006,7 @@ function Step2Inner() {
       <div style={{ position: 'fixed', bottom: isMobile ? '56px' : 0, left: 0, right: 0, background: `${G.rahmenFlaeche}f0`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${G.rahmenLinie}`, padding: isMobile ? '12px 16px' : '14px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', zIndex: 50 }}>
         <div style={{ fontSize: '13px', color: G.rahmenLeise }}>
           {photos.length === 0
-            ? 'Mindestens 1 Foto hochladen'
+            ? (isMobile ? '' : 'Mindestens 1 Foto hochladen')
             : <span style={{ color: G.rahmenGut, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}><CheckCircle2 size={14} /> {photos.length} Foto{photos.length !== 1 ? 's' : ''} bereit{processedCount > 0 ? ` · ${processedCount} im Studio bearbeitet` : ''}</span>
           }
         </div>
@@ -1025,7 +1025,7 @@ function Step2Inner() {
               fontFamily: F, boxShadow: photos.length > 0 ? '0 4px 18px rgba(37,99,235,0.4)' : 'none',
             }}
           >
-            KI-Beschreibung generieren <ChevronRight size={16} />
+            {isMobile ? 'Beschreibung' : 'KI-Beschreibung generieren'} <ChevronRight size={16} />
           </button>
         </div>
       </div>

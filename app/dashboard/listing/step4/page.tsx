@@ -1185,8 +1185,21 @@ function Step4Inner() {
           <button onClick={() => save('Entwurf')} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '10px 15px', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.30)', borderRadius: '9px', color: G.rahmenLuecke, fontSize: '13px', fontWeight: '600', cursor: 'pointer', fontFamily: F }}><Save size={13} /> Entwurf</button>
         </div>
         <div style={{ display: 'flex', gap: '7px', alignItems: 'center' }}>
-          <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#c2410c', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><Send size={13} /> Mobile.de</button>
-          <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#003566', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><ExternalLink size={13} /> AutoScout24</button>
+          {/*
+            Auf dem Handy weglassen.
+
+            Fuenf Knoepfe passen nicht in 375 px: Der letzte —
+            "Veroeffentlichen", also der einzige, der zaehlt — wurde
+            rechts aus dem Bild geschoben und war nicht antippbar. Ein
+            Haendler konnte sein Inserat auf dem Telefon nicht
+            abschliessen.
+
+            Die beiden Portal-Knoepfe sind der richtige Verzicht: Sie
+            tun heute dasselbe wie "Veroeffentlichen" und sind laut
+            eigener Startseite "in Vorbereitung".
+          */}
+          {!isMobile && <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#c2410c', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><Send size={13} /> Mobile.de</button>}
+          {!isMobile && <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#003566', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><ExternalLink size={13} /> AutoScout24</button>}
           <button onClick={() => save('Aktiv')} disabled={saving}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px', background: saving ? 'rgba(99,102,241,0.45)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: '10px', fontSize: '14px', fontWeight: '900', cursor: saving ? 'wait' : 'pointer', fontFamily: F, boxShadow: saving ? 'none' : '0 4px 24px rgba(99,102,241,0.45)', letterSpacing: '-0.2px', transition: 'all 0.2s' }}
             onMouseEnter={e => !saving && (e.currentTarget.style.transform = 'translateY(-1px)', e.currentTarget.style.boxShadow = '0 8px 32px rgba(99,102,241,0.55)')}
