@@ -114,7 +114,7 @@ function LoginForm() {
         </div>
 
         <div style={{ display: 'flex', gap: '32px', position: 'relative', zIndex: 1 }}>
-          {[{ n: '34k+', l: 'Inserate' }, { n: '98%', l: 'Zufriedenheit' }, { n: '2 Min', l: 'Ø Dauer' }].map(s => (
+          {[{ n: '182', l: 'Marken' }, { n: '2.664', l: 'Modelle' }, { n: '133', l: 'Ausstattungen' }].map(s => (
             <div key={s.l}>
               <div style={{ fontSize: '22px', fontWeight: '900', color: '#3b82f6' }}>{s.n}</div>
               <div style={{ fontSize: '12px', color: '#334155', fontWeight: '600', marginTop: '2px' }}>{s.l}</div>

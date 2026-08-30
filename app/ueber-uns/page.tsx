@@ -70,7 +70,7 @@ export default function UeberUnsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px' }}>
             <div>
               <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.9, marginBottom: '20px' }}>
-                2fast4sale wurde 2025 in Deutschland gegründet, nachdem wir gesehen haben, wie viel Zeit Autohändler täglich mit dem Erstellen von Inseraten verschwenden. Zwei Stunden pro Fahrzeug — Fotos bearbeiten, Daten eintippen, Beschreibung schreiben, auf jede Plattform einzeln hochladen.
+                2fast4sale entsteht in Deutschland, weil ich in der Werkstatt gesehen habe, wie viel Zeit Autohändler täglich mit dem Erstellen von Inseraten verschwenden. Zwei Stunden pro Fahrzeug — Fotos bearbeiten, Daten eintippen, Beschreibung schreiben, auf jede Plattform einzeln hochladen.
               </p>
               <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.85, margin: 0 }}>
                 Mit moderner KI-Technologie haben wir diesen Prozess auf 2 Minuten reduziert. Nicht durch Qualitätsverlust — sondern durch Automatisierung all der Schritte, die ein Mensch nicht besser macht als eine gut trainierte KI.
@@ -78,10 +78,9 @@ export default function UeberUnsPage() {
             </div>
             <div>
               <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.9, marginBottom: '20px' }}>
-                Heute nutzen über 500 Autohändler 2fast4sale täglich. Von Einzelhändlern mit 5 Fahrzeugen im Monat bis zu Autohäusern mit mehreren Standorten und Hunderten von Inseraten.
-              </p>
+                2fast4sale ist noch nicht gestartet. Ich baue es gerade — allein, neben meiner Ausbildung. Der Start ist für Oktober 2026 geplant, und bis dahin gibt es keine Kunden, über die ich etwas behaupten könnte.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {['34.000+ erstellte Inserate', '500+ zufriedene Händler', '98% Kundenzufriedenheit', 'Made in Germany 🇩🇪'].map((point, i) => (
+                {['182 Marken und 2.664 Modelle — direkt von mobile.de', '133 Ausstattungsmerkmale, gegen beide Portale geprüft', 'Start geplant für Oktober 2026', 'Made in Germany 🇩🇪'].map((point, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <CheckCircle2 size={14} style={{ color: '#6366f1', flexShrink: 0 }} />
                     <span style={{ fontSize: '14px', color: '#64748b' }}>{point}</span>
@@ -95,9 +94,9 @@ export default function UeberUnsPage() {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '48px' }}>
           {[
-            { number: '2026', label: 'Gegründet', color: '#6366f1' },
-            { number: '500+', label: 'Händler vertrauen uns', color: '#8b5cf6' },
-            { number: '34k+', label: 'Inserate erstellt', color: '#059669' },
+            { number: '2026', label: 'Start geplant', color: '#6366f1' },
+            { number: '182', label: 'Marken abgebildet', color: '#8b5cf6' },
+            { number: '2.664', label: 'Modelle', color: '#059669' },
             { number: '🇩🇪', label: 'Made in Germany', color: '#d97706' },
           ].map((s, i) => (
             <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid #f8fafc', borderRadius: '14px', padding: '28px', textAlign: 'center' }}>
