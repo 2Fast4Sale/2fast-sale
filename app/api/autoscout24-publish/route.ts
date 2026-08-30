@@ -4,7 +4,7 @@ import {
   as24Getriebe, as24FarbeId, as24EuronormId,
   as24PolsterungId, as24InnenfarbeId, as24AntriebId, as24Hu,
 } from '../../../lib/as24Uebersetzung';
-import { istAusgewiesen, laenderCode } from '../../../lib/mobileUebersetzung';
+import { istAusgewiesen, laenderCode, farbnameSauber } from '../../../lib/mobileUebersetzung';
 import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
 import { as24Envkv } from '../../../lib/as24Envkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
@@ -45,6 +45,7 @@ interface FormData {
   envkv?: EnvkvData;
   huUntil?: string; interiorType?: string; interiorColor?: string;
   driveType?: string; warranty?: boolean; countryVersion?: string;
+  cylinders?: string; manufacturerColorName?: string;
 }
 
 /**
@@ -169,6 +170,13 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
 
   const farbe = as24FarbeId(formData.color || '');
   if (farbe) nutzlast.bodyColor = Number(farbe);
+  /* Tankgroesse fehlt hier bewusst — AutoScout24 hat fuer
+     Personenwagen kein Feld dafuer. */
+  const zylinder = ganzzahl(formData.cylinders);
+  if (zylinder >= 1 && zylinder <= 99) nutzlast.cylinderCount = zylinder;
+  const farbname = farbnameSauber(formData.manufacturerColorName || '', 30);
+  if (farbname) nutzlast.bodyColorName = farbname;
+
   const norm = as24EuronormId(formData.emissionClass || '');
   if (norm) nutzlast.euEmissionStandard = Number(norm);
 

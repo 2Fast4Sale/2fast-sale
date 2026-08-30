@@ -1232,6 +1232,30 @@ export default function Showroom() {
                 <Wahl optionen={LAENDERVERSION} wert={data.countryVersion}
                   beiWahl={v => setzen('countryVersion', data.countryVersion === v ? '' : v)} />
               </div>
+              {/*
+                Drei Angaben, die ein vollstaendiges Inserat zeigt und
+                die NICHT im Fahrzeugschein stehen. Deshalb hier und
+                nicht bei den Scan-Feldern — der Haendler traegt sie
+                ein, oder DAT liefert sie spaeter.
+              */}
+              <div>
+                <Beschriftung text="Zylinder" />
+                <Eingabe erkannt={erkannt.has('cylinders')} wert={data.cylinders}
+                  aendern={v => setzen('cylinders', v.replace(/[^0-9]/g, ''))}
+                  platzhalter="4" />
+              </div>
+              <div>
+                <Beschriftung text="Tankgröße" />
+                <Eingabe erkannt={erkannt.has('fuelTankVolume')} wert={data.fuelTankVolume}
+                  aendern={v => setzen('fuelTankVolume', v.replace(/[^0-9]/g, ''))}
+                  einheit="l" platzhalter="63" hinweis="nur mobile.de" />
+              </div>
+              <div>
+                <Beschriftung text="Herstellerfarbe" />
+                <Eingabe erkannt={erkannt.has('manufacturerColorName')} wert={data.manufacturerColorName}
+                  aendern={v => setzen('manufacturerColorName', v.slice(0, 30))}
+                  platzhalter="Vesuvgrau Metallic" />
+              </div>
             </div>
           }
         />

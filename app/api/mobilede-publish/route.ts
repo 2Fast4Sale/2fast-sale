@@ -3,7 +3,7 @@ import { mobileMarkenWert, mobileModellWert } from '../../../lib/carDatabase';
 import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
-  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu, laenderCode,
+  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu, laenderCode, farbnameSauber,
 } from '../../../lib/mobileUebersetzung';
 import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
@@ -43,6 +43,7 @@ interface FormData {
   envkv?: EnvkvData;
   huUntil?: string; interiorType?: string; interiorColor?: string;
   driveType?: string; warranty?: boolean; countryVersion?: string;
+  cylinders?: string; fuelTankVolume?: string; manufacturerColorName?: string;
 }
 
 /**
@@ -166,6 +167,12 @@ function inseratBauen(formData: FormData, description?: string) {
   const farbe = mobileFarbe(formData.color || '');
   if (farbe) inserat.exteriorColor = farbe;
   if (formData.metallic) inserat.metallic = true;
+  const zylinder = ganzzahl(formData.cylinders);
+  if (zylinder >= 1 && zylinder <= 24) inserat.cylinder = zylinder;
+  const tank = ganzzahl(formData.fuelTankVolume);
+  if (tank > 0 && tank <= 9999) inserat.fuelTankVolume = tank;
+  const farbname = farbnameSauber(formData.manufacturerColorName || '', 32);
+  if (farbname) inserat.manufacturerColorName = farbname;
   const norm = mobileEuronorm(formData.emissionClass || '');
   if (norm) inserat.emissionClass = norm;
 

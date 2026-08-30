@@ -96,6 +96,18 @@ export interface FormData {
    * gleich.
    */
   countryVersion: string;
+
+  /*
+   * Drei Angaben, die ein vollstaendiges Inserat zeigt und die NICHT
+   * im Fahrzeugschein stehen. Der Haendler traegt sie ein, oder DAT
+   * liefert sie spaeter.
+   *
+   * Die Tankgroesse kennt nur mobile.de — AutoScout24 hat fuer
+   * Personenwagen kein Feld dafuer.
+   */
+  cylinders: string;
+  fuelTankVolume: string;
+  manufacturerColorName: string;
 }
 
 export const LEER_ENVKV: EnvkvData = {
@@ -167,7 +179,7 @@ export function useEntwurf() {
     bodyType: '', vatType: '', damaged: false, metallic: false, warranty: false,
     huUntil: '', previousOwners: '', interiorType: '', interiorColor: '',
     doors: '', emissionClass: '', driveType: '',
-    countryVersion: '',
+    countryVersion: '', cylinders: '', fuelTankVolume: '', manufacturerColorName: '',
     leermasseKg: '', anhaengelastGebremstKg: '', anhaengelastUngebremstKg: '',
   });
 

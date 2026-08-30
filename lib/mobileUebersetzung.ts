@@ -206,3 +206,24 @@ export function laenderCode(name: string): string | undefined {
     .find(([n]) => gleich(n) === gleich(name));
   return treffer?.[1];
 }
+
+/**
+ * Herstellerfarbe: der Name, den das Werk vergeben hat.
+ *
+ * "Vesuvgrau Metallic" statt "Grau". Beide Portale nehmen freien
+ * Text, aber mit Laengengrenzen und Verboten:
+ *
+ *   mobile.de     manufacturerColorName, hoechstens 32 Zeichen
+ *   AutoScout24   bodyColorName, hoechstens 30
+ *
+ * Beide verbieten E-Mail-Adressen im Inhalt, mobile.de zusaetzlich
+ * URLs und Telefonnummern (manufacturercolorname-contains-email
+ * und -url). Deshalb hier eine schlichte Pruefung: Was danach
+ * aussieht, wird weggelassen statt abgelehnt zu werden.
+ */
+export function farbnameSauber(name: string, maxLaenge: number): string | undefined {
+  const s = (name || '').trim();
+  if (!s) return undefined;
+  if (/@|https?:|www\.|\d{5,}/.test(s)) return undefined;
+  return s.slice(0, maxLaenge);
+}
