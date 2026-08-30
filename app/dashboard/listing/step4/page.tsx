@@ -834,8 +834,26 @@ function Step4Inner() {
 
   /* ── Editor ─────────────────────────────────────────────────────────────── */
   const charCount = desc.length;
-  const qualColor = charCount > 500 ? G.gut : charCount > 250 ? G.akzent : charCount > 100 ? G.luecke : G.fehler;
-  const qualLabel = charCount > 500 ? 'Sehr gut' : charCount > 250 ? 'Gut' : charCount > 100 ? 'OK' : 'Zu kurz';
+
+  /*
+   * Eine Absage ist kein gutes Inserat.
+   *
+   * Die Bewertung zaehlte nur Zeichen. Als die KI einmal antwortete
+   * "Fuer dieses Fahrzeug liegen mir aktuell leider keine konkreten
+   * Daten vor, weshalb ich keine serioese Beschreibung erstellen
+   * kann", stand daneben "Qualitaet: Sehr gut · 516 Zeichen" — der
+   * Text war lang genug, also galt er als gut.
+   *
+   * Die KI verhaelt sich richtig, wenn sie bei fehlenden Daten nichts
+   * erfindet. Falsch war nur die Anzeige. Deshalb erkennt sie diese
+   * Faelle jetzt an ihren Formulierungen, statt sie zu zaehlen.
+   */
+  const istAbsage = /keine (konkreten )?(daten|angaben|informationen)|liegen mir (aktuell )?(leider )?keine|kann ich kein|nicht moeglich, ein|nicht möglich, ein|uebermitteln sie mir|übermitteln Sie mir/i.test(desc);
+
+  const qualColor = istAbsage ? G.fehler
+    : charCount > 500 ? G.gut : charCount > 250 ? G.akzent : charCount > 100 ? G.luecke : G.fehler;
+  const qualLabel = istAbsage ? 'Keine Daten'
+    : charCount > 500 ? 'Sehr gut' : charCount > 250 ? 'Gut' : charCount > 100 ? 'OK' : 'Zu kurz';
 
   /*
    * Alles, was eine echte Inseratsseite zeigt.
