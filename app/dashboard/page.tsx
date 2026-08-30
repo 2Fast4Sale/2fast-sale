@@ -206,7 +206,7 @@ function DashboardContent() {
                   if (isMobile) {
                     // Mobile: card layout
                     return (
-                      <Link key={car.id} href={`/dashboard/listing/${car.id}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:'12px', padding:'12px 16px', borderBottom: i < vehicles.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <Link key={car.id} href={`/inserat/${car.id}`} style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:'12px', padding:'12px 16px', borderBottom: i < vehicles.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
                         <div style={{ width:'56px', height:'40px', flexShrink:0, background:'#f1f5f9', border:'1px solid #e8ecf0', overflow:'hidden', borderRadius:'3px' }}>
                           {car.image
                             ? <img src={car.image} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="" />
@@ -229,7 +229,7 @@ function DashboardContent() {
                   }
                   // Desktop: table row
                   return (
-                    <Link key={car.id} href={`/dashboard/listing/${car.id}`}
+                    <Link key={car.id} href={`/inserat/${car.id}`}
                       style={{ textDecoration:'none', display:'grid', gridTemplateColumns:'1fr 130px 110px 100px', alignItems:'center', padding:'12px 20px', borderBottom: i < vehicles.length - 1 ? '1px solid #f1f5f9' : 'none', cursor:'pointer' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fafbff'}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
