@@ -162,3 +162,68 @@ export function as24EuronormId(norm: string): string | undefined {
   return referenz('EuEmissionStandard', norm)
       ?? referenz('EuEmissionStandard', norm.replace(/\s+/g, ''));
 }
+
+/**
+ * Polsterung, Innenfarbe und Antriebsart.
+ *
+ * Die Beschreibung der Schnittstelle nennt hier Referenzlisten, die es
+ * unter dem Namen gar nicht gibt: "InteriorColor" statt
+ * UpholsteryColor, "DriveType" statt Drivetrain, "Upholstery" statt
+ * UpholsteryType. Massgeblich sind die Listen, die /references
+ * tatsaechlich liefert — sie stehen in as24Referenzen.ts.
+ */
+const POLSTER_AS24: Record<string, string> = {
+  'stoff':     'Cloth',
+  'teilleder': 'Part leather',
+  'leder':     'Full leather',
+  'velour':    'Velour',
+  'alcantara': 'Alcantara',
+};
+
+export function as24PolsterungId(p: string): string | undefined {
+  const name = POLSTER_AS24[gleichform(p)];
+  return name ? referenz('UpholsteryType', name) : undefined;
+}
+
+const INNENFARBE_AS24: Record<string, string> = {
+  'schwarz': 'Black', 'grau': 'Grey', 'beige': 'Beige',
+  'braun':   'Brown', 'rot':  'Red',  'blau':  'Blue',
+  'andere':  'Other',
+};
+
+export function as24InnenfarbeId(f: string): number | undefined {
+  const name = INNENFARBE_AS24[gleichform(f)];
+  const id = name ? referenz('UpholsteryColor', name) : undefined;
+  return id ? Number(id) : undefined;
+}
+
+const ANTRIEB_AS24: Record<string, string> = {
+  'frontantrieb': 'Front',
+  'heckantrieb':  'Rear',
+  'allrad':       '4WD',
+};
+
+export function as24AntriebId(a: string): string | undefined {
+  const name = ANTRIEB_AS24[gleichform(a)];
+  return name ? referenz('Drivetrain', name) : undefined;
+}
+
+/**
+ * Hauptuntersuchung: "MM/JJJJ" -> "JJJJ-MM".
+ *
+ * AutoScout24 nennt das Feld nextInspectionDate und verlangt das
+ * Format year-month. Der Wert muss innerhalb von fuenf Jahren liegen,
+ * vorwaerts oder rueckwaerts — was ausserhalb liegt, lassen wir weg,
+ * statt es abgelehnt zu bekommen.
+ */
+export function as24Hu(huUntil: string): string | undefined {
+  const s = (huUntil || '').trim();
+  const m = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
+  if (!m) return undefined;
+  const monat = Number(m[1]);
+  const jahr = Number(m[2]);
+  if (monat < 1 || monat > 12) return undefined;
+  const abstand = Math.abs(jahr - new Date().getFullYear());
+  if (abstand > 5) return undefined;
+  return `${jahr}-${String(monat).padStart(2, '0')}`;
+}

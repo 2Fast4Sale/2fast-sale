@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   as24MarkenId, as24ModellId, as24KarosserieId, as24Kraftstoff,
   as24Getriebe, as24FarbeId, as24EuronormId,
+  as24PolsterungId, as24InnenfarbeId, as24AntriebId, as24Hu,
 } from '../../../lib/as24Uebersetzung';
 import { istAusgewiesen } from '../../../lib/mobileUebersetzung';
 import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
@@ -42,6 +43,8 @@ interface FormData {
   doors?: string; vatType?: string; equipment?: string[];
   leermasseKg?: string;
   envkv?: EnvkvData;
+  huUntil?: string; interiorType?: string; interiorColor?: string;
+  driveType?: string; warranty?: boolean;
 }
 
 /**
@@ -139,6 +142,25 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
    */
   const leermasse = ganzzahl(formData.leermasseKg);
   if (leermasse > 0) nutzlast.emptyWeight = leermasse;
+
+  /*
+   * Fuenf Felder, die das Formular erfasst und die bisher weggeworfen
+   * wurden.
+   *
+   * warranty ist bei AutoScout24 eine ZAHL in Monaten, unser Formular
+   * kennt nur ja/nein. Deshalb hasWarranty statt warranty — die
+   * Monatszahl bleibt leer, weil wir sie nicht kennen und nicht
+   * erfinden.
+   */
+  const hu = as24Hu(formData.huUntil || '');
+  if (hu) nutzlast.nextInspectionDate = hu;
+  const polster = as24PolsterungId(formData.interiorType || '');
+  if (polster) nutzlast.upholsteryType = polster;
+  const innenfarbe = as24InnenfarbeId(formData.interiorColor || '');
+  if (innenfarbe !== undefined) nutzlast.upholsteryColor = innenfarbe;
+  const antrieb = as24AntriebId(formData.driveType || '');
+  if (antrieb) nutzlast.drivetrain = antrieb;
+  if (formData.warranty) nutzlast.hasWarranty = true;
 
   if (formData.vin) nutzlast.vin = formData.vin;
 

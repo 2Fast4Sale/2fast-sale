@@ -3,6 +3,7 @@ import { mobileMarkenWert, mobileModellWert } from '../../../lib/carDatabase';
 import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
+  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu,
 } from '../../../lib/mobileUebersetzung';
 import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
@@ -40,6 +41,8 @@ interface FormData {
   equipment?: string[];
   leermasseKg?: string; anhaengelastGebremstKg?: string; anhaengelastUngebremstKg?: string;
   envkv?: EnvkvData;
+  huUntil?: string; interiorType?: string; interiorColor?: string;
+  driveType?: string; warranty?: boolean;
 }
 
 /**
@@ -135,6 +138,21 @@ function inseratBauen(formData: FormData, description?: string) {
   if (zugGebremst > 0) inserat.trailerLoadBraked = zugGebremst;
   const zugUngebremst = ganzzahl(formData.anhaengelastUngebremstKg);
   if (zugUngebremst > 0) inserat.trailerLoadUnbraked = zugUngebremst;
+
+  /*
+   * Fuenf Felder, die das Formular erfasst und die bisher weggeworfen
+   * wurden. Drei davon stehen dort unter "Das traegst du selbst ein" —
+   * der Haendler tippte sie ein, und sie landeten nirgends.
+   */
+  const hu = mobileHu(formData.huUntil || '');
+  if (hu) inserat.generalInspection = hu;
+  const polster = mobilePolsterung(formData.interiorType || '');
+  if (polster) inserat.interiorType = polster;
+  const innenfarbe = mobileInnenfarbe(formData.interiorColor || '');
+  if (innenfarbe) inserat.interiorColor = innenfarbe;
+  const antrieb = mobileAntrieb(formData.driveType || '');
+  if (antrieb) inserat.driveType = antrieb;
+  if (formData.warranty) inserat.warranty = true;
 
   if (formData.vin) inserat.vin = formData.vin.toUpperCase();
   const farbe = mobileFarbe(formData.color || '');

@@ -125,3 +125,53 @@ export function istAusgewiesen(vatType: string): boolean {
   const k = gleich(vatType);
   return k === 'ausgewiesen' || k === 'ausweisbar';
 }
+
+/** Polsterung: "Teilleder" -> "PARTIAL_LEATHER" */
+const POLSTER: Record<string, string> = {
+  'stoff':     'FABRIC',
+  'teilleder': 'PARTIAL_LEATHER',
+  'leder':     'LEATHER',
+  'velour':    'VELOUR',
+  'alcantara': 'ALCANTARA',
+};
+
+export function mobilePolsterung(p: string): string | undefined {
+  return POLSTER[gleich(p)];
+}
+
+/** Innenfarbe: "Schwarz" -> "BLACK" */
+const INNENFARBE: Record<string, string> = {
+  'schwarz': 'BLACK', 'grau': 'GREY', 'beige': 'BEIGE',
+  'braun':   'BROWN', 'rot':  'RED',  'blau':  'BLUE',
+  'andere':  'OTHER_INTERIOR_COLOR',
+};
+
+export function mobileInnenfarbe(f: string): string | undefined {
+  return INNENFARBE[gleich(f)];
+}
+
+/** Antriebsart: "Allrad" -> "ALL_WHEEL" */
+const ANTRIEB: Record<string, string> = {
+  'frontantrieb': 'FRONT',
+  'heckantrieb':  'REAR',
+  'allrad':       'ALL_WHEEL',
+};
+
+export function mobileAntrieb(a: string): string | undefined {
+  return ANTRIEB[gleich(a)];
+}
+
+/**
+ * Hauptuntersuchung: "MM/JJJJ" -> "JJJJMM".
+ *
+ * Das Formular fragt Monat und Jahr, weil auf der Pruefplakette nichts
+ * anderes steht. mobile.de will dasselbe in seiner eigenen
+ * Schreibweise.
+ */
+export function mobileHu(huUntil: string): string | undefined {
+  const s = (huUntil || '').trim();
+  const mmJJJJ = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
+  if (mmJJJJ) return `${mmJJJJ[2]}${mmJJJJ[1].padStart(2, '0')}`;
+  if (/^\d{6}$/.test(s)) return s;
+  return undefined;
+}

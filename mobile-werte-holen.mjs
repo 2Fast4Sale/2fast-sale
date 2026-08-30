@@ -47,6 +47,8 @@ const FELDER = {
   trailerCouplingType: 'trailercouplingtypes',
   breakdownService:    'breakdownservices',
   usageType:           'usagetypes',
+  driveType:           'drivetypes',
+  countryVersion:      'countryversion',
   category:            'classes/Car/categories',
   vehicleClass:        'classes',
 };
