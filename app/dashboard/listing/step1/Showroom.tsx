@@ -1206,19 +1206,19 @@ export default function Showroom() {
                 <Beschriftung text="Leergewicht" />
                 <Eingabe erkannt={erkannt.has('leermasseKg')} wert={data.leermasseKg}
                   aendern={v => setzen('leermasseKg', v.replace(/[^\d]/g, ''))}
-                  einheit="kg" hinweis="Feld G im Schein" />
+                  einheit="kg" platzhalter="1.910" hinweis="Feld G im Schein" />
               </div>
               <div>
                 <Beschriftung text="Anhängelast gebremst" />
                 <Eingabe erkannt={erkannt.has('anhaengelastGebremstKg')} wert={data.anhaengelastGebremstKg}
                   aendern={v => setzen('anhaengelastGebremstKg', v.replace(/[^\d]/g, ''))}
-                  einheit="kg" hinweis="Feld O.1" />
+                  einheit="kg" platzhalter="2.000" hinweis="Feld O.1" />
               </div>
               <div>
                 <Beschriftung text="Anhängelast ungebremst" />
                 <Eingabe erkannt={erkannt.has('anhaengelastUngebremstKg')} wert={data.anhaengelastUngebremstKg}
                   aendern={v => setzen('anhaengelastUngebremstKg', v.replace(/[^\d]/g, ''))}
-                  einheit="kg" hinweis="Feld O.2" />
+                  einheit="kg" platzhalter="750" hinweis="Feld O.2" />
               </div>
             </div>
           }
