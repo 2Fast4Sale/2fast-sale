@@ -5,6 +5,8 @@ import {
 } from '../../../lib/as24Uebersetzung';
 import { istAusgewiesen } from '../../../lib/mobileUebersetzung';
 import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
+import { as24Envkv } from '../../../lib/as24Envkv';
+import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +41,7 @@ interface FormData {
   bodyType?: string; damaged?: boolean; emissionClass?: string;
   doors?: string; vatType?: string; equipment?: string[];
   leermasseKg?: string;
+  envkv?: EnvkvData;
 }
 
 /**
@@ -152,6 +155,21 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   const ausstattung = as24Ausstattung(formData.equipment || []);
   if (ausstattung.length > 0) nutzlast.equipment = ausstattung;
 
+  /*
+   * EnVKV. AutoScout24 legt alles unter "wltp" und will die CO2-Klasse
+   * als Zahl. Ohne die Werte lehnt es Neuwagen ab — oder versucht,
+   * sie selbst aus der Fahrgestellnummer nachzutragen (siehe die
+   * Behandlung von 202 weiter unten).
+   */
+  const envkv = formData.envkv;
+  if (envkv) {
+    const pruefung = validateEnvkv(envkv, formData.fuelType || '');
+    if (pruefung.required && !pruefung.complete) {
+      fehlt.push(`EnVKV: ${pruefung.missing.join(', ')}`);
+    }
+    Object.assign(nutzlast, as24Envkv(envkv, formData.fuelType || ''));
+  }
+
   if (description) nutzlast.description = description.slice(0, 5000);
   if (imageIds.length > 0) nutzlast.images = imageIds.map(id => ({ id }));
 
@@ -250,8 +268,33 @@ export async function POST(req: NextRequest) {
   }
 
   const inserat = await antwort.json();
+
+  /*
+   * 202 heisst NICHT "veroeffentlicht".
+   *
+   * Aus der Dokumentation: "If a listing is invalid but might be
+   * enriched by AutoScout24, then the API will now reply with 202
+   * Accepted. This means the listing could not be activated as is."
+   *
+   * AutoScout24 versucht dann, die fehlenden EnVKV-Werte selbst aus
+   * der Fahrgestellnummer nachzutragen — hoechstens fuenf Minuten,
+   * nur bei Neuwagen unter 1.000 km. Klappt es nicht, bleibt das
+   * Inserat inaktiv.
+   *
+   * Ohne diese Unterscheidung haette die Route "veroeffentlicht"
+   * gemeldet, waehrend beim Haendler nichts online ist. 202 ist ein
+   * Erfolgscode, also faellt es durch jede Pruefung auf antwort.ok.
+   */
+  const inArbeit = antwort.status === 202;
+
   return NextResponse.json({
     listingId: inserat.id,
+    nochNichtAktiv: inArbeit,
+    hinweis: inArbeit
+      ? 'AutoScout24 ergänzt fehlende Verbrauchswerte aus der Fahrgestellnummer. '
+        + 'Das dauert bis zu fünf Minuten. Gelingt es nicht, bleibt das Inserat inaktiv '
+        + 'und die Werte müssen nachgetragen werden.'
+      : undefined,
     testmodus: Boolean(testmodus),
     as24Url: testmodus ? null : `https://www.autoscout24.de/angebote/-${inserat.id}`,
     dealerUrl: `https://autoscout24.com/account/listings/${inserat.id}`,
