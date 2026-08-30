@@ -59,7 +59,7 @@ PFLICHTFELDER (immer ausfüllen):
 • P.3: Kraftstoffart → "Benzin" | "Diesel" | "Elektro" | "Hybrid" | "Plug-in Hybrid" | "LPG" | "CNG"
 • R: Farbe des Fahrzeugs (auf Deutsch, z.B. "Schwarz", "Silber Metallic", "Perlweiß")
 • S.1: Anzahl Sitzplätze gesamt (inkl. Fahrer)
-• G: Leermasse in kg
+• G: Leermasse in kg — das LEERGEWICHT, nicht die zulaessige Gesamtmasse
 • Anzahl Türen (2, 3, 4 oder 5) — steht in keinem nummerierten Feld. Nur
   angeben, wenn eine Zeile "Anzahl der Türen" oder "Türen" ausdrücklich
   vorhanden ist. NICHT aus Feld 22 ableiten: Dort stehen die
@@ -75,7 +75,8 @@ PFLICHTFELDER (immer ausfüllen):
 ZUSATZFELDER (wenn sichtbar):
 • T: Höchstgeschwindigkeit km/h
 • V.7: CO2-Emission g/km
-• O.1: Zul. Anhängelast gebremst kg
+• O.1: Zul. Anhängelast GEBREMST in kg
+• O.2: Zul. Anhängelast UNGEBREMST in kg
 
 ═══ FELD 22 — BEMERKUNGEN UND AUSNAHMEN ═══
 
@@ -158,7 +159,9 @@ Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
   "fuelType": "Diesel",
   "color": "Farbe",
   "seats": 5,
-  "grossWeightKg": 2100,
+  "leermasseKg": 1910,
+  "anhaengelastGebremstKg": 2000,
+  "anhaengelastUngebremstKg": 750,
   "doors": 5,
   "emissionClass": "Euro 6d",
   "driveType": "Frontantrieb",
@@ -279,6 +282,38 @@ export async function POST(req: Request) {
       const treffer = AUFBAU.find(([muster]) => muster.test(aufbau));
       if (treffer) result.bodyType = treffer[1];
       else console.log('[scan-doc] Aufbau nicht eindeutig, Feld bleibt leer:', aufbau);
+    }
+
+    /*
+     * Leermasse und Anhaengelasten — mit denselben Plausibilitaets-
+     * grenzen wie bei der Leistung: lieber leer als falsch.
+     *
+     * Die Zahlen stehen oft eng untereinander und werden beim
+     * Abfotografieren gern verwechselt. Ein Auto mit 190 kg Leermasse
+     * oder 20.000 kg Anhaengelast ist ein Lesefehler, kein Fahrzeug.
+     *
+     * Die letzte Pruefung faengt den haeufigsten Verwechsler: O.1 ist
+     * die GEBREMSTE, O.2 die UNGEBREMSTE Last. Ungebremst ist immer
+     * kleiner. Steht es andersherum, wurden die Felder vertauscht —
+     * dann lieber beide verwerfen, als sie falsch ins Inserat zu
+     * schreiben.
+     */
+    const zahlOderWeg = (feld: string, min: number, max: number) => {
+      const v = Number(result[feld]);
+      if (!Number.isFinite(v) || v < min || v > max) {
+        if (result[feld] != null) console.error(`[scan-doc] ${feld} unplausibel, verworfen:`, result[feld]);
+        delete result[feld];
+        return null;
+      }
+      return v;
+    };
+    zahlOderWeg('leermasseKg', 400, 5000);
+    const gebremst = zahlOderWeg('anhaengelastGebremstKg', 0, 3500);
+    const ungebremst = zahlOderWeg('anhaengelastUngebremstKg', 0, 1500);
+    if (gebremst !== null && ungebremst !== null && ungebremst > gebremst) {
+      console.error('[scan-doc] Anhaengelasten vertauscht, beide verworfen:', { gebremst, ungebremst });
+      delete result.anhaengelastGebremstKg;
+      delete result.anhaengelastUngebremstKg;
     }
 
     const kw = Number(result.powerKw);

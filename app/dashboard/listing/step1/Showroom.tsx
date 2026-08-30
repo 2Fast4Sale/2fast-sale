@@ -1172,8 +1172,9 @@ export default function Showroom() {
         */}
         <Block titel="Weitere Angaben"
           startZu
-          inhalt={zusammen(data.color, data.seats && `${data.seats} Sitze`, data.vin)
-            || 'Farbe, Sitzplätze, Fahrgestellnummer — meist nicht nötig'}
+          inhalt={zusammen(data.color, data.seats && `${data.seats} Sitze`, data.vin,
+                           data.leermasseKg && `${data.leermasseKg} kg`)
+            || 'Farbe, Sitzplätze, Fahrgestellnummer, Gewicht, Anhängelast'}
           fertig={mehrLuecken === 0}
           zusammenfassung={zusammen(data.color, data.seats && `${data.seats} Sitze`, data.vin)}
           kinder={
@@ -1191,6 +1192,33 @@ export default function Showroom() {
                 <Eingabe erkannt={erkannt.has('vin')} wert={data.vin}
                   aendern={v => setzen('vin', v.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                   platzhalter="WVWZZZ1JZW000001" />
+              </div>
+              {/*
+                Feld G und O.1/O.2 vom Fahrzeugschein.
+
+                Sichtbar, obwohl der Scan sie liefert: Die drei Zahlen
+                stehen dort eng untereinander und werden beim
+                Abfotografieren gern verwechselt. Was ungeprueft ins
+                Inserat wandert, muss der Haendler wenigstens ansehen
+                koennen.
+              */}
+              <div>
+                <Beschriftung text="Leergewicht" />
+                <Eingabe erkannt={erkannt.has('leermasseKg')} wert={data.leermasseKg}
+                  aendern={v => setzen('leermasseKg', v.replace(/[^\d]/g, ''))}
+                  einheit="kg" hinweis="Feld G im Schein" />
+              </div>
+              <div>
+                <Beschriftung text="Anhängelast gebremst" />
+                <Eingabe erkannt={erkannt.has('anhaengelastGebremstKg')} wert={data.anhaengelastGebremstKg}
+                  aendern={v => setzen('anhaengelastGebremstKg', v.replace(/[^\d]/g, ''))}
+                  einheit="kg" hinweis="Feld O.1" />
+              </div>
+              <div>
+                <Beschriftung text="Anhängelast ungebremst" />
+                <Eingabe erkannt={erkannt.has('anhaengelastUngebremstKg')} wert={data.anhaengelastUngebremstKg}
+                  aendern={v => setzen('anhaengelastUngebremstKg', v.replace(/[^\d]/g, ''))}
+                  einheit="kg" hinweis="Feld O.2" />
               </div>
             </div>
           }

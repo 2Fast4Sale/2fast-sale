@@ -38,6 +38,7 @@ interface FormData {
   powerKw?: string; displacementCcm?: string; color?: string; seats?: string;
   bodyType?: string; damaged?: boolean; emissionClass?: string;
   doors?: string; vatType?: string; equipment?: string[];
+  leermasseKg?: string;
 }
 
 /**
@@ -125,6 +126,17 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   if (sitze > 0) nutzlast.seatCount = sitze;
   const tueren = ganzzahl(formData.doors);
   if (tueren > 0) nutzlast.doorCount = tueren;
+  /*
+   * Leermasse. AutoScout24 nennt es "emptyWeight" und sagt in der
+   * Beschreibung ausdruecklich, was gemeint ist: "without driver,
+   * passengers or liquids". Also Feld G im Schein.
+   *
+   * Die Anhaengelasten fehlen hier bewusst — AutoScout24 hat fuer
+   * Personenwagen kein Feld dafuer. Sie gehen nur an mobile.de.
+   */
+  const leermasse = ganzzahl(formData.leermasseKg);
+  if (leermasse > 0) nutzlast.emptyWeight = leermasse;
+
   if (formData.vin) nutzlast.vin = formData.vin;
 
   const farbe = as24FarbeId(formData.color || '');

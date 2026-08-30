@@ -36,6 +36,7 @@ interface FormData {
   bodyType?: string; damaged?: boolean; emissionClass?: string;
   doors?: string; vatType?: string; metallic?: boolean; previousOwners?: string;
   equipment?: string[];
+  leermasseKg?: string; anhaengelastGebremstKg?: string; anhaengelastUngebremstKg?: string;
 }
 
 /**
@@ -118,6 +119,19 @@ function inseratBauen(formData: FormData, description?: string) {
   if (tueren) inserat.doors = tueren;
   const vorbesitzer = ganzzahl(formData.previousOwners);
   if (vorbesitzer > 0 && inserat.condition === 'USED') inserat.numberOfPreviousOwners = vorbesitzer;
+
+  /*
+   * Feld G und O.1/O.2 aus dem Fahrzeugschein.
+   *
+   * mobile.de nennt das Gewichtsfeld "weight". Gemeint ist die
+   * Leermasse — dieselbe Zahl, die im Inserat unter "Gewicht" steht.
+   */
+  const leermasse = ganzzahl(formData.leermasseKg);
+  if (leermasse > 0) inserat.weight = leermasse;
+  const zugGebremst = ganzzahl(formData.anhaengelastGebremstKg);
+  if (zugGebremst > 0) inserat.trailerLoadBraked = zugGebremst;
+  const zugUngebremst = ganzzahl(formData.anhaengelastUngebremstKg);
+  if (zugUngebremst > 0) inserat.trailerLoadUnbraked = zugUngebremst;
 
   if (formData.vin) inserat.vin = formData.vin.toUpperCase();
   const farbe = mobileFarbe(formData.color || '');

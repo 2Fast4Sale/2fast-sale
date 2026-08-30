@@ -72,6 +72,21 @@ export interface FormData {
   doors: string;
   emissionClass: string;
   driveType: string;
+
+  /*
+   * Steht im Fahrzeugschein und wandert direkt ins Inserat.
+   *
+   * Leermasse ist Feld G — das LEERGEWICHT, nicht die zulaessige
+   * Gesamtmasse. Beide Portale zeigen genau diese Zahl unter
+   * "Gewicht"; AutoScout24 sagt es woertlich ("without driver,
+   * passengers or liquids").
+   *
+   * Die Anhaengelasten kennt nur mobile.de. AutoScout24 hat fuer
+   * Personenwagen kein Feld dafuer.
+   */
+  leermasseKg: string;
+  anhaengelastGebremstKg: string;
+  anhaengelastUngebremstKg: string;
 }
 
 export const LEER_ENVKV: EnvkvData = {
@@ -140,6 +155,7 @@ export function useEntwurf() {
     bodyType: '', vatType: '', damaged: false, metallic: false, warranty: false,
     huUntil: '', previousOwners: '', interiorType: '', interiorColor: '',
     doors: '', emissionClass: '', driveType: '',
+    leermasseKg: '', anhaengelastGebremstKg: '', anhaengelastUngebremstKg: '',
   });
 
   const [blattOffen, setBlattOffen]   = useState(false);
@@ -276,6 +292,10 @@ export function useEntwurf() {
             driveType: nimm('driveType', d.driveType ?? '', p.driveType),
             // Aus Feld 4 (Aufbau), nur wo eindeutig — siehe scan-doc.
             bodyType: nimm('bodyType', d.bodyType ?? '', p.bodyType),
+            // Feld G und O.1/O.2 — vom Scan geprueft, sonst leer.
+            leermasseKg: nimm('leermasseKg', d.leermasseKg != null ? String(d.leermasseKg) : '', p.leermasseKg),
+            anhaengelastGebremstKg: nimm('anhaengelastGebremstKg', d.anhaengelastGebremstKg != null ? String(d.anhaengelastGebremstKg) : '', p.anhaengelastGebremstKg),
+            anhaengelastUngebremstKg: nimm('anhaengelastUngebremstKg', d.anhaengelastUngebremstKg != null ? String(d.anhaengelastUngebremstKg) : '', p.anhaengelastUngebremstKg),
             equipment: Array.isArray(d.equipment)
               ? [...new Set([...p.equipment, ...d.equipment])] : p.equipment,
           };
