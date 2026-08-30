@@ -175,3 +175,34 @@ export function mobileHu(huUntil: string): string | undefined {
   if (/^\d{6}$/.test(s)) return s;
   return undefined;
 }
+
+/**
+ * Laenderversion: fuer welchen Markt das Fahrzeug gebaut wurde.
+ *
+ * Bei mobile.de PFLICHT fuer Neuwagen ("countryversion-missing"), bei
+ * Gebrauchtwagen freiwillig. Beide Portale nennen das Feld gleich und
+ * wollen den ISO-Code, also reicht eine Tabelle fuer beide.
+ *
+ * Acht Laender, nicht 254: Das sind die, aus denen im deutschen
+ * Gebrauchtwagenhandel tatsaechlich importiert wird. Wer einen Wagen
+ * aus Japan stehen hat, laesst das Feld leer — bei einem
+ * Gebrauchtwagen ist es ohnehin freiwillig, und eine Auswahlliste mit
+ * 254 Eintraegen wuerde die Seite fuer alle anderen unbenutzbar
+ * machen.
+ */
+export const LAENDER: Record<string, string> = {
+  'Deutschland':  'DE',
+  'Österreich':   'AT',
+  'Schweiz':      'CH',
+  'Italien':      'IT',
+  'Frankreich':   'FR',
+  'Niederlande':  'NL',
+  'Spanien':      'ES',
+  'Polen':        'PL',
+};
+
+export function laenderCode(name: string): string | undefined {
+  const treffer = Object.entries(LAENDER)
+    .find(([n]) => gleich(n) === gleich(name));
+  return treffer?.[1];
+}

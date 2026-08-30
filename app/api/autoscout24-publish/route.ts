@@ -4,7 +4,7 @@ import {
   as24Getriebe, as24FarbeId, as24EuronormId,
   as24PolsterungId, as24InnenfarbeId, as24AntriebId, as24Hu,
 } from '../../../lib/as24Uebersetzung';
-import { istAusgewiesen } from '../../../lib/mobileUebersetzung';
+import { istAusgewiesen, laenderCode } from '../../../lib/mobileUebersetzung';
 import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
 import { as24Envkv } from '../../../lib/as24Envkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
@@ -44,7 +44,7 @@ interface FormData {
   leermasseKg?: string;
   envkv?: EnvkvData;
   huUntil?: string; interiorType?: string; interiorColor?: string;
-  driveType?: string; warranty?: boolean;
+  driveType?: string; warranty?: boolean; countryVersion?: string;
 }
 
 /**
@@ -161,6 +161,9 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   const antrieb = as24AntriebId(formData.driveType || '');
   if (antrieb) nutzlast.drivetrain = antrieb;
   if (formData.warranty) nutzlast.hasWarranty = true;
+  /* Gleicher Feldname, gleicher ISO-Code — hier aber nirgends Pflicht. */
+  const land = laenderCode(formData.countryVersion || '');
+  if (land) nutzlast.countryVersion = land;
 
   if (formData.vin) nutzlast.vin = formData.vin;
 

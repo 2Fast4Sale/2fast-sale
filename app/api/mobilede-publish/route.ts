@@ -3,7 +3,7 @@ import { mobileMarkenWert, mobileModellWert } from '../../../lib/carDatabase';
 import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
-  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu,
+  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu, laenderCode,
 } from '../../../lib/mobileUebersetzung';
 import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
@@ -42,7 +42,7 @@ interface FormData {
   leermasseKg?: string; anhaengelastGebremstKg?: string; anhaengelastUngebremstKg?: string;
   envkv?: EnvkvData;
   huUntil?: string; interiorType?: string; interiorColor?: string;
-  driveType?: string; warranty?: boolean;
+  driveType?: string; warranty?: boolean; countryVersion?: string;
 }
 
 /**
@@ -153,6 +153,14 @@ function inseratBauen(formData: FormData, description?: string) {
   const antrieb = mobileAntrieb(formData.driveType || '');
   if (antrieb) inserat.driveType = antrieb;
   if (formData.warranty) inserat.warranty = true;
+
+  /*
+   * Laenderversion. Bei Neuwagen Pflicht -- mobile.de lehnt sonst mit
+   * "countryversion-missing" ab.
+   */
+  const land = laenderCode(formData.countryVersion || '');
+  if (land) inserat.countryVersion = land;
+  else if (inserat.condition === 'NEW') fehlt.push('Länderversion (Pflicht bei Neuwagen)');
 
   if (formData.vin) inserat.vin = formData.vin.toUpperCase();
   const farbe = mobileFarbe(formData.color || '');

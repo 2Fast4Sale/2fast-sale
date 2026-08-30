@@ -87,6 +87,15 @@ export interface FormData {
   leermasseKg: string;
   anhaengelastGebremstKg: string;
   anhaengelastUngebremstKg: string;
+
+  /**
+   * Fuer welchen Markt das Fahrzeug gebaut wurde, als ISO-Code.
+   *
+   * Bei mobile.de PFLICHT fuer Neuwagen ("countryversion-missing"),
+   * bei Gebrauchtwagen freiwillig. Beide Portale nennen das Feld
+   * gleich.
+   */
+  countryVersion: string;
 }
 
 export const LEER_ENVKV: EnvkvData = {
@@ -112,6 +121,9 @@ export const POLSTERUNG   = ['Stoff', 'Teilleder', 'Leder', 'Velour', 'Alcantara
 export const INNENFARBE   = ['Schwarz', 'Grau', 'Beige', 'Braun', 'Andere'];
 export const ANTRIEB      = ['Frontantrieb', 'Heckantrieb', 'Allrad'];
 export const EURONORM     = ['Euro 4', 'Euro 5', 'Euro 6', 'Euro 6d-Temp', 'Euro 6d'];
+/* Klartext; die Umsetzung auf den ISO-Code macht die Exportschicht. */
+export const LAENDERVERSION = ['Deutschland', 'Österreich', 'Schweiz', 'Italien',
+                              'Frankreich', 'Niederlande', 'Spanien', 'Polen'];
 
 /**
  * Die vier Angaben, die der Händler je Fahrzeug selbst machen muss.
@@ -155,6 +167,7 @@ export function useEntwurf() {
     bodyType: '', vatType: '', damaged: false, metallic: false, warranty: false,
     huUntil: '', previousOwners: '', interiorType: '', interiorColor: '',
     doors: '', emissionClass: '', driveType: '',
+    countryVersion: '',
     leermasseKg: '', anhaengelastGebremstKg: '', anhaengelastUngebremstKg: '',
   });
 

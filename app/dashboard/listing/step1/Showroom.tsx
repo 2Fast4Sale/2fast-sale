@@ -42,7 +42,7 @@ import { type VehicleKind } from '../../../../lib/envkv';
 import { G } from '../gestaltung';
 import {
   useEntwurf, KRAFTSTOFFE, GETRIEBE, KAROSSERIE, POLSTERUNG, INNENFARBE,
-  ANTRIEB, EURONORM, SELBST_FELDER, TOP_MARKEN, PFLICHT_NAME,
+  ANTRIEB, EURONORM, LAENDERVERSION, SELBST_FELDER, TOP_MARKEN, PFLICHT_NAME,
 } from './useEntwurf';
 
 /* ────────────────────────── Gestaltung ────────────────────────── */
@@ -1219,6 +1219,18 @@ export default function Showroom() {
                 <Eingabe erkannt={erkannt.has('anhaengelastUngebremstKg')} wert={data.anhaengelastUngebremstKg}
                   aendern={v => setzen('anhaengelastUngebremstKg', v.replace(/[^\d]/g, ''))}
                   einheit="kg" platzhalter="750" hinweis="Feld O.2" />
+              </div>
+              {/*
+                Laenderversion: fuer welchen Markt das Fahrzeug gebaut
+                wurde. Bei einem NEUWAGEN verlangt mobile.de sie — ohne
+                sie kommt "countryversion-missing" zurueck. Bei
+                Gebrauchtwagen freiwillig, aber ein EU-Import ist eine
+                Angabe, die Kaeufer sehen wollen.
+              */}
+              <div style={{ gridColumn: schmal ? 'auto' : '1 / -1' }}>
+                <Beschriftung text="Länderversion" />
+                <Wahl optionen={LAENDERVERSION} wert={data.countryVersion}
+                  beiWahl={v => setzen('countryVersion', data.countryVersion === v ? '' : v)} />
               </div>
             </div>
           }
