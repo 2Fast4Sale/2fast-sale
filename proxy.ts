@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from './lib/supabase/middleware';
+import { bauzaunPruefen, BAUZAUN_KEKS, BAUZAUN_PARAM } from './lib/bauzaun';
 
 // ── Rate Limiter (In-Memory, reicht für Start) ──────────────────────────────
 // Key: IP-Adresse → { count, resetAt }
@@ -74,6 +75,36 @@ export async function proxy(request: NextRequest) {
         }
       );
     }
+  }
+
+  /*
+   * Bauzaun: Besucher sehen "in Arbeit", du siehst alles.
+   *
+   * Vor der Sitzungserneuerung, damit ein Fremder nicht bei jedem
+   * Aufruf eine Supabase-Anfrage ausloest.
+   */
+  const zaun = bauzaunPruefen(request);
+
+  if (zaun.keksSetzen) {
+    /* Schluessel aus der Adresse nehmen, damit er nicht im Verlauf,
+       im Verweis-Kopf oder in einem geteilten Link landet. */
+    const sauber = request.nextUrl.clone();
+    sauber.searchParams.delete(BAUZAUN_PARAM);
+    const antwort = NextResponse.redirect(sauber);
+    antwort.cookies.set(BAUZAUN_KEKS, process.env.BAUZAUN_SCHLUESSEL!, {
+      httpOnly: true, sameSite: 'lax', secure: true, path: '/',
+      maxAge: 60 * 60 * 24 * 90,
+    });
+    return antwort;
+  }
+
+  if (zaun.aktiv && !zaun.durchlassen) {
+    const ziel = request.nextUrl.clone();
+    ziel.pathname = '/bauzaun';
+    ziel.search = '';
+    /* Umschreiben statt umleiten: Die Adresse bleibt stehen, damit ein
+       spaeterer Aufruf derselben Seite mit Schluessel funktioniert. */
+    return NextResponse.rewrite(ziel, { status: 503 });
   }
 
   // Supabase Session aktuell halten
