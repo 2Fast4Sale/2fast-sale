@@ -4,7 +4,7 @@ import {
   as24Getriebe, as24FarbeId, as24EuronormId,
   as24PolsterungId, as24InnenfarbeId, as24AntriebId, as24Hu,
 } from '../../../lib/as24Uebersetzung';
-import { istAusgewiesen, laenderCode, farbnameSauber } from '../../../lib/mobileUebersetzung';
+import { istAusgewiesen, laenderCode, farbnameSauber, monatJahr } from '../../../lib/mobileUebersetzung';
 import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
 import { as24Envkv } from '../../../lib/as24Envkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
@@ -45,7 +45,7 @@ interface FormData {
   envkv?: EnvkvData;
   huUntil?: string; interiorType?: string; interiorColor?: string;
   driveType?: string; warranty?: boolean; countryVersion?: string;
-  cylinders?: string; manufacturerColorName?: string;
+  cylinders?: string; manufacturerColorName?: string; lastServiceDate?: string;
 }
 
 /**
@@ -176,6 +176,10 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   if (zylinder >= 1 && zylinder <= 99) nutzlast.cylinderCount = zylinder;
   const farbname = farbnameSauber(formData.manufacturerColorName || '', 30);
   if (farbname) nutzlast.bodyColorName = farbname;
+  /* Nur das Datum — einen Kilometerstand zur Wartung kennt
+     AutoScout24 nicht. */
+  const wartung = monatJahr(formData.lastServiceDate || '', 'yyyy-MM');
+  if (wartung) nutzlast.lastTechnicalServiceDate = wartung;
 
   const norm = as24EuronormId(formData.emissionClass || '');
   if (norm) nutzlast.euEmissionStandard = Number(norm);

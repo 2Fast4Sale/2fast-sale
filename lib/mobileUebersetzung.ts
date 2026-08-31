@@ -227,3 +227,27 @@ export function farbnameSauber(name: string, maxLaenge: number): string | undefi
   if (/@|https?:|www\.|\d{5,}/.test(s)) return undefined;
   return s.slice(0, maxLaenge);
 }
+
+/**
+ * Letzte Wartung: "MM/JJJJ" -> "JJJJMM".
+ *
+ * Anders als bei der HU liegt dieses Datum in der VERGANGENHEIT. Ein
+ * Wartungsdatum in der Zukunft ist ein Tippfehler, kein Termin —
+ * deshalb wird es verworfen statt uebertragen.
+ */
+export function monatJahr(roh: string, format: 'yyyyMM' | 'yyyy-MM'): string | undefined {
+  const s = (roh || '').trim();
+  const m = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
+  if (!m) return undefined;
+  const monat = Number(m[1]);
+  const jahr = Number(m[2]);
+  if (monat < 1 || monat > 12) return undefined;
+
+  const jetzt = new Date();
+  const inZukunft = jahr > jetzt.getFullYear()
+    || (jahr === jetzt.getFullYear() && monat > jetzt.getMonth() + 1);
+  if (inZukunft || jahr < jetzt.getFullYear() - 40) return undefined;
+
+  const mm = String(monat).padStart(2, '0');
+  return format === 'yyyyMM' ? `${jahr}${mm}` : `${jahr}-${mm}`;
+}

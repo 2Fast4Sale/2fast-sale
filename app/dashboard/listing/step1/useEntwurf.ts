@@ -108,6 +108,16 @@ export interface FormData {
   cylinders: string;
   fuelTankVolume: string;
   manufacturerColorName: string;
+
+  /**
+   * Letzte Wartung — Monat/Jahr und Kilometerstand.
+   *
+   * Steht im Serviceheft, in keiner Datenbank. Auch DAT kennt es
+   * nicht. Den Kilometerstand nimmt nur mobile.de; AutoScout24 hat
+   * nur das Datum.
+   */
+  lastServiceDate: string;
+  lastServiceKm: string;
 }
 
 export const LEER_ENVKV: EnvkvData = {
@@ -180,6 +190,7 @@ export function useEntwurf() {
     huUntil: '', previousOwners: '', interiorType: '', interiorColor: '',
     doors: '', emissionClass: '', driveType: '',
     countryVersion: '', cylinders: '', fuelTankVolume: '', manufacturerColorName: '',
+    lastServiceDate: '', lastServiceKm: '',
     leermasseKg: '', anhaengelastGebremstKg: '', anhaengelastUngebremstKg: '',
   });
 

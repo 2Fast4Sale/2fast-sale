@@ -3,7 +3,7 @@ import { mobileMarkenWert, mobileModellWert } from '../../../lib/carDatabase';
 import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
-  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu, laenderCode, farbnameSauber,
+  mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu, laenderCode, farbnameSauber, monatJahr,
 } from '../../../lib/mobileUebersetzung';
 import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
@@ -44,6 +44,7 @@ interface FormData {
   huUntil?: string; interiorType?: string; interiorColor?: string;
   driveType?: string; warranty?: boolean; countryVersion?: string;
   cylinders?: string; fuelTankVolume?: string; manufacturerColorName?: string;
+  lastServiceDate?: string; lastServiceKm?: string;
 }
 
 /**
@@ -173,6 +174,12 @@ function inseratBauen(formData: FormData, description?: string) {
   if (tank > 0 && tank <= 9999) inserat.fuelTankVolume = tank;
   const farbname = farbnameSauber(formData.manufacturerColorName || '', 32);
   if (farbname) inserat.manufacturerColorName = farbname;
+
+  /* Letzte Wartung. Den Kilometerstand nimmt nur mobile.de. */
+  const wartung = monatJahr(formData.lastServiceDate || '', 'yyyyMM');
+  if (wartung) inserat.lastMaintenanceDate = wartung;
+  const wartungKm = ganzzahl(formData.lastServiceKm);
+  if (wartungKm > 0) inserat.lastMaintenanceMileage = wartungKm;
   const norm = mobileEuronorm(formData.emissionClass || '');
   if (norm) inserat.emissionClass = norm;
 

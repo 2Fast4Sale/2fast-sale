@@ -1256,6 +1256,23 @@ export default function Showroom() {
                   aendern={v => setzen('manufacturerColorName', v.slice(0, 30))}
                   platzhalter="Vesuvgrau Metallic" />
               </div>
+              {/*
+                Letzte Wartung. Steht im Serviceheft und in keiner
+                Datenbank — auch DAT kennt sie nicht. Den
+                Kilometerstand nimmt nur mobile.de.
+              */}
+              <div>
+                <Beschriftung text="Letzte Wartung" />
+                <Eingabe erkannt={erkannt.has('lastServiceDate')} wert={data.lastServiceDate}
+                  aendern={v => setzen('lastServiceDate', v)}
+                  platzhalter="05/2025" hinweis="Monat/Jahr aus dem Serviceheft" />
+              </div>
+              <div>
+                <Beschriftung text="Wartung bei km" />
+                <Eingabe erkannt={erkannt.has('lastServiceKm')} wert={data.lastServiceKm}
+                  aendern={v => setzen('lastServiceKm', v.replace(/[^0-9]/g, ''))}
+                  einheit="km" platzhalter="88.199" hinweis="nur mobile.de" />
+              </div>
             </div>
           }
         />
