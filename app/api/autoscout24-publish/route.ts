@@ -201,7 +201,7 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   const envkv = formData.envkv;
   if (envkv) {
     const pruefung = validateEnvkv(envkv, formData.fuelType || '');
-    if (pruefung.required && !pruefung.complete) {
+    if (!pruefung.complete) {
       fehlt.push(`EnVKV: ${pruefung.missing.join(', ')}`);
     }
     Object.assign(nutzlast, as24Envkv(envkv, formData.fuelType || ''));

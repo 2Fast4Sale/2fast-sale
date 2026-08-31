@@ -46,6 +46,19 @@ export function isEnvkvRequired(kind: VehicleKind | '' | null | undefined): bool
 }
 
 /**
+ * Ist ueberhaupt eine Fahrzeugart gewaehlt?
+ *
+ * Klingt nach einer Nebensaechlichkeit, ist aber der Schalter, der
+ * die gesamte EnVKV-Pruefung an- oder ausschaltet. Solange die Art
+ * unbekannt ist, laesst sich nicht sagen, ob Verbrauchsangaben
+ * Pflicht sind — und "unbekannt" darf nicht wie "keine Pflicht"
+ * behandelt werden.
+ */
+export function fahrzeugartGewaehlt(kind: VehicleKind | '' | null | undefined): boolean {
+  return !!kind && (Object.keys(VEHICLE_KIND_LABELS) as VehicleKind[]).includes(kind as VehicleKind);
+}
+
+/**
  * CO2-Klasse nach Anlage 2 Pkw-EnVKV, ermittelt aus den kombinierten
  * CO2-Emissionen (WLTP) in g/km.
  */
@@ -109,8 +122,37 @@ export interface EnvkvValidation {
  * EnVKV-Angaben vorhanden sind.
  */
 export function validateEnvkv(data: EnvkvData, fuelType: string): EnvkvValidation {
+  /*
+   * Keine Fahrzeugart gewaehlt = ungeklaert, nicht "befreit".
+   *
+   * Vorher fiel dieser Fall durch isEnvkvRequired() auf false und das
+   * Inserat galt als vollstaendig. Ein Neuwagen ging dann ohne einen
+   * einzigen Verbrauchswert raus — die Schnittstelle nimmt ihn an, die
+   * Verordnung nicht. Getestet am 2026-08-31 in der mobile.de-Sandbox:
+   * Inserat 42969858743072 wurde ohne EnVKV-Daten anstandslos angelegt.
+   *
+   * Solange die Art unbekannt ist, gilt der strengere Fall.
+   */
+  if (!fahrzeugartGewaehlt(data.vehicleKind)) {
+    return { required: true, complete: false, missing: ['Fahrzeugart'] };
+  }
+
   const required = isEnvkvRequired(data.vehicleKind);
-  if (!required) return { required: false, complete: true, missing: [] };
+
+  /*
+   * Gebrauchtwagen und Jahreswagen sind nicht EnVKV-pflichtig. Wer dort
+   * aber freiwillig Werte angibt, muss sie vollstaendig angeben: ein
+   * Verbrauch ohne CO2-Wert (oder umgekehrt) ist eine halbe Angabe, und
+   * halbe Angaben zu Verbrauchswerten sind irrefuehrend im Sinne des
+   * § 5 UWG. Entweder alles oder nichts.
+   */
+  if (!required) {
+    const angefangen = [
+      data.consumptionCombined, data.co2Combined,
+      data.powerConsumptionCombined, data.electricRangeKm,
+    ].some(v => v !== null && v !== undefined && !Number.isNaN(v));
+    if (!angefangen) return { required: false, complete: true, missing: [] };
+  }
 
   const drivetrain = drivetrainFromFuel(fuelType);
   const missing: string[] = [];
@@ -132,7 +174,7 @@ export function validateEnvkv(data: EnvkvData, fuelType: string): EnvkvValidatio
     if (!has(data.co2Combined))         missing.push('CO₂-Emissionen kombiniert');
   }
 
-  return { required: true, complete: missing.length === 0, missing };
+  return { required, complete: missing.length === 0, missing };
 }
 
 const nf = (v: number, digits = 1) =>

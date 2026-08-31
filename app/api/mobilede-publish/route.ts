@@ -11,7 +11,19 @@ import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 
 export const dynamic = 'force-dynamic';
 
-const BASIS = 'https://services.mobile.de/seller-api';
+/*
+ * Produktiv oder Sandbox.
+ *
+ * MOBILEDE_SANDBOX=true schaltet auf die Testumgebung. Dort angelegte
+ * Inserate sind nie oeffentlich sichtbar und kosten nichts.
+ *
+ * Die Adresse lautet services.sandbox.mobile.de. Im Schnellstart der
+ * eigenen Dokumentation steht sandbox.services.mobile.de — diesen
+ * Rechner gibt es nicht, er loest nicht einmal auf.
+ */
+const BASIS = process.env.MOBILEDE_SANDBOX === 'true'
+  ? 'https://services.sandbox.mobile.de/seller-api'
+  : 'https://services.mobile.de/seller-api';
 
 /** Erstzulassung im Format yyyyMM, wie mobile.de es erwartet. */
 function erstzulassung(roh: string): string {
@@ -214,7 +226,7 @@ function inseratBauen(formData: FormData, description?: string) {
   const envkv = formData.envkv;
   if (envkv) {
     const pruefung = validateEnvkv(envkv, formData.fuelType || '');
-    if (pruefung.required && !pruefung.complete) {
+    if (!pruefung.complete) {
       fehlt.push(`EnVKV: ${pruefung.missing.join(', ')}`);
     }
     Object.assign(inserat, mobileEnvkv(envkv, formData.fuelType || ''));

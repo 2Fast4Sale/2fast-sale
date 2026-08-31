@@ -121,7 +121,16 @@ export interface FormData {
 }
 
 export const LEER_ENVKV: EnvkvData = {
-  vehicleKind: 'gebrauchtwagen',
+  /*
+   * Bewusst leer, nicht 'gebrauchtwagen'.
+   *
+   * Eine Vorbelegung waere hier eine erfundene Angabe — und ausgerechnet
+   * die eine, die die EnVKV-Pruefung stilllegt. Wer einen Neuwagen
+   * einstellt und das Feld nicht anfasst, haette ein Inserat ohne
+   * Verbrauchswerte bekommen, das zusaetzlich als Gebrauchtwagen
+   * ausgezeichnet ist.
+   */
+  vehicleKind: '',
   consumptionCombined: null,
   powerConsumptionCombined: null,
   co2Combined: null,

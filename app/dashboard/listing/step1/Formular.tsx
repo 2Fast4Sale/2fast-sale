@@ -152,7 +152,16 @@ interface FormData {
 }
 
 const LEER_ENVKV: EnvkvData = {
-  vehicleKind: 'gebrauchtwagen',
+  /*
+   * Bewusst leer, nicht 'gebrauchtwagen'.
+   *
+   * Eine Vorbelegung waere hier eine erfundene Angabe — und ausgerechnet
+   * die eine, die die EnVKV-Pruefung stilllegt. Wer einen Neuwagen
+   * einstellt und das Feld nicht anfasst, haette ein Inserat ohne
+   * Verbrauchswerte bekommen, das zusaetzlich als Gebrauchtwagen
+   * ausgezeichnet ist.
+   */
+  vehicleKind: '',
   consumptionCombined: null,
   powerConsumptionCombined: null,
   co2Combined: null,
@@ -816,10 +825,11 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                     <span style={{ fontSize: 12.5, color: T.leise }}>Fahrzeugart:</span>
                     <Wahl
                       optionen={['Gebrauchtwagen', 'Neuwagen', 'Tageszulassung', 'Vorführwagen', 'Jahreswagen']}
-                      wert={ART_ANZEIGE[(data.envkv.vehicleKind as VehicleKind) ?? 'gebrauchtwagen'] ?? 'Gebrauchtwagen'}
+                      wert={ART_ANZEIGE[data.envkv.vehicleKind as VehicleKind] ?? ''}
                       beiWahl={anzeige => {
                         const schluessel = (Object.keys(ART_ANZEIGE) as VehicleKind[])
-                          .find(k => ART_ANZEIGE[k] === anzeige) ?? 'gebrauchtwagen';
+                          .find(k => ART_ANZEIGE[k] === anzeige);
+                        if (!schluessel) return;
                         setData(p => ({ ...p, envkv: { ...p.envkv, vehicleKind: schluessel } }));
                         setFehler(p => ({ ...p, envkv: '' }));
                       }}
