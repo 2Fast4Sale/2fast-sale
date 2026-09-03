@@ -29,6 +29,46 @@ export const PREIS_PRO_INSERAT_CENT = 350;
 /** Monatliche Grundgebühr ohne Paket, in Cent. Pakete enthalten sie bereits. */
 export const GRUNDGEBUEHR_CENT = 5000;
 
+/**
+ * Aufpreis für die VIN-Ausstattungsabfrage, je Inserat, in Cent.
+ *
+ * Bewusst ein Aufpreis und keine enthaltene Leistung. Der Grund ist eine
+ * Rechnung, die ohne diesen Aufpreis nicht aufgeht:
+ *
+ * Die DAT verlangt laut ihrer eigenen Preisseite "ab 1,85 Euro zzgl.
+ * MwSt. pro Abruf". Bei Paket L bringt ein Inserat 2,18 € ein; nach
+ * rund 0,26 € sonstiger Kosten blieben sieben Cent. Als
+ * Kleinunternehmer, der die Vorsteuer nicht zieht, kostet derselbe
+ * Abruf 2,20 € — dann ist Paket L mit jedem Inserat defizitaer.
+ *
+ * Als Aufpreis kann das nicht passieren: Was die Abfrage kostet, wird
+ * durchgereicht, unabhaengig vom gebuchten Paket und unabhaengig von
+ * der Besteuerungsform. Und der Haendler entscheidet selbst — beim
+ * eigenen Vorfuehrwagen kreuzt er die Ausstattung an, beim
+ * eingetauschten Fremdfabrikat nimmt er die Abfrage.
+ *
+ * Der Betrag ist vorlaeufig. Der Einkaufspreis ist noch nicht
+ * verhandelt ("ab" ist ein Einstiegspreis, kein zugesagter), deshalb
+ * steht er in PREIS_DAT_EUR und nicht hier. Vor dem Livegang gegen
+ * vinAufpreisDeckung() pruefen.
+ */
+export const AUFPREIS_VIN_CENT = 290;
+
+/**
+ * Was bleibt vom Aufpreis nach dem Einkauf uebrig, in Cent?
+ *
+ * `datPreisEur` ist der Nettopreis je Abruf. `vorsteuerabzug` false
+ * rechnet die Umsatzsteuer als echte Kosten — so liegt der Fall beim
+ * Kleinunternehmer nach § 19 UStG.
+ *
+ * Negativ heisst: Der Aufpreis deckt den Einkauf nicht. Dann ist nicht
+ * die Abfrage das Problem, sondern der Aufpreis zu niedrig.
+ */
+export function vinAufpreisDeckung(datPreisEur: number, vorsteuerabzug = true): number {
+  const einkaufCent = Math.round(datPreisEur * 100 * (vorsteuerabzug ? 1 : 1.19));
+  return AUFPREIS_VIN_CENT - einkaufCent;
+}
+
 export interface Paket {
   id: 's' | 'm' | 'l';
   name: string;
@@ -134,6 +174,13 @@ export function monatsrechnung(o: {
   /** Studio-Bilder je Inserat, für die Kontingentrechnung. */
   studioBilder?: number[];
   paketId?: Paket['id'] | null;
+  /**
+   * Wie viele Inserate haben die VIN-Ausstattungsabfrage genutzt?
+   *
+   * Nicht jedes Inserat — das ist der Punkt. Wer die Ausstattung selbst
+   * ankreuzt, zahlt den Aufpreis nicht.
+   */
+  vinAbfragen?: number;
 }): Monatsrechnung {
   const inserate = Math.max(0, Math.round(o.inserate));
   const paket = o.paketId ? PAKETE.find(p => p.id === o.paketId) : undefined;
@@ -164,6 +211,22 @@ export function monatsrechnung(o: {
   const extra = studioExtraCent(o.studioBilder ?? [], o.paketId);
   if (extra > 0) {
     posten.push({ bezeichnung: 'Zusätzliche Studio-Bilder', betragCent: extra });
+  }
+
+  /*
+   * Der Aufpreis ist in jedem Paket gleich hoch und nie im Kontingent
+   * enthalten. Genau deshalb verzerrt er bestesAngebot() nicht: Er
+   * kommt auf jede Variante gleich obendrauf und kann die Reihenfolge
+   * nicht drehen. Waere er im Kontingent, muesste er dort mitgerechnet
+   * werden — und ein Paket koennte sich nur deshalb lohnen, weil der
+   * Haendler Abfragen nutzt, die er gar nicht braucht.
+   */
+  const vin = Math.max(0, Math.round(o.vinAbfragen ?? 0));
+  if (vin > 0) {
+    posten.push({
+      bezeichnung: `${vin} × VIN-Ausstattungsabfrage`,
+      betragCent: vin * AUFPREIS_VIN_CENT,
+    });
   }
 
   return { posten, summeCent: posten.reduce((s, p) => s + p.betragCent, 0) };
