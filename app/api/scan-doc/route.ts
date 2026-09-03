@@ -166,8 +166,25 @@ Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
   "emissionClass": "Euro 6d",
   "driveType": "Frontantrieb",
   "aufbau": "AC KOMBILIMOUSINE",
-  "equipment": ["alle erkannten Merkmale auf Deutsch, mind. 15 wenn irgendwie möglich"]
+  "equipment": ["nur die Merkmale, die du tatsächlich abgelesen hast"]
 }`;
+
+/*
+ * Hier stand einmal: "mind. 15 wenn irgendwie möglich".
+ *
+ * Das war eine Aufforderung zum Erfinden, und sie stand ausgerechnet
+ * unter den Absaetzen, die das Raten verbieten. Ein Fahrzeugschein
+ * enthaelt in Feld 22 haeufig gar keine Ausstattungscodes; wer
+ * trotzdem fuenfzehn Merkmale verlangt, bekommt fuenfzehn Merkmale.
+ * Daher die Anhaengerkupplung an einem Fahrzeug, das keine hatte.
+ *
+ * Hinter dem Aufruf steht kein Filter, der so etwas abfangen wuerde —
+ * die Liste wird nur auf die DB-Labels normalisiert, nicht geprueft.
+ * Was das Modell ausgibt, steht am Ende im Inserat.
+ *
+ * Eine leere Liste ist das richtige Ergebnis, wenn nichts dasteht.
+ * Der Haendler kreuzt den Rest selbst an — er steht neben dem Auto.
+ */
 
 // ── Labels aus der Datenbank für Normalisierung ──────────────────────────────
 const DB_LABELS = [
