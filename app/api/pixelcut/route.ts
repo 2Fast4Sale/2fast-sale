@@ -3,6 +3,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { logApiCost, imageCostMicros, currentUserId } from '../../../lib/apiCosts';
 import { findBackground, DEFAULT_BACKGROUND_ID } from '../../../lib/backgrounds';
+import { budget, istSandbox, reservieren, freigeben } from '../../../lib/photoroomBudget';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,36 @@ export async function POST(req: NextRequest) {
         { error: 'Studio-Bearbeitung ist nicht konfiguriert.' },
         { status: 503 }
       );
+    }
+
+    /*
+     * Vor dem Aufruf pruefen, nicht danach.
+     *
+     * Im Sandbox-Modus passiert hier nichts — tausend Aufrufe im Monat
+     * sind frei. Im Produktivbetrieb sind es im Probetarif zehn, und die
+     * sind mit einem einzigen Durchlauf ueber zwoelf Fotos weg.
+     */
+    const sandbox = istSandbox();
+    let buchung: string | null = null;
+    if (!sandbox) {
+      const stand = await budget();
+      if (stand.erschoepft) {
+        console.warn('[pixelcut] Kontingent erschoepft:', stand.verbraucht, 'von', stand.limit);
+        return NextResponse.json({
+          error: `Das Kontingent für Studio-Bilder ist aufgebraucht (${stand.verbraucht} von ${stand.limit} in diesem Monat). `
+               + `Es füllt sich zum Monatsersten wieder auf.`,
+          kontingentErschoepft: true,
+          verbraucht: stand.verbraucht,
+          limit: stand.limit,
+        }, { status: 429 });
+      }
+      buchung = await reservieren(await currentUserId(), draftId ?? null, imageCostMicros('photoroom'));
+      if (!buchung) {
+        return NextResponse.json({
+          error: 'Das Kontingent für Studio-Bilder ist aufgebraucht.',
+          kontingentErschoepft: true,
+        }, { status: 429 });
+      }
     }
 
     const base64Data  = image.replace(/^data:image\/\w+;base64,/, '');
@@ -134,20 +165,29 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       const err = await response.text();
       console.error('[pixelcut] PhotoRoom Fehler:', err);
+      // Nicht zustande gekommen, also auch nicht verbraucht.
+      await freigeben(buchung);
       return NextResponse.json(
         { error: 'Studio-Bearbeitung gerade nicht verfügbar. Bitte gleich nochmal versuchen.' },
         { status: 503 }
       );
     }
 
-    await logApiCost({
-      userId:     await currentUserId(),
-      draftId:    draftId ?? null,
-      service:    'photoroom',
-      operation:  'remove-bg',
-      unitsIn:    1,
-      costMicros: imageCostMicros('photoroom'),
-    });
+    /*
+     * Produktive Aufrufe sind oben schon gebucht — hier noch einmal zu
+     * schreiben ergaebe zwei Zeilen fuer ein Bild und eine doppelt so hohe
+     * Kostenrechnung. Es bleibt der Sandbox-Fall.
+     */
+    if (sandbox) {
+      await logApiCost({
+        userId:     await currentUserId(),
+        draftId:    draftId ?? null,
+        service:    'photoroom',
+        operation:  'studio-sandbox',
+        unitsIn:    1,
+        costMicros: imageCostMicros('photoroom'),
+      });
+    }
 
     const resultBuffer = Buffer.from(await response.arrayBuffer());
     return NextResponse.json({ result: `data:image/jpeg;base64,${resultBuffer.toString('base64')}` });
