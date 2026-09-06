@@ -142,6 +142,41 @@ const ART_ANZEIGE: Record<VehicleKind, string> = {
 const TOP_MARKEN  = ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Opel', 'Ford',
                      'Skoda', 'Seat', 'Hyundai', 'Kia', 'Toyota', 'Renault'];
 
+/**
+ * Alter in Jahren aus der Erstzulassung, oder null wenn unlesbar.
+ *
+ * Nimmt "MM/JJJJ" und "MM.JJJJ", sonst eine vierstellige Jahreszahl.
+ * Alles andere ergibt null — dann wird nichts vorbelegt.
+ */
+function alterInJahren(erstzulassung: string): number | null {
+  const s = (erstzulassung || '').trim();
+  if (!s) return null;
+
+  const mmJJJJ = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
+  const jahr   = mmJJJJ ? Number(mmJJJJ[2]) : Number(s.match(/^(\d{4})$/)?.[1]);
+  if (!jahr || jahr < 1900) return null;
+  const monat = mmJJJJ ? Number(mmJJJJ[1]) : 1;
+  if (monat < 1 || monat > 12) return null;
+
+  const jetzt = new Date();
+  const monate = (jetzt.getFullYear() - jahr) * 12 + (jetzt.getMonth() + 1 - monat);
+  return monate < 0 ? null : monate / 12;
+}
+
+/**
+ * Ab welchem Alter die Fahrzeugart sicher "Gebrauchtwagen" ist.
+ *
+ * Zwei Jahre, nicht eines. Ein Jahreswagen ist per Definition rund ein
+ * Jahr alt, ein Vorfuehrwagen laeuft oft bis anderthalb — bei einer
+ * Grenze von einem Jahr wuerde genau die falsch gestempelt.
+ *
+ * Ueber zwei Jahren bleibt keine der drei EnVKV-pflichtigen Arten
+ * uebrig: Ein Neuwagen ist nicht zwei Jahre zugelassen, eine
+ * Tageszulassung ist Tage alt. Das ist abgelesen, nicht geraten — und
+ * genau das ist der Unterschied zur frueheren stillen Vorbelegung.
+ */
+const GEBRAUCHT_AB_JAHREN = 2;
+
 interface FormData {
   brand: string; model: string; vin: string;
   firstRegistration: string; km: string; price: string;
@@ -250,6 +285,27 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
    * Sind die Verbrauchsangaben vorgeschrieben? Bei Gebrauchtwagen nicht —
    * und das ist der Normalfall. Der Block bleibt dann eingeklappt.
    */
+  /*
+   * Fahrzeugart aus der Erstzulassung vorbelegen.
+   *
+   * Nur wenn noch nichts gewaehlt ist — eine Wahl des Haendlers wird
+   * niemals ueberschrieben. Und nur ueber ${GEBRAUCHT_AB_JAHREN} Jahren, wo keine
+   * der EnVKV-pflichtigen Arten mehr in Frage kommt.
+   *
+   * Das ist kein Rueckfall in die alte stille Vorbelegung: Damals stand
+   * "gebrauchtwagen" fest im Formular, unabhaengig vom Fahrzeug. Hier
+   * steht ein abgelesenes Datum dahinter.
+   */
+  useEffect(() => {
+    if (data.envkv.vehicleKind) return;
+    const alter = alterInJahren(data.firstRegistration);
+    if (alter === null || alter < GEBRAUCHT_AB_JAHREN) return;
+    setData(p => p.envkv.vehicleKind
+      ? p
+      : { ...p, envkv: { ...p.envkv, vehicleKind: 'gebrauchtwagen' } });
+    setFehler(p => (p.envkv ? { ...p, envkv: '' } : p));
+  }, [data.firstRegistration, data.envkv.vehicleKind]);
+
   const envkvPflicht = isEnvkvRequired(data.envkv.vehicleKind);
 
   /** Offene Pflichtangaben als lesbare Namen, inklusive Fahrzeugart. */
