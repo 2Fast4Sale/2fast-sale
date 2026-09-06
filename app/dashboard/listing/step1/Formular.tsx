@@ -152,11 +152,39 @@ function alterInJahren(erstzulassung: string): number | null {
   const s = (erstzulassung || '').trim();
   if (!s) return null;
 
-  const mmJJJJ = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
-  const jahr   = mmJJJJ ? Number(mmJJJJ[2]) : Number(s.match(/^(\d{4})$/)?.[1]);
-  if (!jahr || jahr < 1900) return null;
-  const monat = mmJJJJ ? Number(mmJJJJ[1]) : 1;
-  if (monat < 1 || monat > 12) return null;
+  let jahr: number | undefined;
+  let monat = 1;
+
+  /*
+   * Fuenf Schreibweisen, weil das Feld aus zwei Quellen kommt: aus dem
+   * Scan, der "MM/JJJJ" liefern soll, und aus der Tastatur des
+   * Haendlers, der schreibt, was auf dem Papier steht.
+   *
+   * Im Fahrzeugschein steht in Feld B ein VOLLSTAENDIGES Datum mit Tag.
+   * Genau das wurde vorher nicht erkannt — und weil ein unlesbares
+   * Datum keine Vorbelegung ausloest, passierte im haeufigsten Fall
+   * gar nichts.
+   */
+  let m: RegExpMatchArray | null;
+  if ((m = s.match(/^(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{4})$/))) {
+    // Tag.Monat.Jahr — deutsche Schreibweise, Tag wird nicht gebraucht.
+    monat = Number(m[2]); jahr = Number(m[3]);
+  } else if ((m = s.match(/^(\d{4})\s*[.\-/]\s*(\d{1,2})$/))) {
+    // Jahr-Monat
+    jahr = Number(m[1]); monat = Number(m[2]);
+  } else if ((m = s.match(/^(\d{1,2})\s*[.\-/]\s*(\d{4})$/))) {
+    // Monat/Jahr
+    monat = Number(m[1]); jahr = Number(m[2]);
+  } else if ((m = s.match(/^(\d{4})$/))) {
+    // Nur das Jahr — dann Januar annehmen. Das macht das Fahrzeug
+    // hoechstens juenger, nie aelter, kann also keine Vorbelegung
+    // ausloesen, die nicht ohnehin richtig waere.
+    jahr = Number(m[1]);
+  } else {
+    return null;
+  }
+
+  if (!jahr || jahr < 1900 || monat < 1 || monat > 12) return null;
 
   const jetzt = new Date();
   const monate = (jetzt.getFullYear() - jahr) * 12 + (jetzt.getMonth() + 1 - monat);
