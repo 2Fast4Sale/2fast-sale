@@ -251,6 +251,12 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
    * und das ist der Normalfall. Der Block bleibt dann eingeklappt.
    */
   const envkvPflicht = isEnvkvRequired(data.envkv.vehicleKind);
+
+  /** Offene Pflichtangaben als lesbare Namen, inklusive Fahrzeugart. */
+  const offeneNamen = [
+    ...offenePflicht.map(k => pflichtName[k]),
+    ...(data.envkv.vehicleKind ? [] : ['Fahrzeugart']),
+  ];
   const envkvSichtbar = envkvPflicht || envkvOffen;
 
   /* ── Fahrzeugschein einlesen ── */
@@ -800,9 +806,16 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
             {/* ── Verbrauch ── */}
             <Gruppe titel="Verbrauch und Emissionen"
               rechts={
-                envkvPflicht
-                  ? <span style={{ fontSize: 11.5, color: T.luecke, fontWeight: 600 }}>Pflichtangaben</span>
-                  : <span style={{ fontSize: 11.5, color: T.leise, fontWeight: 500 }}>bei Gebrauchtwagen freiwillig</span>
+                /*
+                 * Drei Zustaende, nicht zwei. Solange keine Fahrzeugart
+                 * gewaehlt ist, waere "bei Gebrauchtwagen freiwillig"
+                 * schlicht falsch — es ist ja keiner gewaehlt.
+                 */
+                !data.envkv.vehicleKind
+                  ? <span style={{ fontSize: 11.5, color: T.luecke, fontWeight: 600 }}>Fahrzeugart wählen</span>
+                  : envkvPflicht
+                    ? <span style={{ fontSize: 11.5, color: T.luecke, fontWeight: 600 }}>Pflichtangaben</span>
+                    : <span style={{ fontSize: 11.5, color: T.leise, fontWeight: 500 }}>bei Gebrauchtwagen freiwillig</span>
               }
               kinder={
                 <div style={{ padding: envkvSichtbar ? 16 : 0 }} data-luecke={fehler.envkv ? 'true' : undefined}>
@@ -822,7 +835,9 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                     display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
                     padding: '11px 16px',
                   }}>
-                    <span style={{ fontSize: 12.5, color: T.leise }}>Fahrzeugart:</span>
+                    <span style={{ fontSize: 12.5, color: T.leise }}>
+                      Fahrzeugart:{!data.envkv.vehicleKind && <span style={{ color: T.fehler }}> *</span>}
+                    </span>
                     <Wahl
                       optionen={['Gebrauchtwagen', 'Neuwagen', 'Tageszulassung', 'Vorführwagen', 'Jahreswagen']}
                       wert={ART_ANZEIGE[data.envkv.vehicleKind as VehicleKind] ?? ''}
@@ -842,6 +857,21 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                       }}>
                       Werte freiwillig angeben
                     </button>
+
+                    {/*
+                      Die Fehlermeldung stand nur im ausgeklappten Zweig.
+                      Eingeklappt — also im Normalfall — schlug die Pruefung
+                      zwar an, sagte aber nichts: "Weiter" wirkte kaputt,
+                      obwohl es genau das tat, was es sollte.
+                    */}
+                    {fehler.envkv && (
+                      <p style={{
+                        margin: '4px 0 0', width: '100%', fontSize: 12.5, color: T.fehler,
+                        display: 'flex', alignItems: 'center', gap: 5,
+                      }}>
+                        <AlertCircle size={13} /> {fehler.envkv}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <>
@@ -1038,9 +1068,16 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
         }}>
           <div style={{ maxWidth: 940, margin: '0 auto', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
-              {offenePflicht.length > 0
+              {/*
+                Die Fahrzeugart gehoert in dieselbe Aufzaehlung wie Marke,
+                Kilometerstand und Preis. Sie steckt nur nicht in PFLICHT,
+                weil sie unter data.envkv liegt und nicht flach in data —
+                fuer den Haendler ist dieser Unterschied bedeutungslos, er
+                sieht nur eine Liste dessen, was noch fehlt.
+              */}
+              {offeneNamen.length > 0
                 ? <span style={{ color: T.luecke, fontWeight: 600 }}>
-                    Fehlt noch: {offenePflicht.map(k => pflichtName[k]).join(', ')}
+                    Fehlt noch: {offeneNamen.join(', ')}
                   </span>
                 : <span style={{ color: T.leise }}>
                     {[data.brand, data.model].filter(Boolean).join(' ')}
