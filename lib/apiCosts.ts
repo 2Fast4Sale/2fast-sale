@@ -36,16 +36,37 @@ const LLM_PRICES_USD_PER_MTOK: Record<string, { input: number; output: number }>
  */
 const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
   removebg:  0.20,
-  // Belegt aus dem PhotoRoom API-Dashboard (Stand August 2026):
-  // Basic 20 EUR fuer 1.000 Bilder = 0,02 EUR/Bild. Hier in USD hinterlegt,
-  // weil die Umrechnung unten pauschal erfolgt. Bei groesseren Kontingenten
-  // sinkt der Stueckpreis weiter — dann hier nachziehen.
-  photoroom: 0.0217,
+  // photoroom steht in IMAGE_PRICES_EUR_PER_CALL — es wird in Euro abgerechnet.
   fal:       0.03,
   pixelcut:  0.04,
   // Octopus Piranha soll die obigen Dienste spaeter ersetzen.
   // Preis eintragen, sobald der Vertrag steht.
   piranha:   0.00,
+};
+
+/**
+ * Bilddienste, die in Euro abrechnen.
+ *
+ * PhotoRoom stellt in Euro; der Umweg ueber den Dollar wuerde bei
+ * USD_TO_EUR=0.92 aus 0,10 EUR glatte 9,2 Cent machen — ein Fehler von
+ * acht Prozent, eingebaut ohne Not. Dieselbe Ueberlegung steht schon
+ * bei den VIN-Preisen.
+ *
+ * PhotoRoom Plus, Stand September 2026: 100 EUR fuer 1.000 Bilder im
+ * Monat = 0,10 EUR je Bild.
+ *
+ * Hier stand vorher 0,0217 in der Dollar-Tabelle, begruendet mit "Basic
+ * 20 EUR fuer 1.000 Bilder". Das war der falsche Tarif: Basic ist die
+ * Remove Background API und kann weder AI Backgrounds noch AI Shadows —
+ * in der Vergleichstabelle steht bei beiden ein Kreuz. Das Studio setzt
+ * shadow.mode=ai.soft und einen Hintergrund, braucht also Plus.
+ *
+ * Der Fehler war nicht harmlos: Die Kontingente in studioQuota.ts waren
+ * gegen 2,17 Cent gerechnet. Bei Paket L standen 30 Bilder zu 0,10 EUR
+ * gegen 2,18 EUR Erloes — jedes Inserat ein Verlust.
+ */
+const IMAGE_PRICES_EUR_PER_CALL: Record<string, number> = {
+  photoroom: 0.10,
 };
 
 /**
@@ -91,6 +112,8 @@ export function llmCostMicros(model: string, inputTokens: number, outputTokens: 
 
 /** Kosten eines Bildaufrufs in Mikro-Euro. */
 export function imageCostMicros(service: CostService, calls = 1): number {
+  const eur = IMAGE_PRICES_EUR_PER_CALL[service];
+  if (eur !== undefined) return Math.round(eur * calls * MICROS);
   const usd = (IMAGE_PRICES_USD_PER_CALL[service] ?? 0) * calls;
   return Math.round(usd * USD_TO_EUR * MICROS);
 }

@@ -17,30 +17,47 @@ import type { Paket } from './preismodell';
 /**
  * Studio-Bilder je Inserat, die im Paketpreis enthalten sind.
  *
- * Gestaffelt nach Paket. Ein Händler mit Fahrzeugen im sechsstelligen
- * Bereich stellt mehr Ansichten ein als einer mit Kleinwagen — bei
- * mobile.de haben teure Fahrzeuge bis zu 56 Fotos. Die brauchen aber nicht
- * alle das Studio, sondern nur die Aussenansichten.
+ * Die Zahlen standen frueher bei 12/15/20/30. Sie waren gegen einen
+ * angenommenen Einkaufspreis von 2,17 Cent je Bild gerechnet — und der
+ * war falsch: Er stammte vom Basic-Tarif, der nur freistellen kann.
+ * Studio-Bilder brauchen AI Backgrounds und AI Shadows, das ist Plus,
+ * und der kostet bei 1.000 Bildern im Monat 10 Cent je Bild.
+ *
+ * Damit kostete Paket L 30 x 0,10 = 3,00 EUR an Fotos bei 2,18 EUR
+ * Erloes je Inserat. Jedes einzelne Inserat war ein Verlustgeschaeft.
+ *
+ * Die neuen Zahlen kommen nicht aus der Marge, sondern aus dem Auto:
+ * Ein Fahrzeug hat etwa acht sinnvolle Aussenansichten — vorne, hinten,
+ * beide Dreiviertel, beide Seiten, dazu Front und Heck gerade. Darueber
+ * wiederholt man sich. Innenraum, Motorraum, Felgen und Serviceheft
+ * laufen ohnehin nicht durchs Studio und kosten nichts.
+ *
+ * Deshalb endet die Staffelung bei zwoelf: Mehr Studio-Bilder zu
+ * verschenken hiesse, fuer Ansichten zu zahlen, die es gar nicht gibt.
+ * Der Vorteil eines groesseren Pakets liegt im Preis je Inserat, nicht
+ * in mehr Fotos vom selben Auto.
  */
 export const STUDIO_INKLUSIVE_JE_PAKET: Record<'kein' | Paket['id'], number> = {
-  kein: 12,
-  s:    15,
-  m:    20,
-  l:    30,
+  kein: 8,
+  s:    10,
+  m:    12,
+  l:    12,
 };
 
 /**
  * Preis je Studio-Bild über dem Kontingent, in Cent.
  *
- * Vier Cent, nicht die früheren 25. Ein Bild kostet rund 2,6 Cent —
- * 2,0 Cent bei PhotoRoom plus Speicher und Auslieferung. Bei 25 Cent
- * wäre das ein Aufschlag auf das Neunfache; die Zusatzbilder sollen sich
- * aber tragen und nichts verdienen. Unter 4 Cent wird es knapp, sobald
- * ein Händler seine Bilder oft ausliefern lässt — und genau dafür sind
- * sie da.
+ * Zwölf Cent, nicht die früheren vier. Die vier waren mit "ein Bild
+ * kostet rund 2,6 Cent" begründet — bei den tatsächlichen 10 Cent
+ * Einkauf verlor jedes Zusatzbild sechs Cent, ausgerechnet bei einer
+ * Leistung, die extra berechnet wird.
+ *
+ * Der Grundsatz bleibt derselbe: Zusatzbilder sollen sich tragen und
+ * nichts verdienen. Zehn Cent Einkauf plus zwei für Speicher und
+ * Auslieferung.
  */
 export const PREIS_EXTRA_BILD_CENT = Number(
-  process.env.NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT || process.env.PREIS_EXTRA_BILD_CENT || '4'
+  process.env.NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT || process.env.PREIS_EXTRA_BILD_CENT || '12'
 );
 
 /** Kontingent für ein Paket. `null` heisst: kein Paket gebucht. */
