@@ -49,7 +49,23 @@ export async function POST(req: NextRequest) {
      * sind frei. Im Produktivbetrieb sind es im Probetarif zehn, und die
      * sind mit einem einzigen Durchlauf ueber zwoelf Fotos weg.
      */
-    const sandbox = istSandbox();
+    /*
+     * Sandbox nicht nur nach der Umgebungsvariablen bestimmen, sondern
+     * auch am Schluessel ablesen.
+     *
+     * Der Fall ist real eingetreten: In der Umgebung stand der Schluessel
+     * bereits MIT Praefix und PHOTOROOM_SANDBOX war nicht gesetzt. Die
+     * Route hielt sich fuer produktiv, buchte ein Freibild — und schickte
+     * trotzdem den Sandbox-Schluessel los. Ergebnis: Wasserzeichen auf dem
+     * Bild und ein Freibild weniger, fuer nichts.
+     *
+     * Ein Schluessel mit "sandbox_" kann keinen produktiven Aufruf
+     * erzeugen. Dann wird auch nichts gebucht.
+     */
+    const sandbox = istSandbox() || apiKey.startsWith('sandbox_');
+    if (sandbox && !istSandbox()) {
+      console.warn('[pixelcut] Schluessel traegt sandbox_-Praefix — als Sandbox behandelt, kein Kontingent verbraucht.');
+    }
     let buchung: string | null = null;
     if (!sandbox) {
       const stand = await budget();
