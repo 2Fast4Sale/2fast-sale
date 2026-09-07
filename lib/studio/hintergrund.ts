@@ -68,6 +68,49 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
 };
 
 /**
+ * Welche Eintraege der Bibliothek lassen sich rechnen?
+ *
+ * Nur die Studio-Hintergruende. Eine Ziegelwand, ein Bergpass oder ein
+ * Hafen haben erkennbaren Inhalt — den kann keine Verlaufsformel
+ * erfinden, dafuer braucht es weiterhin ein Modell.
+ *
+ * Der Unterschied ist nicht nur technisch, er steht in der Rechnung:
+ * Ein gerechneter Hintergrund kostet nichts und sieht bei jedem Bild
+ * gleich aus. Ein erzeugter kostet bei jedem Aufruf Geld und ist nur
+ * ueber den Seed halbwegs stabil.
+ */
+export const GERECHNET: Record<string, keyof typeof STUDIO_VORLAGEN> = {
+  studio_white: 'studio_hell',
+  studio_dark:  'studio_dunkel',
+  studio_grey:  'studio_grau',
+};
+
+export function istGerechnet(id: string): boolean {
+  return id in GERECHNET;
+}
+
+/**
+ * Umriss eines Kombis, nur zur Veranschaulichung.
+ *
+ * Die Hintergrund-Auswahl zeigte bisher leere Flaechen. Ein leerer Raum
+ * sagt aber wenig darueber, wie ein Fahrzeug darin steht — Licht,
+ * Horizont und Schatten wirken erst mit einem Objekt davor. Deshalb
+ * dieser Umriss: bewusst schematisch, damit niemand ihn fuer ein
+ * echtes Fahrzeugfoto haelt.
+ */
+export const FAHRZEUG_UMRISS = Buffer.from(
+  `<svg width="1400" height="900" xmlns="http://www.w3.org/2000/svg">
+     <g transform="translate(200,300)">
+       <path d="M20,220 L60,120 Q80,80 140,72 L420,60 Q500,58 560,110 L700,180
+                Q760,196 900,206 Q960,214 962,260 L960,300 L20,300 Z" fill="#222c38"/>
+       <path d="M150,110 L400,96 L400,168 L120,172 Z" fill="#6f8ea6" opacity="0.7"/>
+       <path d="M430,96 L560,120 L660,176 L430,168 Z" fill="#6f8ea6" opacity="0.7"/>
+       <circle cx="220" cy="300" r="70" fill="#141b23"/>
+       <circle cx="770" cy="300" r="70" fill="#141b23"/>
+     </g></svg>`,
+);
+
+/**
  * Zeichnet den Hintergrund.
  *
  * Der Uebergang zwischen Wand und Boden ist bewusst weich (eine
