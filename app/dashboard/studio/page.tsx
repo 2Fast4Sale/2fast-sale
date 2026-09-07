@@ -22,6 +22,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Upload, Loader2, RotateCcw, Check, AlertCircle, Image as BildIcon } from 'lucide-react';
 import { G } from '../listing/gestaltung';
+import { merken, holen } from '../../../lib/studio/freigestelltSpeicher';
 
 const F = G.schrift;
 
@@ -51,6 +52,47 @@ const STANDARD: Werte = {
 
 const SPEICHER = 'studio_einstellungen_v1';
 
+
+/*
+ * Ausserhalb der Seite definiert — sonst baut React die Eingabefelder
+ * bei jedem Rendern neu auf und ein gezogener Schieber reisst nach dem
+ * ersten Schritt ab. Im Browser gemessen: Die Kennung des Elements
+ * wechselte bei jeder Aenderung.
+ */
+function Regler({ wert, name, min, max, schritt, einheit, beiAenderung }: {
+  wert: number; name: string; min: number; max: number; schritt: number;
+  einheit?: string; beiAenderung: (v: number) => void;
+}) {
+  return (
+    <label style={{ display: 'block', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+        <span style={{ fontSize: 12.5, color: G.buehneLeise }}>{name}</span>
+        <span style={{ fontSize: 12, color: G.buehneText, fontVariantNumeric: 'tabular-nums' }}>
+          {einheit === '%' ? Math.round(wert * 100) + ' %' : wert.toFixed(schritt < 1 ? 2 : 0) + (einheit ?? '')}
+        </span>
+      </div>
+      <input type="range" min={min} max={max} step={schritt} value={wert}
+        onChange={e => beiAenderung(Number(e.target.value))}
+        style={{ width: '100%', accentColor: G.buehneAkzent, cursor: 'pointer' }} />
+    </label>
+  );
+}
+
+function Block({ titel, kinder }: { titel: string; kinder: React.ReactNode }) {
+  return (
+    <section style={{
+      border: `1px solid ${G.buehneLinie}44`, borderRadius: 8,
+      padding: '14px 16px', marginBottom: 14, background: 'rgba(255,255,255,0.02)',
+    }}>
+      <h2 style={{
+        margin: '0 0 12px', fontSize: 11.5, fontWeight: 700, letterSpacing: '.09em',
+        textTransform: 'uppercase', color: G.buehneAkzent,
+      }}>{titel}</h2>
+      {kinder}
+    </section>
+  );
+}
+
 export default function StudioSeite() {
   const [freigestellt, setFreigestellt] = useState<string | null>(null);
   const [vorschau, setVorschau]         = useState<string | null>(null);
@@ -71,6 +113,9 @@ export default function StudioSeite() {
         if (g.vorlage) setVorlage(g.vorlage);
       }
     } catch { /* kaputter Eintrag darf die Seite nicht blockieren */ }
+    // Schon einmal freigestellt? Dann nicht noch einmal bezahlen.
+    const gemerkt = holen();
+    if (gemerkt) setFreigestellt(gemerkt);
   }, []);
 
   /* ── Freistellen: kostet ein Bild, laeuft genau einmal ── */
@@ -93,6 +138,12 @@ export default function StudioSeite() {
       const daten = await res.json();
       if (!res.ok) throw new Error(daten.error || 'Freistellen fehlgeschlagen');
       setFreigestellt(daten.freigestellt);
+      /*
+       * Merken, damit die Hintergrund-Auswahl dasselbe Fahrzeug zeigen
+       * kann. Freistellen kostet — dieses eine Bild soll ueberall
+       * dienen, wo eine Vorschau gebraucht wird.
+       */
+      void merken(daten.freigestellt);
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Freistellen fehlgeschlagen');
     } finally {
@@ -145,42 +196,13 @@ export default function StudioSeite() {
     return () => clearTimeout(t);
   }, [freigestellt, werte, vorlage, berechnen]);
 
-  const setzen = (k: keyof Werte) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setWerte(p => ({ ...p, [k]: Number(e.target.value) }));
-
   const speichern = () => {
     localStorage.setItem(SPEICHER, JSON.stringify({ werte, vorlage }));
     setGespeichert(true);
     setTimeout(() => setGespeichert(false), 2000);
   };
 
-  const Regler = ({ k, name, min, max, schritt, einheit }: {
-    k: keyof Werte; name: string; min: number; max: number; schritt: number; einheit?: string;
-  }) => (
-    <label style={{ display: 'block', marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontSize: 12.5, color: G.buehneLeise }}>{name}</span>
-        <span style={{ fontSize: 12, color: G.buehneText, fontVariantNumeric: 'tabular-nums' }}>
-          {einheit === '%' ? Math.round(werte[k] * 100) + ' %' : werte[k].toFixed(schritt < 1 ? 2 : 0) + (einheit ?? '')}
-        </span>
-      </div>
-      <input type="range" min={min} max={max} step={schritt} value={werte[k]} onChange={setzen(k)}
-        style={{ width: '100%', accentColor: G.buehneAkzent, cursor: 'pointer' }} />
-    </label>
-  );
 
-  const Block = ({ titel, kinder }: { titel: string; kinder: React.ReactNode }) => (
-    <section style={{
-      border: `1px solid ${G.buehneLinie}44`, borderRadius: 8,
-      padding: '14px 16px', marginBottom: 14, background: 'rgba(255,255,255,0.02)',
-    }}>
-      <h2 style={{
-        margin: '0 0 12px', fontSize: 11.5, fontWeight: 700, letterSpacing: '.09em',
-        textTransform: 'uppercase', color: G.buehneAkzent,
-      }}>{titel}</h2>
-      {kinder}
-    </section>
-  );
 
   return (
     <div style={{ background: G.buehneGrund, minHeight: '100vh', color: G.buehneText, fontFamily: F }}>
@@ -271,36 +293,36 @@ export default function StudioSeite() {
                       }}>{v.name}</button>
                   ))}
                 </div>
-                <Regler k="horizont"     name="Horizont"       min={0.4} max={0.92} schritt={0.01} einheit="%" />
-                <Regler k="lichtStaerke" name="Licht"          min={0}   max={0.6}  schritt={0.01} einheit="%" />
-                <Regler k="lichtX"       name="Licht waagerecht" min={0} max={1}    schritt={0.01} einheit="%" />
-                <Regler k="lichtY"       name="Licht senkrecht"  min={0} max={0.8}  schritt={0.01} einheit="%" />
-                <Regler k="lichtGroesse" name="Lichtgröße"     min={0.2} max={1}    schritt={0.01} einheit="%" />
+                <Regler wert={werte.horizont} name="Horizont" min={0.4} max={0.92} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, horizont: v }))} />
+                <Regler wert={werte.lichtStaerke} name="Licht" min={0} max={0.6} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, lichtStaerke: v }))} />
+                <Regler wert={werte.lichtX} name="Licht waagerecht" min={0} max={1} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, lichtX: v }))} />
+                <Regler wert={werte.lichtY} name="Licht senkrecht" min={0} max={0.8} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, lichtY: v }))} />
+                <Regler wert={werte.lichtGroesse} name="Lichtgröße" min={0.2} max={1} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, lichtGroesse: v }))} />
               </>
             } />
 
             <Block titel="Fahrzeug" kinder={
               <>
-                <Regler k="breitenanteil" name="Größe"        min={0.4} max={0.98} schritt={0.01} einheit="%" />
-                <Regler k="ausrichtung"   name="Position"     min={0}   max={1}    schritt={0.01} einheit="%" />
-                <Regler k="bodenabstand"  name="Bodenabstand" min={0}   max={0.35} schritt={0.01} einheit="%" />
-                <Regler k="angleichung"   name="Licht angleichen" min={0} max={1}  schritt={0.01} einheit="%" />
+                <Regler wert={werte.breitenanteil} name="Größe" min={0.4} max={0.98} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, breitenanteil: v }))} />
+                <Regler wert={werte.ausrichtung} name="Position" min={0} max={1} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, ausrichtung: v }))} />
+                <Regler wert={werte.bodenabstand} name="Bodenabstand" min={0} max={0.35} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, bodenabstand: v }))} />
+                <Regler wert={werte.angleichung} name="Licht angleichen" min={0} max={1} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, angleichung: v }))} />
               </>
             } />
 
             <Block titel="Schatten" kinder={
               <>
-                <Regler k="schattenStaerke"   name="Stärke"    min={0} max={1}    schritt={0.01} einheit="%" />
-                <Regler k="schattenWeichheit" name="Weichheit" min={1} max={80}   schritt={1} />
-                <Regler k="schattenHoehe"     name="Höhe"      min={0.02} max={0.3} schritt={0.01} einheit="%" />
-                <Regler k="schattenVersatz"   name="Versatz"   min={-0.1} max={0.1} schritt={0.005} einheit="%" />
+                <Regler wert={werte.schattenStaerke} name="Stärke" min={0} max={1} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, schattenStaerke: v }))} />
+                <Regler wert={werte.schattenWeichheit} name="Weichheit" min={1} max={80} schritt={1} beiAenderung={v => setWerte(p => ({ ...p, schattenWeichheit: v }))} />
+                <Regler wert={werte.schattenHoehe} name="Höhe" min={0.02} max={0.3} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, schattenHoehe: v }))} />
+                <Regler wert={werte.schattenVersatz} name="Versatz" min={-0.1} max={0.1} schritt={0.005} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, schattenVersatz: v }))} />
               </>
             } />
 
             <Block titel="Spiegelung" kinder={
               <>
-                <Regler k="spiegelungStaerke" name="Stärke" min={0} max={0.6} schritt={0.01} einheit="%" />
-                <Regler k="spiegelungLaenge"  name="Länge"  min={0} max={0.7} schritt={0.01} einheit="%" />
+                <Regler wert={werte.spiegelungStaerke} name="Stärke" min={0} max={0.6} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, spiegelungStaerke: v }))} />
+                <Regler wert={werte.spiegelungLaenge} name="Länge" min={0} max={0.7} schritt={0.01} einheit="%" beiAenderung={v => setWerte(p => ({ ...p, spiegelungLaenge: v }))} />
               </>
             } />
 
