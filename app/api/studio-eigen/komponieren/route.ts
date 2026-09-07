@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../../lib/studio/kompositor';
 import { studioHintergrund, STUDIO_VORLAGEN, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Darf dieser Hintergrund geladen werden?
+ *
+ * Der Server holt hier ein Bild von einer Adresse, die aus dem Browser
+ * kommt. Ungeprueft waere das eine Einladung: Wer die Adresse
+ * austauscht, laesst den Server beliebige Ziele abrufen — auch solche
+ * im internen Netz, an die er von aussen nicht herankaeme.
+ *
+ * Deshalb nur der eigene Supabase-Speicher, und nur ueber https.
+ * Dorthin hat der Haendler sein Hallenfoto geladen, etwas anderes wird
+ * hier nicht gebraucht.
+ */
+function hintergrundErlaubt(adresse: string): boolean {
+  try {
+    const ziel = new URL(adresse);
+    if (ziel.protocol !== 'https:') return false;
+    const erlaubt = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!erlaubt) return false;
+    return ziel.host === new URL(erlaubt).host;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Setzt ein freigestelltes Fahrzeug in einen Hintergrund.
@@ -15,13 +40,15 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { freigestellt, vorlage, hintergrund, kompositor, breite, hoehe } = body as {
+    const { freigestellt, vorlage, hintergrund, kompositor, breite, hoehe, hintergrundUrl } = body as {
       freigestellt?: string;
       vorlage?: string;
       hintergrund?: Partial<StudioHintergrund>;
       kompositor?: Partial<KompositorEinstellungen>;
       breite?: number;
       hoehe?: number;
+      /** Eigenes Hallenfoto des Haendlers statt eines gerechneten Raums. */
+      hintergrundUrl?: string;
     };
 
     if (!freigestellt) {
@@ -40,7 +67,34 @@ export async function POST(req: NextRequest) {
     const zielBreite = Math.max(400, Math.min(2400, Math.round(breite ?? 1200)));
     const zielHoehe  = Math.max(300, Math.min(1600, Math.round(hoehe ?? Math.round(zielBreite / 1.5))));
 
-    const hg = await studioHintergrund(hgEinstellungen, zielBreite, zielHoehe);
+    /*
+     * Eigener Showroom schlaegt den gerechneten Raum.
+     *
+     * Wer ein Foto seiner Halle hinterlegt hat, will seine Fahrzeuge
+     * dort stehen sehen und nicht in einem erfundenen Studio — genau
+     * deshalb hat er es hochgeladen. Bis hierher wurde diese Auswahl
+     * ignoriert; die Studio-Seite kannte nur ihre vier Vorlagen.
+     *
+     * Schlaegt das Laden fehl, wird der gerechnete Raum genommen statt
+     * einer Fehlermeldung. Ein Bild mit falschem Hintergrund ist
+     * brauchbarer als gar keines.
+     */
+    let hg: Buffer;
+    if (hintergrundUrl && hintergrundErlaubt(hintergrundUrl)) {
+      try {
+        const antwort = await fetch(hintergrundUrl);
+        if (!antwort.ok) throw new Error('HTTP ' + antwort.status);
+        hg = await sharp(Buffer.from(await antwort.arrayBuffer()))
+          .resize(zielBreite, zielHoehe, { fit: 'cover', position: 'centre' })
+          .jpeg({ quality: 92 })
+          .toBuffer();
+      } catch (err) {
+        console.warn('[studio-eigen] Eigener Hintergrund nicht ladbar, nehme gerechneten:', err);
+        hg = await studioHintergrund(hgEinstellungen, zielBreite, zielHoehe);
+      }
+    } else {
+      hg = await studioHintergrund(hgEinstellungen, zielBreite, zielHoehe);
+    }
 
     const roh = Buffer.from(freigestellt.replace(/^data:image\/\w+;base64,/, ''), 'base64');
     const ergebnis = await komponieren(roh, hg, { ...STANDARD, ...(kompositor ?? {}) });

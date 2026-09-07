@@ -36,6 +36,9 @@ const VORLAGEN = [
   { id: 'studio_warm',   name: 'Studio warm'   },
 ];
 
+/** Kennzeichnet die Wahl "eigene Halle" statt eines gerechneten Raums. */
+const EIGENER = 'eigener_showroom';
+
 interface Werte {
   breitenanteil: number; bodenabstand: number; ausrichtung: number;
   schattenStaerke: number; schattenWeichheit: number; schattenHoehe: number; schattenVersatz: number;
@@ -102,6 +105,7 @@ export default function StudioSeite() {
   const [rechnet, setRechnet]           = useState(false);
   const [fehler, setFehler]             = useState<string | null>(null);
   const [gespeichert, setGespeichert]   = useState(false);
+  const [eigenerUrl, setEigenerUrl]     = useState<string | null>(null);
   const dateiRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -116,6 +120,16 @@ export default function StudioSeite() {
     // Schon einmal freigestellt? Dann nicht noch einmal bezahlen.
     const gemerkt = holen();
     if (gemerkt) setFreigestellt(gemerkt);
+
+    /*
+     * Die Hintergrund-Seite ist die fuehrende Stelle fuer die Wahl des
+     * Raums. Wer dort seine eigene Halle hinterlegt hat, soll sie hier
+     * sehen — vorher kannte diese Seite nur ihre vier Vorlagen und
+     * ueberging die Auswahl stillschweigend.
+     */
+    const halle = localStorage.getItem('dealer_custom_background_url');
+    setEigenerUrl(halle);
+    if (halle && localStorage.getItem('dealer_background') === 'custom') setVorlage(EIGENER);
   }, []);
 
   /* ── Freistellen: kostet ein Bild, laeuft genau einmal ── */
@@ -160,7 +174,8 @@ export default function StudioSeite() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           freigestellt: bild,
-          vorlage: vl,
+          vorlage: vl === EIGENER ? 'studio_dunkel' : vl,
+          hintergrundUrl: vl === EIGENER ? eigenerUrl : undefined,
           breite: 1200,
           hintergrund: {
             horizont: v.horizont, lichtX: v.lichtX, lichtY: v.lichtY,
@@ -184,7 +199,7 @@ export default function StudioSeite() {
     } finally {
       setRechnet(false);
     }
-  }, []);
+  }, [eigenerUrl]);
 
   /*
    * Entprellt, sonst laeuft bei jedem Pixel am Regler eine Berechnung
@@ -282,7 +297,7 @@ export default function StudioSeite() {
             <Block titel="Hintergrund" kinder={
               <>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                  {VORLAGEN.map(v => (
+                  {[...VORLAGEN, ...(eigenerUrl ? [{ id: EIGENER, name: 'Meine Halle' }] : [])].map(v => (
                     <button key={v.id} onClick={() => setVorlage(v.id)}
                       style={{
                         padding: '5px 10px', borderRadius: 6, cursor: 'pointer', fontFamily: F, fontSize: 12,
