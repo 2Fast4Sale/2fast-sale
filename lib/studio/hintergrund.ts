@@ -102,6 +102,96 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
   },
 };
 
+/* ═══════════════════════════════════════════════════════════════════
+ * Wand und Boden getrennt
+ *
+ * Abgeschaut beim Gecko-Konfigurator von Octopus: Dort sind Hintergrund
+ * und Strasse zwei getrennte Kataloge, und der Haendler kombiniert sie
+ * frei. Der Setup-Code "BD0089R1015" ist nichts anderes als Wand 0089
+ * plus Boden 1015.
+ *
+ * Das ist aus zwei Gruenden besser als ein Katalog fertiger Raeume:
+ *
+ * Erstens die Menge. Acht Waende und acht Boeden ergeben
+ * vierundsechzig Raeume aus sechzehn Bausteinen — als fertige Raeume
+ * muesste man vierundsechzig Eintraege pflegen.
+ *
+ * Zweitens die Bedienung. Ein Haendler weiss, dass er eine helle Wand
+ * will und einen dunklen Boden. Er weiss nicht, ob er "Studio grau"
+ * will. Waehlen ist leichter als Einstellen.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+/** Der Teil eines Raums oberhalb des Horizonts. */
+export type Wand = Pick<StudioHintergrund,
+  'wandOben' | 'wandUnten' | 'decke' | 'strahler' | 'strahlerStaerke' |
+  'ecke' | 'lichtX' | 'lichtY' | 'lichtGroesse' | 'lichtStaerke' | 'randabfall'
+> & { name: string };
+
+/** Der Teil unterhalb des Horizonts. */
+export type Boden = Pick<StudioHintergrund,
+  'bodenOben' | 'bodenUnten' | 'horizont' | 'bodenglanz'
+> & { name: string };
+
+export const WAENDE: Record<string, Wand> = {
+  W01: { name: 'Weiß, nahtlos',   wandOben: '#f7f8fa', wandUnten: '#e2e5ea',
+         decke: 0,    strahler: 0, strahlerStaerke: 0,    ecke: null,
+         lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.70, lichtStaerke: 0.26, randabfall: 0.18 },
+  W02: { name: 'Weiß mit Decke',  wandOben: '#f4f5f7', wandUnten: '#dcdfe4',
+         decke: 0.14, strahler: 5, strahlerStaerke: 0.85, ecke: 0.28,
+         lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30, randabfall: 0.26 },
+  W03: { name: 'Hellgrau',        wandOben: '#c9ced6', wandUnten: '#aab0ba',
+         decke: 0.12, strahler: 4, strahlerStaerke: 0.70, ecke: 0.32,
+         lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.24, randabfall: 0.24 },
+  W04: { name: 'Mittelgrau',      wandOben: '#8c9199', wandUnten: '#666c75',
+         decke: 0.12, strahler: 4, strahlerStaerke: 0.62, ecke: 0.32,
+         lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26, randabfall: 0.30 },
+  W05: { name: 'Anthrazit',       wandOben: '#3c424b', wandUnten: '#252a31',
+         decke: 0.13, strahler: 4, strahlerStaerke: 0.60, ecke: 0.30,
+         lichtX: 0.5, lichtY: 0.33, lichtGroesse: 0.62, lichtStaerke: 0.24, randabfall: 0.38 },
+  W06: { name: 'Schwarz',         wandOben: '#22262c', wandUnten: '#0d1013',
+         decke: 0.13, strahler: 4, strahlerStaerke: 0.55, ecke: 0.30,
+         lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.60, lichtStaerke: 0.22, randabfall: 0.46 },
+  W07: { name: 'Warm, Nussbaum',  wandOben: '#4a3f34', wandUnten: '#2a231c',
+         decke: 0.13, strahler: 3, strahlerStaerke: 0.60, ecke: 0.34,
+         lichtX: 0.46, lichtY: 0.33, lichtGroesse: 0.60, lichtStaerke: 0.24, randabfall: 0.40 },
+  W08: { name: 'Blaugrau, kühl',  wandOben: '#3f4a5a', wandUnten: '#232b36',
+         decke: 0.12, strahler: 5, strahlerStaerke: 0.66, ecke: 0.26,
+         lichtX: 0.52, lichtY: 0.31, lichtGroesse: 0.66, lichtStaerke: 0.26, randabfall: 0.34 },
+};
+
+export const BOEDEN: Record<string, Boden> = {
+  B01: { name: 'Hell, matt',      bodenOben: '#dcdfe4', bodenUnten: '#c2c6cd', horizont: 0.74, bodenglanz: 0.06 },
+  B02: { name: 'Hell, glänzend',  bodenOben: '#d3d7dd', bodenUnten: '#b3b8c0', horizont: 0.74, bodenglanz: 0.26 },
+  B03: { name: 'Grau, matt',      bodenOben: '#8d929a', bodenUnten: '#6d727a', horizont: 0.74, bodenglanz: 0.08 },
+  B04: { name: 'Grau, poliert',   bodenOben: '#7f858e', bodenUnten: '#565c65', horizont: 0.74, bodenglanz: 0.30 },
+  B05: { name: 'Beton, dunkel',   bodenOben: '#4a4f56', bodenUnten: '#2c3036', horizont: 0.74, bodenglanz: 0.12 },
+  B06: { name: 'Asphalt',         bodenOben: '#33383e', bodenUnten: '#1c2024', horizont: 0.76, bodenglanz: 0.10 },
+  B07: { name: 'Schwarz, Spiegel',bodenOben: '#191d23', bodenUnten: '#07090c', horizont: 0.74, bodenglanz: 0.34 },
+  B08: { name: 'Warm, Estrich',   bodenOben: '#3a322a', bodenUnten: '#1d1813', horizont: 0.74, bodenglanz: 0.16 },
+};
+
+/**
+ * Setzt aus einer Wand und einem Boden einen Raum zusammen.
+ *
+ * Unbekannte Kennungen fallen auf die erste Wand und den ersten Boden
+ * zurueck, statt einen Fehler zu werfen: Ein gespeicherter Code aus
+ * einer aelteren Fassung soll ein Bild liefern, kein Problem.
+ */
+export function raumAusCode(code: string): StudioHintergrund & { code: string } {
+  const treffer = code.match(/^(W\d{2})(B\d{2})$/i);
+  const wandId  = treffer ? treffer[1].toUpperCase() : 'W02';
+  const bodenId = treffer ? treffer[2].toUpperCase() : 'B02';
+  const w = WAENDE[wandId] ?? WAENDE.W02;
+  const b = BOEDEN[bodenId] ?? BOEDEN.B02;
+
+  const { name: _w, ...wand }  = w;
+  const { name: _b, ...boden } = b;
+  return { ...wand, ...boden, code: `${wandId}${bodenId}` };
+}
+
+/** Standardraum, wenn der Haendler noch nichts gewaehlt hat. */
+export const STANDARD_CODE = 'W02B02';
+
 /**
  * Welche Eintraege der Bibliothek lassen sich rechnen?
  *

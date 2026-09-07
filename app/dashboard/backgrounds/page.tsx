@@ -1,235 +1,131 @@
 'use client';
 
 /**
- * Hintergrund-Auswahl und -Einstellung.
+ * Raum-Konfigurator.
  *
- * Dritter Anlauf, und diesmal mit einer klaren Aufteilung:
+ * Vierter Anlauf, und der erste mit dem richtigen Aufbau. Die drei
+ * vorherigen boten fertige Raeume zur Auswahl oder Schieberegler zum
+ * Einstellen. Beides ist falsch fuer diese Aufgabe:
  *
- *   Diese Seite   — WELCHER Raum, und wie er aussieht.
- *   /dashboard/studio — WIE das Fahrzeug darin steht (Schatten,
- *                       Spiegelung, Groesse, Lage).
+ * Fertige Raeume sind zu wenige. Acht Vorlagen decken nicht ab, was
+ * Haendler wollen — heller Raum mit dunklem Boden, dunkler Raum mit
+ * hellem Boden, warm mit Estrich.
  *
- * Zwei Dinge, die vorher fehlten:
+ * Regler sind zu viel. Wer eine Wandfarbe waehlen soll, ist mit vier
+ * Farbfeldern und fuenf Reglern beschaeftigt, statt zu entscheiden.
  *
- * Erstens: Die Vorschau zeigt das ECHTE freigestellte Fahrzeug, sobald
- * einmal eines vorliegt. Vorher stand dort ein gezeichneter Umriss —
- * der zeigte Licht und Schatten, aber nicht, wie ein wirkliches Auto
- * in dem Raum steht, und das ist die Frage vor der Wahl.
+ * Der Weg dazwischen: zwei Kataloge, frei kombinierbar. Acht Waende
+ * und acht Boeden ergeben vierundsechzig Raeume, und der Haendler
+ * trifft zwei Entscheidungen statt neun. Abgeschaut beim
+ * Gecko-Konfigurator von Octopus, dessen Setup-Code "BD0089R1015"
+ * genau dasselbe ausdrueckt: Wand plus Boden.
  *
- * Zweitens: Die Studio-Hintergruende sind einstellbar. Sie werden
- * gerechnet, nicht erzeugt — Wandfarbe, Bodenfarbe, Horizont und Licht
- * sind schlicht Zahlen in einer Formel. Sie fest vorzugeben waere eine
- * kuenstliche Beschraenkung: Jeder Haendler hat eine andere
- * Vorstellung davon, wie hell seine Bilder sein sollen.
- *
- * Die uebrigen sieben Hintergruende lassen sich nicht einstellen. Sie
- * haben erkennbaren Inhalt und entstehen bei jedem Bild neu — daran
- * kann diese Seite nichts drehen, und sie behauptet es auch nicht.
+ * Der Schalter "Fahrzeug ausblenden" hat denselben Grund wie dort: In
+ * der grossen Vorschau will man sehen, wie ein Auto im Raum steht — im
+ * Katalog will man die Wand sehen, und da steht ein Auto davor nur im
+ * Weg.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Check, Lock, Upload, Trash2, Crown, Zap, Sparkles, ImageOff, Camera,
-  RotateCcw, Loader2, SlidersHorizontal, Info,
+  Check, Upload, Trash2, Camera, ChevronLeft, ChevronRight,
+  Eye, EyeOff, Copy, Shuffle,
 } from 'lucide-react';
 import { createClient } from '../../../lib/supabase/client';
-import {
-  BACKGROUNDS, DEFAULT_BACKGROUND_ID, OWN_SHOWROOM_ID,
-  canUseBackground, type BackgroundTier, type BackgroundEntry,
-} from '../../../lib/backgrounds';
-import { holen } from '../../../lib/studio/freigestelltSpeicher';
+import { OWN_SHOWROOM_ID } from '../../../lib/backgrounds';
 import { G } from '../listing/gestaltung';
 
 const F = G.schrift;
 
-/* Muss zu GERECHNET in lib/studio/hintergrund.ts passen. Dort steht
- * die Wahrheit; hier nur die Anzeige, weil sharp nicht ins
- * Browser-Bundle darf. */
-const GERECHNET: Record<string, string> = {
-  studio_white: 'studio_hell',
-  studio_dark:  'studio_dunkel',
-  studio_grey:  'studio_grau',
-};
+/* Muss zu WAENDE/BOEDEN in lib/studio/hintergrund.ts passen. Dort steht
+ * die Wahrheit; hier nur die Namen, weil sharp nicht ins Browser-Bundle
+ * darf. */
+const WAENDE: [string, string][] = [
+  ['W01', 'Weiß, nahtlos'], ['W02', 'Weiß mit Decke'], ['W03', 'Hellgrau'],
+  ['W04', 'Mittelgrau'],    ['W05', 'Anthrazit'],      ['W06', 'Schwarz'],
+  ['W07', 'Warm, Nussbaum'],['W08', 'Blaugrau, kühl'],
+];
+const BOEDEN: [string, string][] = [
+  ['B01', 'Hell, matt'],    ['B02', 'Hell, glänzend'], ['B03', 'Grau, matt'],
+  ['B04', 'Grau, poliert'], ['B05', 'Beton, dunkel'],  ['B06', 'Asphalt'],
+  ['B07', 'Schwarz, Spiegel'], ['B08', 'Warm, Estrich'],
+];
 
-interface HgWerte {
-  wandOben: string; wandUnten: string;
-  bodenOben: string; bodenUnten: string;
-  horizont: number; lichtX: number; lichtY: number;
-  lichtGroesse: number; lichtStaerke: number;
-}
+const STANDARD_CODE = 'W02B02';
+const CODE_SCHLUESSEL = 'studio_raum_code';
 
-/* Ausgangswerte je Vorlage — dieselben wie in lib/studio/hintergrund.ts. */
-const AUSGANG: Record<string, HgWerte> = {
-  studio_white: {
-    wandOben: '#f4f5f7', wandUnten: '#dcdfe4', bodenOben: '#d3d7dd', bodenUnten: '#b3b8c0',
-    horizont: 0.74, lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30,
-  },
-  studio_dark: {
-    wandOben: '#2b3038', wandUnten: '#14181d', bodenOben: '#191d23', bodenUnten: '#07090c',
-    horizont: 0.74, lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.62, lichtStaerke: 0.22,
-  },
-  studio_grey: {
-    wandOben: '#8c9199', wandUnten: '#666c75', bodenOben: '#5c626b', bodenUnten: '#3a3f47',
-    horizont: 0.74, lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26,
-  },
-};
-
-const TARIF: Record<BackgroundTier, { name: string; farbe: string; symbol: React.ReactNode }> = {
-  free:     { name: 'Free',     farbe: '#4ade80', symbol: <Sparkles size={10} /> },
-  pro:      { name: 'Pro',      farbe: '#7c8aff', symbol: <Zap size={10} />      },
-  business: { name: 'Business', farbe: '#fbbf24', symbol: <Crown size={10} />    },
-};
-
-const EINSTELLUNGEN_SCHLUESSEL = 'hintergrund_einstellungen_v1';
-
-
-/*
- * Regler und Farbfeld stehen AUSSERHALB der Seite.
- *
- * Vorher waren sie im Rumpf der Komponente definiert. React sieht dann
- * bei jedem Rendern einen neuen Komponententyp, wirft das alte
- * Eingabefeld weg und baut ein neues — beim Ziehen eines Schiebers
- * reisst die Bewegung nach dem ersten Schritt ab, weil das Element
- * unter der Maus verschwindet. Im Browser gemessen: Die Kennung des
- * Elements wechselte bei jeder Aenderung.
- */
-function Regler({ wert, name, min, max, schritt, beiAenderung }: {
-  wert: number; name: string; min: number; max: number; schritt: number;
-  beiAenderung: (v: number) => void;
-}) {
-  return (
-    <label style={{ display: 'block', marginBottom: 13 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontSize: 12.5, color: G.buehneLeise }}>{name}</span>
-        <span style={{ fontSize: 12, color: G.buehneText, fontVariantNumeric: 'tabular-nums' }}>
-          {Math.round(wert * 100)} %
-        </span>
-      </div>
-      <input type="range" min={min} max={max} step={schritt} value={wert}
-        onChange={e => beiAenderung(Number(e.target.value))}
-        style={{ width: '100%', accentColor: G.buehneAkzent, cursor: 'pointer' }} />
-    </label>
-  );
-}
-
-function Farbe({ wert, name, beiAenderung }: {
-  wert: string; name: string; beiAenderung: (v: string) => void;
-}) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 9 }}>
-      <input type="color" value={wert} onChange={e => beiAenderung(e.target.value)}
-        style={{
-          width: 34, height: 26, padding: 0, border: `1px solid ${G.buehneLinie}55`,
-          borderRadius: 5, background: 'none', cursor: 'pointer', flexShrink: 0,
-        }} />
-      <span style={{ fontSize: 12.5, color: G.buehneLeise }}>{name}</span>
-      <span style={{
-        marginLeft: 'auto', fontSize: 11, color: G.buehneLeise,
-        fontFamily: G.ziffern, textTransform: 'uppercase',
-      }}>{wert}</span>
-    </label>
-  );
-}
-
-export default function HintergrundSeite() {
-  const [gewaehlt, setGewaehlt]     = useState(DEFAULT_BACKGROUND_ID);
-  const [bestaetigt, setBestaetigt] = useState(false);
-  const [plan, setPlan]             = useState('free');
+export default function RaumKonfigurator() {
+  const [wand, setWand]   = useState('W02');
+  const [boden, setBoden] = useState('B02');
+  const [reiter, setReiter] = useState<'wand' | 'boden'>('wand');
+  const [mitAuto, setMitAuto] = useState(true);
+  const [gemerkt, setGemerkt] = useState(false);
+  const [kopiert, setKopiert] = useState(false);
   const [eigenerUrl, setEigenerUrl] = useState<string | null>(null);
-  const [laedt, setLaedt]           = useState(false);
-
-  const [fahrzeug, setFahrzeug]   = useState<string | null>(null);
-  const [werte, setWerte]         = useState<HgWerte>(AUSGANG[DEFAULT_BACKGROUND_ID] ?? AUSGANG.studio_white);
-  const [vorschau, setVorschau]   = useState<string | null>(null);
-  const [rechnet, setRechnet]     = useState(false);
+  const [eigenerAktiv, setEigenerAktiv] = useState(false);
+  const [laedt, setLaedt] = useState(false);
   const dateiRef = useRef<HTMLInputElement>(null);
 
-  const einstellbar = gewaehlt in GERECHNET;
+  const code = `${wand}${boden}`;
 
   useEffect(() => {
-    const id = localStorage.getItem('dealer_background') || DEFAULT_BACKGROUND_ID;
-    setGewaehlt(id);
-    setEigenerUrl(localStorage.getItem('dealer_custom_background_url') || null);
-    setFahrzeug(holen());
-
-    try {
-      const roh = localStorage.getItem(EINSTELLUNGEN_SCHLUESSEL);
-      const alle = roh ? JSON.parse(roh) : {};
-      setWerte({ ...(AUSGANG[id] ?? AUSGANG.studio_white), ...(alle?.[id] ?? {}) });
-    } catch {
-      setWerte(AUSGANG[id] ?? AUSGANG.studio_white);
-    }
+    const gespeichert = localStorage.getItem(CODE_SCHLUESSEL) || STANDARD_CODE;
+    const t = gespeichert.match(/^(W\d{2})(B\d{2})$/i);
+    if (t) { setWand(t[1].toUpperCase()); setBoden(t[2].toUpperCase()); }
+    setEigenerUrl(localStorage.getItem('dealer_custom_background_url'));
+    setEigenerAktiv(localStorage.getItem('dealer_background') === OWN_SHOWROOM_ID);
 
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       const { data } = await supabase.from('profiles').select('plan').eq('id', user.id).single();
-      const p = data?.plan || 'free';
-      setPlan(p);
-      localStorage.setItem('dealer_plan', p);
+      localStorage.setItem('dealer_plan', data?.plan || 'free');
     });
   }, []);
 
-  const kurzBestaetigen = () => {
-    setBestaetigt(true);
-    setTimeout(() => setBestaetigt(false), 1800);
+  /* Jede Wahl gilt sofort — ein Speichern-Knopf waere hier nur eine
+   * zusaetzliche Handlung ohne Nutzen. */
+  const merken = (w: string, b: string) => {
+    localStorage.setItem(CODE_SCHLUESSEL, `${w}${b}`);
+    localStorage.setItem('dealer_background', `${w}${b}`);
+    localStorage.removeItem('dealer_custom_background_url_aktiv');
+    setEigenerAktiv(false);
+    setGemerkt(true);
+    setTimeout(() => setGemerkt(false), 1500);
   };
 
-  const waehlen = (id: string, tier: BackgroundTier) => {
-    if (!canUseBackground(plan, tier)) return;
-    setGewaehlt(id);
-    localStorage.setItem('dealer_background', id);
-    localStorage.removeItem('dealer_custom_background_url');
-    try {
-      const roh = localStorage.getItem(EINSTELLUNGEN_SCHLUESSEL);
-      const alle = roh ? JSON.parse(roh) : {};
-      setWerte({ ...(AUSGANG[id] ?? AUSGANG.studio_white), ...(alle?.[id] ?? {}) });
-    } catch {
-      setWerte(AUSGANG[id] ?? AUSGANG.studio_white);
-    }
-    kurzBestaetigen();
+  const setzeWand  = (w: string) => { setWand(w);  merken(w, boden); };
+  const setzeBoden = (b: string) => { setBoden(b); merken(wand, b); };
+
+  /* Blaettern mit den Pfeilen — bezieht sich immer auf den offenen Reiter. */
+  const blaettern = (richtung: -1 | 1) => {
+    const liste = reiter === 'wand' ? WAENDE : BOEDEN;
+    const jetzt = reiter === 'wand' ? wand : boden;
+    const i = liste.findIndex(([id]) => id === jetzt);
+    const neu = liste[(i + richtung + liste.length) % liste.length][0];
+    if (reiter === 'wand') setzeWand(neu); else setzeBoden(neu);
   };
 
-  /* ── Vorschau: kostenlos, darf oft laufen ── */
-  const berechnen = useCallback(async (id: string, v: HgWerte, auto: string | null) => {
-    const vorlage = GERECHNET[id];
-    if (!vorlage || !auto) { setVorschau(null); return; }
-    setRechnet(true);
-    try {
-      const res = await fetch('/api/studio-eigen/komponieren', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          freigestellt: auto, vorlage, breite: 1100, hintergrund: v,
-        }),
-      });
-      const daten = await res.json();
-      if (res.ok) setVorschau(daten.bild);
-    } catch { /* Vorschau ist Beiwerk, kein Grund fuer eine Fehlermeldung */ }
-    finally { setRechnet(false); }
-  }, []);
+  const zufall = () => {
+    const w = WAENDE[Math.floor(Math.random() * WAENDE.length)][0];
+    const b = BOEDEN[Math.floor(Math.random() * BOEDEN.length)][0];
+    setWand(w); setBoden(b); merken(w, b);
+  };
 
-  useEffect(() => {
-    const t = setTimeout(() => berechnen(gewaehlt, werte, fahrzeug), 200);
-    return () => clearTimeout(t);
-  }, [gewaehlt, werte, fahrzeug, berechnen]);
-
-  const einstellungenSichern = (neu: HgWerte) => {
-    setWerte(neu);
+  const codeKopieren = async () => {
     try {
-      const roh = localStorage.getItem(EINSTELLUNGEN_SCHLUESSEL);
-      const alle = roh ? JSON.parse(roh) : {};
-      alle[gewaehlt] = neu;
-      localStorage.setItem(EINSTELLUNGEN_SCHLUESSEL, JSON.stringify(alle));
-    } catch { /* Speichern darf die Seite nicht kippen */ }
+      await navigator.clipboard.writeText(code);
+      setKopiert(true);
+      setTimeout(() => setKopiert(false), 1500);
+    } catch { /* ohne Zwischenablage-Recht passiert eben nichts */ }
   };
 
   const eigenenWaehlen = () => {
     if (!eigenerUrl) return;
-    setGewaehlt(OWN_SHOWROOM_ID);
     localStorage.setItem('dealer_background', OWN_SHOWROOM_ID);
-    localStorage.setItem('dealer_custom_background_url', eigenerUrl);
-    kurzBestaetigen();
+    setEigenerAktiv(true);
+    setGemerkt(true);
+    setTimeout(() => setGemerkt(false), 1500);
   };
 
   const hochladen = async (datei: File) => {
@@ -247,8 +143,7 @@ export default function HintergrundSeite() {
       setEigenerUrl(url);
       localStorage.setItem('dealer_custom_background_url', url);
       localStorage.setItem('dealer_background', OWN_SHOWROOM_ID);
-      setGewaehlt(OWN_SHOWROOM_ID);
-      kurzBestaetigen();
+      setEigenerAktiv(true);
     } catch (err) {
       alert('Hochladen fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Unbekannter Fehler'));
     } finally {
@@ -258,288 +153,231 @@ export default function HintergrundSeite() {
 
   const eigenenEntfernen = () => {
     setEigenerUrl(null);
+    setEigenerAktiv(false);
     localStorage.removeItem('dealer_custom_background_url');
-    localStorage.setItem('dealer_background', DEFAULT_BACKGROUND_ID);
-    setGewaehlt(DEFAULT_BACKGROUND_ID);
+    localStorage.setItem('dealer_background', code);
   };
 
-  /* ── Bausteine ─────────────────────────────────────────────────── */
-
-
-
-  const Kachel = ({ bg }: { bg: BackgroundEntry }) => {
-    const frei = canUseBackground(plan, bg.tier);
-    const aktiv = gewaehlt === bg.id;
-    const gerechnet = bg.id in GERECHNET;
-    const t = TARIF[bg.tier];
-
-    return (
-      <button onClick={() => waehlen(bg.id, bg.tier)} disabled={!frei} aria-pressed={aktiv}
-        style={{
-          textAlign: 'left', padding: 0, cursor: frei ? 'pointer' : 'not-allowed',
-          background: G.buehneGrund, fontFamily: F,
-          border: `1.5px solid ${aktiv ? G.buehneAkzent : G.buehneLinie + '3a'}`,
-          borderRadius: 11, overflow: 'hidden', opacity: frei ? 1 : 0.5,
-          boxShadow: aktiv ? `0 0 0 3px ${G.buehneAkzent}22` : 'none',
-          transition: 'border-color .15s, box-shadow .15s',
-        }}>
-        <div style={{
-          aspectRatio: '3 / 2', position: 'relative', overflow: 'hidden',
-          background: gerechnet
-            ? `linear-gradient(178deg, ${AUSGANG[bg.id].wandOben} 0%, ${AUSGANG[bg.id].wandUnten} 72%, ${AUSGANG[bg.id].bodenUnten} 100%)`
-            : `linear-gradient(170deg, ${bg.farben[0]} 0%, ${bg.farben[0]} 62%, ${bg.farben[1]} 100%)`,
-        }}>
-          {!gerechnet && (
-            <div style={{
-              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 5,
-              color: 'rgba(255,255,255,0.7)', textShadow: '0 1px 3px rgba(0,0,0,.55)',
-            }}>
-              <ImageOff size={16} />
-              <span style={{ fontSize: 10, fontWeight: 600 }}>entsteht beim Bearbeiten</span>
-            </div>
-          )}
-          {aktiv && (
-            <div style={{
-              position: 'absolute', top: 7, right: 7, width: 22, height: 22, borderRadius: '50%',
-              background: G.buehneAkzent, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}><Check size={13} color="#0a0c11" strokeWidth={3} /></div>
-          )}
-          {!frei && (
-            <div style={{
-              position: 'absolute', inset: 0, background: 'rgba(10,12,17,0.55)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}><Lock size={18} color="#fff" /></div>
-          )}
-        </div>
-        <div style={{ padding: '9px 11px 11px', borderTop: `1px solid ${G.buehneLinie}22` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: G.buehneText }}>{bg.label}</span>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9,
-              fontWeight: 700, color: t.farbe, background: t.farbe + '1e',
-              border: `1px solid ${t.farbe}44`, borderRadius: 20, padding: '1px 5px',
-            }}>{t.symbol}{t.name}</span>
-          </div>
-        </div>
-      </button>
-    );
-  };
-
-  const gerechnete = BACKGROUNDS.filter(b => b.id in GERECHNET);
-  const erzeugte   = BACKGROUNDS.filter(b => !(b.id in GERECHNET));
+  const liste = reiter === 'wand' ? WAENDE : BOEDEN;
 
   return (
     <div style={{ background: G.buehneGrund, minHeight: '100vh', color: G.buehneText, fontFamily: F }}>
-      <div style={{ maxWidth: 1320, margin: '0 auto', padding: '28px 22px 90px' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '28px 22px 90px' }}>
 
-        <header style={{ marginBottom: 24 }}>
+        <header style={{ marginBottom: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, fontSize: 27, fontWeight: 700, letterSpacing: '-.02em' }}>Hintergründe</h1>
-            {bestaetigt && (
+            <h1 style={{ margin: 0, fontSize: 27, fontWeight: 700, letterSpacing: '-.02em' }}>Raum wählen</h1>
+            {gemerkt && (
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700,
                 color: '#4ade80', background: 'rgba(74,222,128,.12)',
                 border: '1px solid rgba(74,222,128,.3)', borderRadius: 20, padding: '3px 10px',
-              }}><Check size={12} /> Gespeichert</span>
+              }}><Check size={12} /> Übernommen</span>
             )}
           </div>
-          <p style={{ margin: '8px 0 0', color: G.buehneLeise, fontSize: 14.5, maxWidth: '68ch', lineHeight: 1.6 }}>
-            Der Raum, in dem deine Fahrzeuge stehen. Wie das Fahrzeug darin sitzt — Größe,
-            Schatten, Spiegelung — stellst du unter <strong style={{ color: G.buehneText }}>Studio</strong> ein.
+          <p style={{ margin: '8px 0 0', color: G.buehneLeise, fontSize: 14.5, maxWidth: '70ch', lineHeight: 1.6 }}>
+            Wand und Boden werden getrennt gewählt und frei kombiniert — acht mal acht ergibt
+            64 Räume. Alle werden gerechnet und kosten nichts.
           </p>
         </header>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 20, alignItems: 'start' }}>
+        {/* ── Grosse Vorschau ── */}
+        <div style={{
+          border: `1px solid ${G.buehneLinie}44`, borderRadius: 13, overflow: 'hidden',
+          background: '#000', position: 'relative', marginBottom: 14,
+        }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img key={`${code}-${mitAuto}`}
+               src={`/api/studio-eigen/vorschau?code=${code}&b=1200${mitAuto ? '' : '&leer=1'}`}
+               alt={`Raum ${code}`}
+               style={{ width: '100%', display: 'block', aspectRatio: '3 / 2', objectFit: 'cover' }} />
 
-          {/* ── Linke Spalte ── */}
-          <div>
-            {/* Grosse Vorschau */}
-            <div style={{
-              border: `1px solid ${G.buehneLinie}44`, borderRadius: 12, overflow: 'hidden',
-              background: '#000', position: 'relative', marginBottom: 20,
-              aspectRatio: '3 / 2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          <button onClick={() => blaettern(-1)} aria-label="Zurück"
+            style={{ ...pfeilStil, left: 14 }}><ChevronLeft size={20} /></button>
+          <button onClick={() => blaettern(1)} aria-label="Weiter"
+            style={{ ...pfeilStil, right: 14 }}><ChevronRight size={20} /></button>
+
+          <button onClick={() => setMitAuto(m => !m)}
+            style={{
+              position: 'absolute', top: 13, right: 13, display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '7px 13px', cursor: 'pointer', background: 'rgba(10,12,17,0.72)',
+              border: `1px solid ${G.buehneLinie}55`, borderRadius: 20,
+              color: G.buehneText, fontFamily: F, fontSize: 12, fontWeight: 600,
             }}>
-              {vorschau ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={vorschau} alt="Vorschau" style={{ width: '100%', display: 'block' }} />
-              ) : (
-                <div style={{ textAlign: 'center', padding: 34, maxWidth: '46ch' }}>
-                  <Camera size={30} color={G.buehneLeise} />
-                  <p style={{ color: G.buehneText, fontSize: 14, margin: '13px 0 6px', fontWeight: 600 }}>
-                    {einstellbar ? 'Noch kein Fahrzeug für die Vorschau' : 'Dieser Hintergrund lässt sich nicht vorab zeigen'}
-                  </p>
-                  <p style={{ color: G.buehneLeise, fontSize: 12.5, margin: 0, lineHeight: 1.55 }}>
-                    {einstellbar
-                      ? 'Stelle unter Studio einmal ein Foto frei — danach siehst du hier dein eigenes Fahrzeug in jedem Hintergrund, ohne dass etwas kostet.'
-                      : 'Showroom- und Außenkulissen entstehen erst beim Bearbeiten des Bildes. Was hier zu sehen wäre, wäre geraten.'}
-                  </p>
-                </div>
-              )}
-              {rechnet && (
-                <div style={{
-                  position: 'absolute', top: 11, right: 11, display: 'flex', alignItems: 'center', gap: 6,
-                  background: 'rgba(0,0,0,0.65)', borderRadius: 20, padding: '5px 11px', fontSize: 11.5,
-                }}>
-                  <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Rechnet
-                </div>
-              )}
-            </div>
+            {mitAuto ? <EyeOff size={13} /> : <Eye size={13} />}
+            {mitAuto ? 'Fahrzeug ausblenden' : 'Fahrzeug zeigen'}
+          </button>
+        </div>
 
-            <section style={{ marginBottom: 26 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 11, flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 700 }}>Studio</h2>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase',
-                  color: '#4ade80', background: 'rgba(74,222,128,.1)',
-                  border: '1px solid rgba(74,222,128,.3)', borderRadius: 20, padding: '2px 8px',
-                }}>kostenlos · einstellbar</span>
-              </div>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(175px,1fr))' }}>
-                {gerechnete.map(b => <Kachel key={b.id} bg={b} />)}
-              </div>
-            </section>
+        {/* ── Code-Leiste ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          border: `1px solid ${G.buehneLinie}44`, borderRadius: 10,
+          padding: '11px 15px', marginBottom: 24, background: 'rgba(255,255,255,0.02)',
+        }}>
+          <span style={{ fontSize: 12.5, color: G.buehneLeise }}>Dein Raum-Code</span>
+          <code style={{
+            fontFamily: G.ziffern, fontSize: 15, fontWeight: 700, letterSpacing: '.06em',
+            color: G.buehneAkzent, background: G.buehneAkzent + '18',
+            border: `1px dashed ${G.buehneAkzent}66`, borderRadius: 7, padding: '4px 11px',
+          }}>{code}</code>
+          <button onClick={codeKopieren}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', cursor: 'pointer',
+              background: 'transparent', border: `1px solid ${G.buehneLinie}55`, borderRadius: 7,
+              color: kopiert ? '#4ade80' : G.buehneLeise, fontFamily: F, fontSize: 12, fontWeight: 600,
+            }}>
+            {kopiert ? <Check size={12} /> : <Copy size={12} />} {kopiert ? 'Kopiert' : 'Kopieren'}
+          </button>
+          <button onClick={zufall}
+            style={{
+              marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 11px', cursor: 'pointer', background: 'transparent',
+              border: `1px solid ${G.buehneLinie}55`, borderRadius: 7,
+              color: G.buehneLeise, fontFamily: F, fontSize: 12, fontWeight: 600,
+            }}>
+            <Shuffle size={12} /> Überraschung
+          </button>
+        </div>
 
-            <section style={{ marginBottom: 26 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginBottom: 11, flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: 14.5, fontWeight: 700 }}>Showroom und Außen</h2>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase',
-                  color: '#fbbf24', background: 'rgba(251,191,36,.1)',
-                  border: '1px solid rgba(251,191,36,.3)', borderRadius: 20, padding: '2px 8px',
-                }}>wird je Bild erzeugt</span>
-              </div>
-              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(175px,1fr))' }}>
-                {erzeugte.map(b => <Kachel key={b.id} bg={b} />)}
-              </div>
-            </section>
-
-            {/* Eigener Showroom */}
-            <section>
-              <h2 style={{ margin: '0 0 11px', fontSize: 14.5, fontWeight: 700 }}>Eigener Showroom</h2>
-              <div style={{
-                display: 'grid', gap: 14,
-                gridTemplateColumns: eigenerUrl ? 'minmax(0,260px) minmax(0,1fr)' : '1fr',
+        {/* ── Katalog ── */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {(['wand', 'boden'] as const).map(r => (
+            <button key={r} onClick={() => setReiter(r)}
+              style={{
+                padding: '8px 18px', cursor: 'pointer', fontFamily: F, fontSize: 13,
+                fontWeight: reiter === r ? 700 : 500, borderRadius: 8,
+                border: `1px solid ${reiter === r ? G.buehneAkzent : G.buehneLinie + '44'}`,
+                background: reiter === r ? G.buehneAkzent + '1e' : 'transparent',
+                color: reiter === r ? G.buehneAkzent : G.buehneLeise,
               }}>
+              {r === 'wand' ? 'Wand' : 'Boden'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{
+          display: 'grid', gap: 11, marginBottom: 34,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))',
+        }}>
+          {liste.map(([id, name]) => {
+            const aktiv = reiter === 'wand' ? wand === id : boden === id;
+            /*
+             * Die Kachel zeigt NUR den eigenen Baustein: eine Wand vor
+             * neutralem Boden, ein Boden unter neutraler Wand. Sonst
+             * saehe man immer die aktuelle Kombination und koennte
+             * nicht beurteilen, was der Baustein selbst beitraegt.
+             */
+            const kachelCode = reiter === 'wand' ? `${id}B03` : `W04${id}`;
+            return (
+              <button key={id}
+                onClick={() => (reiter === 'wand' ? setzeWand(id) : setzeBoden(id))}
+                aria-pressed={aktiv}
+                style={{
+                  padding: 0, cursor: 'pointer', overflow: 'hidden', fontFamily: F,
+                  background: G.buehneGrund, textAlign: 'left',
+                  border: `1.5px solid ${aktiv ? G.buehneAkzent : G.buehneLinie + '33'}`,
+                  borderRadius: 10,
+                  boxShadow: aktiv ? `0 0 0 3px ${G.buehneAkzent}22` : 'none',
+                }}>
+                <div style={{ position: 'relative', aspectRatio: '3 / 2', background: '#111' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/studio-eigen/vorschau?code=${kachelCode}&b=300&leer=1`} alt=""
+                       loading="lazy"
+                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  {aktiv && (
+                    <div style={{
+                      position: 'absolute', top: 6, right: 6, width: 21, height: 21, borderRadius: '50%',
+                      background: G.buehneAkzent, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}><Check size={12} color="#0a0c11" strokeWidth={3} /></div>
+                  )}
+                </div>
+                <div style={{ padding: '8px 10px 9px', borderTop: `1px solid ${G.buehneLinie}22` }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: G.buehneText }}>{name}</div>
+                  <div style={{ fontSize: 10, color: G.buehneLeise, fontFamily: G.ziffern }}>{id}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Eigene Halle ── */}
+        <section>
+          <h2 style={{ margin: '0 0 5px', fontSize: 15, fontWeight: 700 }}>Oder deine eigene Halle</h2>
+          <p style={{ margin: '0 0 13px', fontSize: 13, color: G.buehneLeise, lineHeight: 1.55, maxWidth: '62ch' }}>
+            Statt eines gerechneten Raums ein Foto deiner Halle — leer, quer aufgenommen, die Kamera
+            etwa auf Kotflügelhöhe. Dann stehen deine Fahrzeuge dort, wo sie wirklich stehen.
+          </p>
+
+          <div style={{
+            display: 'grid', gap: 14,
+            gridTemplateColumns: eigenerUrl ? 'minmax(0,260px) minmax(0,1fr)' : '1fr',
+          }}>
+            {eigenerUrl && (
+              <button onClick={eigenenWaehlen} aria-pressed={eigenerAktiv}
+                style={{
+                  padding: 0, cursor: 'pointer', overflow: 'hidden', position: 'relative',
+                  aspectRatio: '3 / 2', background: G.buehneGrund, borderRadius: 10,
+                  border: `1.5px solid ${eigenerAktiv ? G.buehneAkzent : G.buehneLinie + '33'}`,
+                  boxShadow: eigenerAktiv ? `0 0 0 3px ${G.buehneAkzent}22` : 'none',
+                }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={eigenerUrl} alt="Eigene Halle"
+                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                {eigenerAktiv && (
+                  <div style={{
+                    position: 'absolute', top: 7, right: 7, width: 22, height: 22, borderRadius: '50%',
+                    background: G.buehneAkzent, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}><Check size={13} color="#0a0c11" strokeWidth={3} /></div>
+                )}
+              </button>
+            )}
+
+            <div style={{
+              border: `1px dashed ${G.buehneLinie}55`, borderRadius: 10, padding: '17px 19px',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 11,
+              background: 'rgba(255,255,255,0.02)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Camera size={16} color={G.buehneAkzent} />
+                <span style={{ fontSize: 13.5, fontWeight: 700 }}>
+                  {eigenerUrl ? 'Halle ersetzen' : 'Halle hochladen'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => dateiRef.current?.click()} disabled={laedt}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px',
+                    cursor: laedt ? 'wait' : 'pointer', background: G.buehneAkzent, color: '#0a0c11',
+                    border: 'none', borderRadius: 8, fontFamily: F, fontSize: 12.5, fontWeight: 700,
+                  }}>
+                  <Upload size={13} /> {laedt ? 'Wird geladen…' : 'Foto wählen'}
+                </button>
                 {eigenerUrl && (
-                  <button onClick={eigenenWaehlen} aria-pressed={gewaehlt === OWN_SHOWROOM_ID}
+                  <button onClick={eigenenEntfernen}
                     style={{
-                      padding: 0, cursor: 'pointer', background: G.buehneGrund, overflow: 'hidden',
-                      border: `1.5px solid ${gewaehlt === OWN_SHOWROOM_ID ? G.buehneAkzent : G.buehneLinie + '3a'}`,
-                      borderRadius: 11, position: 'relative', aspectRatio: '3 / 2',
+                      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                      cursor: 'pointer', background: 'transparent', color: '#f87171',
+                      border: `1px solid ${G.buehneLinie}44`, borderRadius: 8,
+                      fontFamily: F, fontSize: 12.5, fontWeight: 600,
                     }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={eigenerUrl} alt="Eigener Showroom"
-                         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    {gewaehlt === OWN_SHOWROOM_ID && (
-                      <div style={{
-                        position: 'absolute', top: 7, right: 7, width: 22, height: 22, borderRadius: '50%',
-                        background: G.buehneAkzent, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}><Check size={13} color="#0a0c11" strokeWidth={3} /></div>
-                    )}
+                    <Trash2 size={12} /> Entfernen
                   </button>
                 )}
-                <div style={{
-                  border: `1px dashed ${G.buehneLinie}55`, borderRadius: 11, padding: '17px 19px',
-                  display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10,
-                  background: 'rgba(255,255,255,0.02)',
-                }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-                    {eigenerUrl ? 'Showroom ersetzen' : 'Eigenen Showroom hochladen'}
-                  </span>
-                  <p style={{ margin: 0, fontSize: 12.5, color: G.buehneLeise, lineHeight: 1.55, maxWidth: '52ch' }}>
-                    Ein Foto deiner eigenen Halle — leer, quer aufgenommen, gleichmäßig ausgeleuchtet.
-                    Dann stehen deine Fahrzeuge dort, wo sie wirklich stehen.
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button onClick={() => dateiRef.current?.click()} disabled={laedt}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px',
-                        cursor: laedt ? 'wait' : 'pointer', background: G.buehneAkzent, color: '#0a0c11',
-                        border: 'none', borderRadius: 8, fontFamily: F, fontSize: 12.5, fontWeight: 700,
-                      }}>
-                      <Upload size={13} /> {laedt ? 'Wird geladen…' : 'Foto wählen'}
-                    </button>
-                    {eigenerUrl && (
-                      <button onClick={eigenenEntfernen}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px',
-                          cursor: 'pointer', background: 'transparent', color: '#f87171',
-                          border: `1px solid ${G.buehneLinie}44`, borderRadius: 8,
-                          fontFamily: F, fontSize: 12.5, fontWeight: 600,
-                        }}>
-                        <Trash2 size={12} /> Entfernen
-                      </button>
-                    )}
-                  </div>
-                </div>
               </div>
-              <input ref={dateiRef} type="file" accept="image/*" style={{ display: 'none' }}
-                onChange={e => { const d = e.target.files?.[0]; if (d) hochladen(d); e.target.value = ''; }} />
-            </section>
-          </div>
-
-          {/* ── Rechte Spalte: einstellen ── */}
-          <aside style={{
-            border: `1px solid ${G.buehneLinie}44`, borderRadius: 12,
-            padding: '16px 17px', background: 'rgba(255,255,255,0.02)', position: 'sticky', top: 18,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <SlidersHorizontal size={15} color={G.buehneAkzent} />
-              <h2 style={{ margin: 0, fontSize: 13.5, fontWeight: 700 }}>Einstellen</h2>
             </div>
-
-            {!einstellbar ? (
-              <p style={{
-                margin: 0, fontSize: 12.5, color: G.buehneLeise, lineHeight: 1.6,
-                display: 'flex', gap: 8, alignItems: 'flex-start',
-              }}>
-                <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-                Nur die Studio-Hintergründe lassen sich einstellen — sie werden gerechnet.
-                Showroom und Außen entstehen bei jedem Bild neu; daran kann hier nichts gedreht werden.
-              </p>
-            ) : (
-              <>
-                <Farbe wert={werte.wandOben} name="Wand oben" beiAenderung={v => einstellungenSichern({ ...werte, wandOben: v })} />
-                <Farbe wert={werte.wandUnten} name="Wand unten" beiAenderung={v => einstellungenSichern({ ...werte, wandUnten: v })} />
-                <Farbe wert={werte.bodenOben} name="Boden vorn" beiAenderung={v => einstellungenSichern({ ...werte, bodenOben: v })} />
-                <Farbe wert={werte.bodenUnten} name="Boden hinten" beiAenderung={v => einstellungenSichern({ ...werte, bodenUnten: v })} />
-
-                <div style={{ height: 1, background: G.buehneLinie + '33', margin: '14px 0' }} />
-
-                <Regler wert={werte.horizont} name="Horizont" min={0.4} max={0.92} schritt={0.01} beiAenderung={v => einstellungenSichern({ ...werte, horizont: v })} />
-                <Regler wert={werte.lichtStaerke} name="Licht" min={0} max={0.6} schritt={0.01} beiAenderung={v => einstellungenSichern({ ...werte, lichtStaerke: v })} />
-                <Regler wert={werte.lichtX} name="Licht waagerecht" min={0} max={1} schritt={0.01} beiAenderung={v => einstellungenSichern({ ...werte, lichtX: v })} />
-                <Regler wert={werte.lichtY} name="Licht senkrecht" min={0} max={0.8} schritt={0.01} beiAenderung={v => einstellungenSichern({ ...werte, lichtY: v })} />
-                <Regler wert={werte.lichtGroesse} name="Lichtgröße" min={0.2} max={1} schritt={0.01} beiAenderung={v => einstellungenSichern({ ...werte, lichtGroesse: v })} />
-
-                <button onClick={() => einstellungenSichern(AUSGANG[gewaehlt])}
-                  style={{
-                    width: '100%', marginTop: 4, padding: '9px', cursor: 'pointer',
-                    background: 'transparent', border: `1px solid ${G.buehneLinie}55`,
-                    borderRadius: 8, color: G.buehneLeise, fontFamily: F, fontSize: 12.5, fontWeight: 600,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  }}>
-                  <RotateCcw size={12} /> Auf Ausgangswerte
-                </button>
-
-                {!fahrzeug && (
-                  <p style={{ margin: '13px 0 0', fontSize: 11.5, color: G.buehneLeise, lineHeight: 1.55 }}>
-                    Für die Vorschau fehlt noch ein freigestelltes Fahrzeug. Unter <strong
-                    style={{ color: G.buehneText }}>Studio</strong> einmal ein Foto laden — danach
-                    kostet keine Einstellung mehr etwas.
-                  </p>
-                )}
-              </>
-            )}
-          </aside>
-        </div>
+          </div>
+          <input ref={dateiRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => { const d = e.target.files?.[0]; if (d) hochladen(d); e.target.value = ''; }} />
+        </section>
       </div>
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }
-        @media (max-width: 1040px) {
-          div[style*="grid-template-columns: minmax(0,1fr) 320px"] { grid-template-columns: 1fr !important }
-        }`}</style>
     </div>
   );
 }
+
+const pfeilStil: React.CSSProperties = {
+  position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+  width: 40, height: 40, borderRadius: '50%', cursor: 'pointer',
+  background: 'rgba(10,12,17,0.68)', border: '1px solid rgba(255,255,255,0.16)',
+  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+};

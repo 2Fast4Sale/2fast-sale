@@ -106,6 +106,7 @@ export default function StudioSeite() {
   const [fehler, setFehler]             = useState<string | null>(null);
   const [gespeichert, setGespeichert]   = useState(false);
   const [eigenerUrl, setEigenerUrl]     = useState<string | null>(null);
+  const [raumCode, setRaumCode]         = useState('W02B02');
   const dateiRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -127,6 +128,8 @@ export default function StudioSeite() {
      * sehen — vorher kannte diese Seite nur ihre vier Vorlagen und
      * ueberging die Auswahl stillschweigend.
      */
+    // Der Raum kommt aus dem Konfigurator unter "Hintergründe".
+    setRaumCode(localStorage.getItem('studio_raum_code') || 'W02B02');
     const halle = localStorage.getItem('dealer_custom_background_url');
     setEigenerUrl(halle);
     if (halle && localStorage.getItem('dealer_background') === 'custom') setVorlage(EIGENER);
@@ -174,7 +177,7 @@ export default function StudioSeite() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           freigestellt: bild,
-          vorlage: vl === EIGENER ? 'studio_dunkel' : vl,
+          code: vl === EIGENER ? undefined : raumCode,
           hintergrundUrl: vl === EIGENER ? eigenerUrl : undefined,
           breite: 1200,
           hintergrund: {
@@ -199,7 +202,7 @@ export default function StudioSeite() {
     } finally {
       setRechnet(false);
     }
-  }, [eigenerUrl]);
+  }, [eigenerUrl, raumCode]);
 
   /*
    * Entprellt, sonst laeuft bei jedem Pixel am Regler eine Berechnung

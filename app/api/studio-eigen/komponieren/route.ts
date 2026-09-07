@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../../lib/studio/kompositor';
-import { studioHintergrund, STUDIO_VORLAGEN, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
+import { studioHintergrund, STUDIO_VORLAGEN, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +40,7 @@ function hintergrundErlaubt(adresse: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { freigestellt, vorlage, hintergrund, kompositor, breite, hoehe, hintergrundUrl } = body as {
+    const { freigestellt, vorlage, hintergrund, kompositor, breite, hoehe, hintergrundUrl, code } = body as {
       freigestellt?: string;
       vorlage?: string;
       hintergrund?: Partial<StudioHintergrund>;
@@ -49,13 +49,26 @@ export async function POST(req: NextRequest) {
       hoehe?: number;
       /** Eigenes Hallenfoto des Haendlers statt eines gerechneten Raums. */
       hintergrundUrl?: string;
+      /** Raum-Code aus dem Konfigurator, z.B. "W02B07". */
+      code?: string;
     };
 
     if (!freigestellt) {
       return NextResponse.json({ error: 'Kein freigestelltes Bild geliefert' }, { status: 400 });
     }
 
-    const basis = STUDIO_VORLAGEN[vorlage ?? 'studio_dunkel'] ?? STUDIO_VORLAGEN.studio_dunkel;
+    /*
+     * Der Raum-Code hat Vorrang vor der Vorlage.
+     *
+     * Die Vorlagen bleiben, weil aeltere Aufrufe sie noch schicken.
+     * Neue Aufrufe kommen aus dem Konfigurator und tragen einen Code
+     * wie "W02B07" — Wand 02 mit Boden 07. Ohne diesen Vorrang waere
+     * der Konfigurator Dekoration: Der Haendler waehlt einen Raum, und
+     * gerechnet wird ein anderer.
+     */
+    const basis = code
+      ? raumAusCode(code)
+      : (STUDIO_VORLAGEN[vorlage ?? 'studio_dunkel'] ?? STUDIO_VORLAGEN.studio_dunkel);
     const hgEinstellungen: StudioHintergrund = { ...basis, ...(hintergrund ?? {}) };
 
     /*
