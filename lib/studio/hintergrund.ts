@@ -65,6 +65,15 @@ export interface StudioHintergrund {
   randabfall: number;
   /** Wie stark der Boden die Deckenlichter spiegelt, 0 bis 1. */
   bodenglanz: number;
+
+  /** Korn der Wand, 0 bis 1. Ohne Korn wirkt sie wie Vektorgrafik. */
+  wandKorn: number;
+  /** Korn des Bodens, 0 bis 1. */
+  bodenKorn: number;
+  /** Groesse des Bodenkorns in Pixeln. Gross = grober Beton. */
+  bodenKoernung: number;
+  /** Sichtbarkeit der Bodenfugen, 0 bis 1. 0 laesst sie weg. */
+  bodenFugen: number;
 }
 
 export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrund> = {
@@ -75,6 +84,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.62, lichtStaerke: 0.22,
     decke: 0.13, strahler: 4, strahlerStaerke: 0.55, ecke: 0.30,
     randabfall: 0.42, bodenglanz: 0.30,
+    wandKorn: 0.055, bodenKorn: 0.06, bodenKoernung: 4, bodenFugen: 0,
   },
   studio_hell: {
     name: 'Studio hell',
@@ -83,6 +93,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30,
     decke: 0.14, strahler: 5, strahlerStaerke: 0.85, ecke: 0.28,
     randabfall: 0.26, bodenglanz: 0.22,
+    wandKorn: 0.06, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0,
   },
   studio_grau: {
     name: 'Studio grau',
@@ -91,6 +102,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26,
     decke: 0.12, strahler: 4, strahlerStaerke: 0.70, ecke: 0.32,
     randabfall: 0.30, bodenglanz: 0.20,
+    wandKorn: 0.055, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0,
   },
   studio_warm: {
     name: 'Studio warm',
@@ -99,6 +111,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.46, lichtY: 0.33, lichtGroesse: 0.60, lichtStaerke: 0.24,
     decke: 0.13, strahler: 3, strahlerStaerke: 0.60, ecke: 0.34,
     randabfall: 0.40, bodenglanz: 0.26,
+    wandKorn: 0.10, bodenKorn: 0.13, bodenKoernung: 5, bodenFugen: 0,
   },
 };
 
@@ -112,9 +125,9 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
  *
  * Das ist aus zwei Gruenden besser als ein Katalog fertiger Raeume:
  *
- * Erstens die Menge. Acht Waende und acht Boeden ergeben
- * vierundsechzig Raeume aus sechzehn Bausteinen — als fertige Raeume
- * muesste man vierundsechzig Eintraege pflegen.
+ * Erstens die Menge. Zwoelf Waende und zwoelf Boeden ergeben 144
+ * Raeume aus vierundzwanzig Bausteinen — als fertige Raeume muesste
+ * man 144 Eintraege pflegen.
  *
  * Zweitens die Bedienung. Ein Haendler weiss, dass er eine helle Wand
  * will und einen dunklen Boden. Er weiss nicht, ob er "Studio grau"
@@ -124,50 +137,79 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
 /** Der Teil eines Raums oberhalb des Horizonts. */
 export type Wand = Pick<StudioHintergrund,
   'wandOben' | 'wandUnten' | 'decke' | 'strahler' | 'strahlerStaerke' |
-  'ecke' | 'lichtX' | 'lichtY' | 'lichtGroesse' | 'lichtStaerke' | 'randabfall'
+  'ecke' | 'lichtX' | 'lichtY' | 'lichtGroesse' | 'lichtStaerke' | 'randabfall' | 'wandKorn'
 > & { name: string };
 
 /** Der Teil unterhalb des Horizonts. */
 export type Boden = Pick<StudioHintergrund,
-  'bodenOben' | 'bodenUnten' | 'horizont' | 'bodenglanz'
+  'bodenOben' | 'bodenUnten' | 'horizont' | 'bodenglanz' |
+  'bodenKorn' | 'bodenKoernung' | 'bodenFugen'
 > & { name: string };
 
 export const WAENDE: Record<string, Wand> = {
-  W01: { name: 'Weiß, nahtlos',   wandOben: '#f7f8fa', wandUnten: '#e2e5ea',
+  W01: { name: 'Weiß, nahtlos',    wandOben: '#f7f8fa', wandUnten: '#e2e5ea',
          decke: 0,    strahler: 0, strahlerStaerke: 0,    ecke: null,
-         lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.70, lichtStaerke: 0.26, randabfall: 0.18 },
-  W02: { name: 'Weiß mit Decke',  wandOben: '#f4f5f7', wandUnten: '#dcdfe4',
+         lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.70, lichtStaerke: 0.26, randabfall: 0.18, wandKorn: 0.05 },
+  W02: { name: 'Weiß mit Decke',   wandOben: '#f4f5f7', wandUnten: '#dcdfe4',
          decke: 0.14, strahler: 5, strahlerStaerke: 0.85, ecke: 0.28,
-         lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30, randabfall: 0.26 },
-  W03: { name: 'Hellgrau',        wandOben: '#c9ced6', wandUnten: '#aab0ba',
+         lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30, randabfall: 0.26, wandKorn: 0.06 },
+  W03: { name: 'Hellgrau',         wandOben: '#c9ced6', wandUnten: '#aab0ba',
          decke: 0.12, strahler: 4, strahlerStaerke: 0.70, ecke: 0.32,
-         lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.24, randabfall: 0.24 },
-  W04: { name: 'Mittelgrau',      wandOben: '#8c9199', wandUnten: '#666c75',
+         lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.24, randabfall: 0.24, wandKorn: 0.05 },
+  W04: { name: 'Mittelgrau',       wandOben: '#8c9199', wandUnten: '#666c75',
          decke: 0.12, strahler: 4, strahlerStaerke: 0.62, ecke: 0.32,
-         lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26, randabfall: 0.30 },
-  W05: { name: 'Anthrazit',       wandOben: '#3c424b', wandUnten: '#252a31',
+         lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26, randabfall: 0.30, wandKorn: 0.055 },
+  W05: { name: 'Anthrazit',        wandOben: '#3c424b', wandUnten: '#252a31',
          decke: 0.13, strahler: 4, strahlerStaerke: 0.60, ecke: 0.30,
-         lichtX: 0.5, lichtY: 0.33, lichtGroesse: 0.62, lichtStaerke: 0.24, randabfall: 0.38 },
-  W06: { name: 'Schwarz',         wandOben: '#22262c', wandUnten: '#0d1013',
+         lichtX: 0.5, lichtY: 0.33, lichtGroesse: 0.62, lichtStaerke: 0.24, randabfall: 0.38, wandKorn: 0.06 },
+  W06: { name: 'Schwarz',          wandOben: '#22262c', wandUnten: '#0d1013',
          decke: 0.13, strahler: 4, strahlerStaerke: 0.55, ecke: 0.30,
-         lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.60, lichtStaerke: 0.22, randabfall: 0.46 },
-  W07: { name: 'Warm, Nussbaum',  wandOben: '#4a3f34', wandUnten: '#2a231c',
+         lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.60, lichtStaerke: 0.22, randabfall: 0.46, wandKorn: 0.055 },
+  W07: { name: 'Warm, Nussbaum',   wandOben: '#4a3f34', wandUnten: '#2a231c',
          decke: 0.13, strahler: 3, strahlerStaerke: 0.60, ecke: 0.34,
-         lichtX: 0.46, lichtY: 0.33, lichtGroesse: 0.60, lichtStaerke: 0.24, randabfall: 0.40 },
-  W08: { name: 'Blaugrau, kühl',  wandOben: '#3f4a5a', wandUnten: '#232b36',
+         lichtX: 0.46, lichtY: 0.33, lichtGroesse: 0.60, lichtStaerke: 0.24, randabfall: 0.40, wandKorn: 0.05 },
+  W08: { name: 'Blaugrau, kühl',   wandOben: '#3f4a5a', wandUnten: '#232b36',
          decke: 0.12, strahler: 5, strahlerStaerke: 0.66, ecke: 0.26,
-         lichtX: 0.52, lichtY: 0.31, lichtGroesse: 0.66, lichtStaerke: 0.26, randabfall: 0.34 },
+         lichtX: 0.52, lichtY: 0.31, lichtGroesse: 0.66, lichtStaerke: 0.26, randabfall: 0.34, wandKorn: 0.055 },
+  W09: { name: 'Beton, roh',       wandOben: '#9a9791', wandUnten: '#76736d',
+         decke: 0.11, strahler: 4, strahlerStaerke: 0.58, ecke: 0.36,
+         lichtX: 0.48, lichtY: 0.33, lichtGroesse: 0.62, lichtStaerke: 0.22, randabfall: 0.32, wandKorn: 0.05 },
+  W10: { name: 'Sandbeige',        wandOben: '#ddd2c0', wandUnten: '#bfb4a1',
+         decke: 0.12, strahler: 4, strahlerStaerke: 0.72, ecke: 0.30,
+         lichtX: 0.5, lichtY: 0.31, lichtGroesse: 0.66, lichtStaerke: 0.26, randabfall: 0.24, wandKorn: 0.055 },
+  W11: { name: 'Petrol, dunkel',   wandOben: '#22414a', wandUnten: '#12252b',
+         decke: 0.13, strahler: 4, strahlerStaerke: 0.62, ecke: 0.28,
+         lichtX: 0.5, lichtY: 0.33, lichtGroesse: 0.62, lichtStaerke: 0.24, randabfall: 0.40, wandKorn: 0.055 },
+  W12: { name: 'Weiß, hohe Decke', wandOben: '#fbfcfd', wandUnten: '#e8ebef',
+         decke: 0.22, strahler: 6, strahlerStaerke: 0.90, ecke: 0.24,
+         lichtX: 0.5, lichtY: 0.36, lichtGroesse: 0.72, lichtStaerke: 0.28, randabfall: 0.20, wandKorn: 0.05 },
 };
 
 export const BOEDEN: Record<string, Boden> = {
-  B01: { name: 'Hell, matt',      bodenOben: '#dcdfe4', bodenUnten: '#c2c6cd', horizont: 0.74, bodenglanz: 0.06 },
-  B02: { name: 'Hell, glänzend',  bodenOben: '#d3d7dd', bodenUnten: '#b3b8c0', horizont: 0.74, bodenglanz: 0.26 },
-  B03: { name: 'Grau, matt',      bodenOben: '#8d929a', bodenUnten: '#6d727a', horizont: 0.74, bodenglanz: 0.08 },
-  B04: { name: 'Grau, poliert',   bodenOben: '#7f858e', bodenUnten: '#565c65', horizont: 0.74, bodenglanz: 0.30 },
-  B05: { name: 'Beton, dunkel',   bodenOben: '#4a4f56', bodenUnten: '#2c3036', horizont: 0.74, bodenglanz: 0.12 },
-  B06: { name: 'Asphalt',         bodenOben: '#33383e', bodenUnten: '#1c2024', horizont: 0.76, bodenglanz: 0.10 },
-  B07: { name: 'Schwarz, Spiegel',bodenOben: '#191d23', bodenUnten: '#07090c', horizont: 0.74, bodenglanz: 0.34 },
-  B08: { name: 'Warm, Estrich',   bodenOben: '#3a322a', bodenUnten: '#1d1813', horizont: 0.74, bodenglanz: 0.16 },
+  B01: { name: 'Hell, matt',        bodenOben: '#dcdfe4', bodenUnten: '#c2c6cd', horizont: 0.74,
+         bodenglanz: 0.06, bodenKorn: 0.09, bodenKoernung: 3, bodenFugen: 0 },
+  B02: { name: 'Hell, glänzend',    bodenOben: '#d3d7dd', bodenUnten: '#b3b8c0', horizont: 0.74,
+         bodenglanz: 0.26, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0 },
+  B03: { name: 'Grau, matt',        bodenOben: '#8d929a', bodenUnten: '#6d727a', horizont: 0.74,
+         bodenglanz: 0.08, bodenKorn: 0.11, bodenKoernung: 4, bodenFugen: 0 },
+  B04: { name: 'Grau, poliert',     bodenOben: '#7f858e', bodenUnten: '#565c65', horizont: 0.74,
+         bodenglanz: 0.30, bodenKorn: 0.06, bodenKoernung: 3, bodenFugen: 0 },
+  B05: { name: 'Beton, dunkel',     bodenOben: '#4a4f56', bodenUnten: '#2c3036', horizont: 0.74,
+         bodenglanz: 0.12, bodenKorn: 0.12, bodenKoernung: 6, bodenFugen: 0 },
+  B06: { name: 'Asphalt',           bodenOben: '#33383e', bodenUnten: '#1c2024', horizont: 0.76,
+         bodenglanz: 0.10, bodenKorn: 0.11, bodenKoernung: 4, bodenFugen: 0 },
+  B07: { name: 'Schwarz, Spiegel',  bodenOben: '#191d23', bodenUnten: '#07090c', horizont: 0.74,
+         bodenglanz: 0.34, bodenKorn: 0.04, bodenKoernung: 3, bodenFugen: 0 },
+  B08: { name: 'Warm, Estrich',     bodenOben: '#3a322a', bodenUnten: '#1d1813', horizont: 0.74,
+         bodenglanz: 0.16, bodenKorn: 0.14, bodenKoernung: 5, bodenFugen: 0 },
+  B09: { name: 'Großfliesen hell',  bodenOben: '#d8dce1', bodenUnten: '#b7bcc4', horizont: 0.74,
+         bodenglanz: 0.20, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0.30 },
+  B10: { name: 'Großfliesen grau',  bodenOben: '#7b818a', bodenUnten: '#565b63', horizont: 0.74,
+         bodenglanz: 0.18, bodenKorn: 0.07, bodenKoernung: 3, bodenFugen: 0.34 },
+  B11: { name: 'Industrieplatten',  bodenOben: '#454b52', bodenUnten: '#272b31', horizont: 0.75,
+         bodenglanz: 0.14, bodenKorn: 0.11, bodenKoernung: 5, bodenFugen: 0.40 },
+  B12: { name: 'Beton, hell rau',   bodenOben: '#b6b3ac', bodenUnten: '#918d85', horizont: 0.74,
+         bodenglanz: 0.07, bodenKorn: 0.14, bodenKoernung: 7, bodenFugen: 0.16 },
 };
 
 /**
@@ -234,6 +276,77 @@ export const FAHRZEUG_UMRISS = Buffer.from(
        <circle cx="770" cy="300" r="70" fill="#141b23"/>
      </g></svg>`,
 );
+
+/**
+ * Erzeugt eine Rauschebene — das Mittel gegen den Zeichentrick-Eindruck.
+ *
+ * Ein reiner Farbverlauf ist mathematisch glatt, und genau daran
+ * erkennt das Auge sofort, dass es keine Oberflaeche ist. Jede echte
+ * Wand hat Korn, jeder Beton hat Flecken, jeder Lack hat Staub.
+ *
+ * Das Rauschen wird klein erzeugt und hochskaliert. Das ist nicht nur
+ * schneller — es macht das Korn groeber und damit glaubwuerdiger. Ein
+ * Rauschen auf Pixelebene sieht aus wie ein verrauschtes Foto, ein
+ * grobes wie eine Oberflaeche.
+ *
+ * Die Werte liegen um 128 herum, weil die Ebene mit "overlay"
+ * aufgelegt wird: 128 laesst den Untergrund unveraendert, darueber
+ * hellt auf, darunter dunkelt ab. `staerke` bestimmt, wie weit die
+ * Werte von 128 abweichen duerfen.
+ */
+async function rauschen(
+  breite: number,
+  hoehe: number,
+  koernung: number,
+  staerke: number,
+): Promise<Buffer> {
+  const kleinB = Math.max(2, Math.round(breite / koernung));
+  const kleinH = Math.max(2, Math.round(hoehe / koernung));
+  const roh = Buffer.allocUnsafe(kleinB * kleinH);
+  const spanne = Math.max(0, Math.min(1, staerke)) * 128;
+  for (let i = 0; i < roh.length; i++) {
+    roh[i] = 128 + Math.round((Math.random() * 2 - 1) * spanne);
+  }
+  return sharp(roh, { raw: { width: kleinB, height: kleinH, channels: 1 } })
+    .resize(breite, hoehe, { fit: 'fill', kernel: 'cubic' })
+    .png()
+    .toBuffer();
+}
+
+/**
+ * Fugen im Boden, perspektivisch zum Fluchtpunkt.
+ *
+ * Der wirksamste einzelne Zusatz. Ein Farbverlauf ist eine Flaeche;
+ * sobald Linien darauf zu einem Punkt zusammenlaufen, ist es ein
+ * Boden, auf dem etwas stehen kann. Das Auge liest die Tiefe aus den
+ * Linien, nicht aus der Farbe.
+ *
+ * Der Fluchtpunkt liegt auf dem Horizont in der Bildmitte, die Fugen
+ * faechern von dort nach unten auf. Zusaetzlich ein paar Querfugen,
+ * deren Abstand nach unten hin waechst — auch das ist Perspektive.
+ */
+function fugen(breite: number, hoehe: number, hY: number, staerke: number): string {
+  if (staerke <= 0) return '';
+  const fx = breite / 2;
+  let d = '';
+
+  // Laengsfugen: vom Fluchtpunkt nach unten aufgefaechert.
+  for (let i = -6; i <= 6; i++) {
+    if (i === 0) continue;
+    const unten = fx + i * (breite * 0.19);
+    d += `<line x1="${fx.toFixed(0)}" y1="${hY}" x2="${unten.toFixed(0)}" y2="${hoehe}"
+            stroke="#000" stroke-opacity="${(staerke * 0.5).toFixed(3)}" stroke-width="1.5"/>`;
+  }
+
+  // Querfugen: Abstand waechst nach unten, wie in der Perspektive.
+  const tiefe = hoehe - hY;
+  for (let k = 1; k <= 5; k++) {
+    const y = hY + tiefe * Math.pow(k / 5, 1.9);
+    d += `<line x1="0" y1="${y.toFixed(0)}" x2="${breite}" y2="${y.toFixed(0)}"
+            stroke="#000" stroke-opacity="${(staerke * 0.32).toFixed(3)}" stroke-width="1.5"/>`;
+  }
+  return d;
+}
 
 /**
  * Zeichnet den Hintergrund.
@@ -355,6 +468,7 @@ export async function studioHintergrund(
   <rect width="${breite}" height="${hY}" fill="url(#wand)"/>
   <rect y="${hY}" width="${breite}" height="${hoehe - hY}" fill="url(#boden)"/>
   <rect y="${hY - uebergang}" width="${breite}" height="${uebergang * 2}" fill="url(#kehle)"/>
+${fugen(breite, hoehe, hY, v.bodenFugen)}
 ${eckeSvg}
 ${bodenreflexe}
   <rect width="${breite}" height="${hoehe}" fill="url(#licht)"/>
@@ -367,7 +481,62 @@ ${strahlerSvg}
   <rect width="${breite}" height="${hoehe}" fill="url(#rand)"/>
 </svg>`;
 
-  return sharp(Buffer.from(svg))
-    .jpeg({ quality: 92, chromaSubsampling: '4:4:4' })
-    .toBuffer();
+  /*
+   * Korn zuletzt, in zwei Ebenen: eine feine ueber das ganze Bild fuer
+   * die Wand, eine groebere nur auf dem Boden.
+   *
+   * Zwei getrennte Ebenen, weil Wand und Boden verschiedene
+   * Oberflaechen sind. Eine glatte Wand und ein rauer Betonboden
+   * teilen sich kein Korn — dieselbe Koernung ueber beides zu legen
+   * sieht aus wie ein Filter, nicht wie Material.
+   *
+   * "overlay" laesst mittleres Grau unveraendert und verschiebt den
+   * Rest; deshalb liegen die Rauschwerte um 128.
+   */
+  const ebenen: sharp.OverlayOptions[] = [];
+
+  if (v.wandKorn > 0) {
+    ebenen.push({
+      // Koernung 3 statt 2: feineres Korn liest sich als Bildrauschen,
+      // groeberes als Oberflaeche.
+      input: await rauschen(breite, hoehe, 3, v.wandKorn),
+      blend: 'overlay',
+    });
+  }
+
+  if (v.bodenKorn > 0 && hoehe - hY > 4) {
+    /*
+     * Das Bodenkorn lag zuerst als eigenes Bild ab dem Horizont auf.
+     * Dabei entstand genau dort eine sichtbare waagerechte Kante — das
+     * Korn setzte auf einen Schlag ein. Im Test bei "Beton, roh"
+     * deutlich als Strich quer durchs Bild zu sehen.
+     *
+     * Jetzt geht die Ebene ueber das ganze Bild und wird oberhalb des
+     * Horizonts auf neutrales Grau gezogen. Neutral heisst bei
+     * "overlay": keine Wirkung. Der Uebergang ist damit weich, ohne
+     * dass das Korn ueber die Wand laeuft.
+     */
+    const roh = await rauschen(breite, hoehe, Math.max(1, v.bodenKoernung), v.bodenKorn);
+    const ausblenden = Buffer.from(
+      `<svg width="${breite}" height="${hoehe}">
+         <defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
+           <stop offset="0%" stop-color="#808080" stop-opacity="1"/>
+           <stop offset="${((hY / hoehe) * 100).toFixed(1)}%" stop-color="#808080" stop-opacity="1"/>
+           <stop offset="${(((hY + (hoehe - hY) * 0.12) / hoehe) * 100).toFixed(1)}%" stop-color="#808080" stop-opacity="0"/>
+         </linearGradient></defs>
+         <rect width="${breite}" height="${hoehe}" fill="url(#a)"/>
+       </svg>`,
+    );
+    ebenen.push({
+      input: await sharp(roh)
+        .composite([{ input: await sharp(ausblenden).png().toBuffer() }])
+        .png().toBuffer(),
+      blend: 'overlay',
+    });
+  }
+
+  const gezeichnet = sharp(Buffer.from(svg));
+  const fertig = ebenen.length ? gezeichnet.composite(ebenen) : gezeichnet;
+
+  return fertig.jpeg({ quality: 92, chromaSubsampling: '4:4:4' }).toBuffer();
 }

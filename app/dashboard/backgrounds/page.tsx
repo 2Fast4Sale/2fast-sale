@@ -7,15 +7,15 @@
  * vorherigen boten fertige Raeume zur Auswahl oder Schieberegler zum
  * Einstellen. Beides ist falsch fuer diese Aufgabe:
  *
- * Fertige Raeume sind zu wenige. Acht Vorlagen decken nicht ab, was
+ * Fertige Raeume sind zu wenige. Ein Dutzend Vorlagen deckt nicht ab, was
  * Haendler wollen — heller Raum mit dunklem Boden, dunkler Raum mit
  * hellem Boden, warm mit Estrich.
  *
  * Regler sind zu viel. Wer eine Wandfarbe waehlen soll, ist mit vier
  * Farbfeldern und fuenf Reglern beschaeftigt, statt zu entscheiden.
  *
- * Der Weg dazwischen: zwei Kataloge, frei kombinierbar. Acht Waende
- * und acht Boeden ergeben vierundsechzig Raeume, und der Haendler
+ * Der Weg dazwischen: zwei Kataloge, frei kombinierbar. Zwoelf
+ * Waende und zwoelf Boeden ergeben 144 Raeume, und der Haendler
  * trifft zwei Entscheidungen statt neun. Abgeschaut beim
  * Gecko-Konfigurator von Octopus, dessen Setup-Code "BD0089R1015"
  * genau dasselbe ausdrueckt: Wand plus Boden.
@@ -41,14 +41,16 @@ const F = G.schrift;
  * die Wahrheit; hier nur die Namen, weil sharp nicht ins Browser-Bundle
  * darf. */
 const WAENDE: [string, string][] = [
-  ['W01', 'Weiß, nahtlos'], ['W02', 'Weiß mit Decke'], ['W03', 'Hellgrau'],
-  ['W04', 'Mittelgrau'],    ['W05', 'Anthrazit'],      ['W06', 'Schwarz'],
-  ['W07', 'Warm, Nussbaum'],['W08', 'Blaugrau, kühl'],
+  ['W01', 'Weiß, nahtlos'],    ['W02', 'Weiß mit Decke'],  ['W03', 'Hellgrau'],
+  ['W04', 'Mittelgrau'],       ['W05', 'Anthrazit'],       ['W06', 'Schwarz'],
+  ['W07', 'Warm, Nussbaum'],   ['W08', 'Blaugrau, kühl'],  ['W09', 'Beton, roh'],
+  ['W10', 'Sandbeige'],        ['W11', 'Petrol, dunkel'],  ['W12', 'Weiß, hohe Decke'],
 ];
 const BOEDEN: [string, string][] = [
-  ['B01', 'Hell, matt'],    ['B02', 'Hell, glänzend'], ['B03', 'Grau, matt'],
-  ['B04', 'Grau, poliert'], ['B05', 'Beton, dunkel'],  ['B06', 'Asphalt'],
-  ['B07', 'Schwarz, Spiegel'], ['B08', 'Warm, Estrich'],
+  ['B01', 'Hell, matt'],       ['B02', 'Hell, glänzend'],  ['B03', 'Grau, matt'],
+  ['B04', 'Grau, poliert'],    ['B05', 'Beton, dunkel'],   ['B06', 'Asphalt'],
+  ['B07', 'Schwarz, Spiegel'], ['B08', 'Warm, Estrich'],   ['B09', 'Großfliesen hell'],
+  ['B10', 'Großfliesen grau'], ['B11', 'Industrieplatten'],['B12', 'Beton, hell rau'],
 ];
 
 const STANDARD_CODE = 'W02B02';
@@ -97,13 +99,26 @@ export default function RaumKonfigurator() {
   const setzeWand  = (w: string) => { setWand(w);  merken(w, boden); };
   const setzeBoden = (b: string) => { setBoden(b); merken(wand, b); };
 
-  /* Blaettern mit den Pfeilen — bezieht sich immer auf den offenen Reiter. */
-  const blaettern = (richtung: -1 | 1) => {
-    const liste = reiter === 'wand' ? WAENDE : BOEDEN;
-    const jetzt = reiter === 'wand' ? wand : boden;
+  /*
+   * Blaettern, getrennt fuer Wand und Boden.
+   *
+   * Vorher bezogen sich die Pfeile auf den gerade offenen Reiter. Das
+   * ist zwar sparsam, aber man muss erst wissen, welcher Reiter offen
+   * ist, um zu verstehen, was ein Pfeil tut. Zwei ausdrueckliche
+   * Zeilen sind laenger und dafuer eindeutig.
+   */
+  const blaettern = (teil: 'wand' | 'boden', richtung: -1 | 1) => {
+    const liste = teil === 'wand' ? WAENDE : BOEDEN;
+    const jetzt = teil === 'wand' ? wand : boden;
     const i = liste.findIndex(([id]) => id === jetzt);
     const neu = liste[(i + richtung + liste.length) % liste.length][0];
-    if (reiter === 'wand') setzeWand(neu); else setzeBoden(neu);
+    if (teil === 'wand') setzeWand(neu); else setzeBoden(neu);
+  };
+
+  const nameVon = (teil: 'wand' | 'boden') => {
+    const liste = teil === 'wand' ? WAENDE : BOEDEN;
+    const jetzt = teil === 'wand' ? wand : boden;
+    return liste.find(([id]) => id === jetzt)?.[1] ?? jetzt;
   };
 
   const zufall = () => {
@@ -176,8 +191,7 @@ export default function RaumKonfigurator() {
             )}
           </div>
           <p style={{ margin: '8px 0 0', color: G.buehneLeise, fontSize: 14.5, maxWidth: '70ch', lineHeight: 1.6 }}>
-            Wand und Boden werden getrennt gewählt und frei kombiniert — acht mal acht ergibt
-            64 Räume. Alle werden gerechnet und kosten nichts.
+            Wand und Boden werden getrennt gewählt und frei kombiniert — zwölf mal zwölf ergibt 144 Räume. Alle werden gerechnet und kosten nichts.
           </p>
         </header>
 
@@ -192,9 +206,9 @@ export default function RaumKonfigurator() {
                alt={`Raum ${code}`}
                style={{ width: '100%', display: 'block', aspectRatio: '3 / 2', objectFit: 'cover' }} />
 
-          <button onClick={() => blaettern(-1)} aria-label="Zurück"
+          <button onClick={() => blaettern('wand', -1)} aria-label="Vorherige Wand"
             style={{ ...pfeilStil, left: 14 }}><ChevronLeft size={20} /></button>
-          <button onClick={() => blaettern(1)} aria-label="Weiter"
+          <button onClick={() => blaettern('wand', 1)} aria-label="Nächste Wand"
             style={{ ...pfeilStil, right: 14 }}><ChevronRight size={20} /></button>
 
           <button onClick={() => setMitAuto(m => !m)}
@@ -207,6 +221,35 @@ export default function RaumKonfigurator() {
             {mitAuto ? <EyeOff size={13} /> : <Eye size={13} />}
             {mitAuto ? 'Fahrzeug ausblenden' : 'Fahrzeug zeigen'}
           </button>
+        </div>
+
+        {/* ── Blättern, getrennt für Wand und Boden ── */}
+        <div style={{
+          display: 'grid', gap: 10, marginBottom: 14,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        }}>
+          {(['wand', 'boden'] as const).map(teil => (
+            <div key={teil} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              border: `1px solid ${G.buehneLinie}44`, borderRadius: 10,
+              padding: '8px 10px', background: 'rgba(255,255,255,0.02)',
+            }}>
+              <button onClick={() => blaettern(teil, -1)} aria-label={`Vorherige ${teil}`}
+                style={kleinerPfeil}><ChevronLeft size={15} /></button>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+                <div style={{
+                  fontSize: 9.5, fontWeight: 700, letterSpacing: '.09em',
+                  textTransform: 'uppercase', color: G.buehneLeise,
+                }}>{teil === 'wand' ? 'Wand' : 'Boden'}</div>
+                <div style={{
+                  fontSize: 13, fontWeight: 600, color: G.buehneText,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>{nameVon(teil)}</div>
+              </div>
+              <button onClick={() => blaettern(teil, 1)} aria-label={`Nächste ${teil}`}
+                style={kleinerPfeil}><ChevronRight size={15} /></button>
+            </div>
+          ))}
         </div>
 
         {/* ── Code-Leiste ── */}
@@ -374,6 +417,12 @@ export default function RaumKonfigurator() {
     </div>
   );
 }
+
+const kleinerPfeil: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: 7, cursor: 'pointer', flexShrink: 0,
+  background: 'transparent', border: '1px solid rgba(255,255,255,0.14)',
+  color: '#c7cede', display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
 
 const pfeilStil: React.CSSProperties = {
   position: 'absolute', top: '50%', transform: 'translateY(-50%)',
