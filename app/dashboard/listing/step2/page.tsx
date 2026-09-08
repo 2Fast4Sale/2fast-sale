@@ -372,10 +372,41 @@ function Step2Inner() {
         ? localStorage.getItem('dealer_custom_background_url')
         : null;
 
-      const res = await fetch('/api/pixelcut', {
+      /*
+       * Seit dem Umstieg auf den eigenen Kompositor laeuft das ueber
+       * /api/studio-eigen/verarbeiten statt ueber /api/pixelcut.
+       *
+       * Der Unterschied ist der Tarif: Dort wurde PhotoRoom Plus
+       * benutzt (0,10 EUR je Bild, Hintergrund und Schatten inklusive),
+       * hier nur Basic zum Freistellen (0,02 EUR) und der Rest wird
+       * gerechnet. Bei zwoelf Bildern je Inserat sind das 1,20 EUR
+       * gegen 0,24 EUR.
+       *
+       * /api/pixelcut bleibt bestehen, damit sich beides vergleichen
+       * laesst — aber nichts faellt automatisch darauf zurueck. Ein
+       * stiller Rueckfall waere bequem und wuerde jedes Bild
+       * unbemerkt verfuenffachen.
+       */
+      const raumCode = typeof window !== 'undefined'
+        ? (localStorage.getItem('studio_raum_code') || 'W02B02')
+        : 'W02B02';
+
+      let studioWerte: Record<string, number> | undefined;
+      try {
+        const roh = localStorage.getItem('studio_einstellungen_v1');
+        if (roh) studioWerte = JSON.parse(roh)?.werte;
+      } catch { /* kaputter Eintrag darf die Verarbeitung nicht kippen */ }
+
+      const res = await fetch('/api/studio-eigen/verarbeiten', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: compressed, backgroundId, customBackgroundUrl, draftId: entwurfId() }),
+        body: JSON.stringify({
+          image: compressed,
+          draftId: entwurfId(),
+          code: raumCode,
+          hintergrundUrl: customBackgroundUrl || undefined,
+          kompositor: studioWerte,
+        }),
       });
       if (!res.ok) throw new Error('Verarbeitung fehlgeschlagen');
       const data = await res.json();

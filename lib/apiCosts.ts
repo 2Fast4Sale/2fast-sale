@@ -67,6 +67,17 @@ const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
  */
 const IMAGE_PRICES_EUR_PER_CALL: Record<string, number> = {
   photoroom: 0.10,
+  /*
+   * Nur Freistellen, ohne KI-Hintergrund und KI-Schatten: PhotoRoom
+   * Basic, 20 EUR fuer 1.000 Bilder.
+   *
+   * Eigener Eintrag und nicht derselbe wie oben, weil es sonst keine
+   * ehrliche Kostenrechnung gaebe: Seit Schritt 2 den eigenen
+   * Kompositor benutzt, wird nur noch freigestellt — mit dem
+   * Plus-Preis gebucht waere jedes Inserat funfmal zu teuer
+   * ausgewiesen.
+   */
+  photoroom_basic: 0.02,
 };
 
 /**
@@ -88,7 +99,7 @@ const VIN_PRICES_EUR_PER_CALL: Record<string, number> = {
 };
 
 export type CostService =
-  | 'anthropic' | 'removebg' | 'photoroom' | 'fal' | 'pixelcut' | 'piranha'
+  | 'anthropic' | 'removebg' | 'photoroom' | 'photoroom_basic' | 'fal' | 'pixelcut' | 'piranha'
   | 'dat';
 
 /**
