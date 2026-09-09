@@ -47,14 +47,10 @@ const WAENDE: [string, string][] = [
   ['W10', 'Sandbeige'],        ['W11', 'Petrol, dunkel'],  ['W12', 'Weiß, hohe Decke'],
 ];
 const BOEDEN: [string, string][] = [
-  ['B01', 'Hell, matt'],        ['B02', 'Hell, glänzend'],   ['B03', 'Grau, matt'],
-  ['B04', 'Grau, poliert'],     ['B05', 'Beton, dunkel'],    ['B06', 'Asphalt'],
-  ['B07', 'Schwarz, Spiegel'],  ['B08', 'Warm, Estrich'],    ['B09', 'Großfliesen hell'],
-  ['B10', 'Großfliesen grau'],  ['B11', 'Industrieplatten'], ['B12', 'Beton, hell rau'],
-  ['B13', 'Beton, poliert'],    ['B14', 'Terrazzo, hell'],   ['B15', 'Marmor, weiß'],
-  ['B16', 'Dielen, dunkel'],    ['B17', 'Geriffelt, dunkel'],['B18', 'Textil, grau'],
-  ['B19', 'Muster, geometrisch'],['B20', 'Travertin'],       ['B21', 'Flussstein'],
-  ['B22', 'Dielen, grau'],
+  ['B01', 'Beton, poliert'],  ['B02', 'Beton, rau'],      ['B03', 'Großfliesen'],
+  ['B04', 'Marmor'],          ['B05', 'Terrazzo'],        ['B06', 'Travertin'],
+  ['B07', 'Holz, dunkel'],    ['B08', 'Holz, grau'],      ['B09', 'Asphalt'],
+  ['B10', 'Teppich, grau'],   ['B11', 'Hell, glänzend'],  ['B12', 'Schwarz, Spiegel'],
 ];
 
 const STANDARD_CODE = 'W02B02';
@@ -195,7 +191,7 @@ export default function RaumKonfigurator() {
             )}
           </div>
           <p style={{ margin: '8px 0 0', color: G.buehneLeise, fontSize: 14.5, maxWidth: '70ch', lineHeight: 1.6 }}>
-            Wand und Boden werden getrennt gewählt und frei kombiniert — zwölf Wände mal 22 Böden ergibt 264 Räume. Alle werden gerechnet und kosten nichts.
+            Wand und Boden werden getrennt gewählt und frei kombiniert — zwölf mal zwölf ergibt 144 Räume. Alle werden gerechnet und kosten nichts.
           </p>
         </header>
 

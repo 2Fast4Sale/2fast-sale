@@ -18,7 +18,9 @@
  */
 
 import sharp from 'sharp';
-import { bodenMuster, type MusterId } from './bodenmuster';
+import { bodenTextur } from './bodentextur';
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 export interface StudioHintergrund {
   /** Wandfarbe oben, als Hex. */
@@ -75,10 +77,19 @@ export interface StudioHintergrund {
   bodenKoernung: number;
   /** Sichtbarkeit der Bodenfugen, 0 bis 1. 0 laesst sie weg. */
   bodenFugen: number;
-  /** Aufgezeichnetes Muster, in Perspektive. */
-  muster: MusterId;
-  /** Deckkraft des Musters, 0 bis 1. */
-  musterStaerke: number;
+  /**
+   * Dateiname der Materialkachel unter public/backgrounds/boden,
+   * oder null fuer eine reine Farbflaeche.
+   *
+   * Fotografiertes Material statt gezeichneter Muster: Fugen,
+   * Maserung und Splitter selbst zu zeichnen sah erkennbar
+   * konstruiert aus. Die Dateien stehen unter CC0, siehe HERKUNFT.md.
+   */
+  textur: string | null;
+  /** Wie oft die Kachel vorn ueber die Bildbreite passt. */
+  texturWiederholungen: number;
+  /** Deckkraft der Textur, 0 bis 1. */
+  texturStaerke: number;
 }
 
 export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrund> = {
@@ -89,7 +100,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.62, lichtStaerke: 0.22,
     decke: 0.13, strahler: 4, strahlerStaerke: 0.55, ecke: 0.30,
     randabfall: 0.42, bodenglanz: 0.30,
-    wandKorn: 0.055, bodenKorn: 0.06, bodenKoernung: 4, bodenFugen: 0, muster: 'keine', musterStaerke: 0,
+    wandKorn: 0.055, bodenKorn: 0.06, bodenKoernung: 4, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
   studio_hell: {
     name: 'Studio hell',
@@ -98,7 +109,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30,
     decke: 0.14, strahler: 5, strahlerStaerke: 0.85, ecke: 0.28,
     randabfall: 0.26, bodenglanz: 0.22,
-    wandKorn: 0.06, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0, muster: 'keine', musterStaerke: 0,
+    wandKorn: 0.06, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
   studio_grau: {
     name: 'Studio grau',
@@ -107,7 +118,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26,
     decke: 0.12, strahler: 4, strahlerStaerke: 0.70, ecke: 0.32,
     randabfall: 0.30, bodenglanz: 0.20,
-    wandKorn: 0.055, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0, muster: 'keine', musterStaerke: 0,
+    wandKorn: 0.055, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
   studio_warm: {
     name: 'Studio warm',
@@ -116,7 +127,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.46, lichtY: 0.33, lichtGroesse: 0.60, lichtStaerke: 0.24,
     decke: 0.13, strahler: 3, strahlerStaerke: 0.60, ecke: 0.34,
     randabfall: 0.40, bodenglanz: 0.26,
-    wandKorn: 0.10, bodenKorn: 0.13, bodenKoernung: 5, bodenFugen: 0, muster: 'keine', musterStaerke: 0,
+    wandKorn: 0.10, bodenKorn: 0.13, bodenKoernung: 5, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
 };
 
@@ -148,7 +159,8 @@ export type Wand = Pick<StudioHintergrund,
 /** Der Teil unterhalb des Horizonts. */
 export type Boden = Pick<StudioHintergrund,
   'bodenOben' | 'bodenUnten' | 'horizont' | 'bodenglanz' |
-  'bodenKorn' | 'bodenKoernung' | 'bodenFugen' | 'muster' | 'musterStaerke'
+  'bodenKorn' | 'bodenKoernung' | 'bodenFugen' |
+  'textur' | 'texturWiederholungen' | 'texturStaerke'
 > & { name: string };
 
 export const WAENDE: Record<string, Wand> = {
@@ -191,60 +203,42 @@ export const WAENDE: Record<string, Wand> = {
 };
 
 export const BOEDEN: Record<string, Boden> = {
-  B01: { name: 'Hell, matt',        bodenOben: '#dcdfe4', bodenUnten: '#c2c6cd', horizont: 0.74,
-         bodenglanz: 0.06, bodenKorn: 0.09, bodenKoernung: 3, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B02: { name: 'Hell, glänzend',    bodenOben: '#d3d7dd', bodenUnten: '#b3b8c0', horizont: 0.74,
-         bodenglanz: 0.26, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B03: { name: 'Grau, matt',        bodenOben: '#8d929a', bodenUnten: '#6d727a', horizont: 0.74,
-         bodenglanz: 0.08, bodenKorn: 0.11, bodenKoernung: 4, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B04: { name: 'Grau, poliert',     bodenOben: '#7f858e', bodenUnten: '#565c65', horizont: 0.74,
-         bodenglanz: 0.30, bodenKorn: 0.06, bodenKoernung: 3, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B05: { name: 'Beton, dunkel',     bodenOben: '#4a4f56', bodenUnten: '#2c3036', horizont: 0.74,
-         bodenglanz: 0.12, bodenKorn: 0.12, bodenKoernung: 6, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B06: { name: 'Asphalt',           bodenOben: '#33383e', bodenUnten: '#1c2024', horizont: 0.76,
-         bodenglanz: 0.10, bodenKorn: 0.11, bodenKoernung: 4, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B07: { name: 'Schwarz, Spiegel',  bodenOben: '#191d23', bodenUnten: '#07090c', horizont: 0.74,
-         bodenglanz: 0.34, bodenKorn: 0.04, bodenKoernung: 3, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B08: { name: 'Warm, Estrich',     bodenOben: '#3a322a', bodenUnten: '#1d1813', horizont: 0.74,
-         bodenglanz: 0.16, bodenKorn: 0.14, bodenKoernung: 5, bodenFugen: 0, muster: 'keine', musterStaerke: 0 },
-  B09: { name: 'Großfliesen hell',  bodenOben: '#d8dce1', bodenUnten: '#b7bcc4', horizont: 0.74,
-         bodenglanz: 0.20, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0.30, muster: 'keine', musterStaerke: 0 },
-  B10: { name: 'Großfliesen grau',  bodenOben: '#7b818a', bodenUnten: '#565b63', horizont: 0.74,
-         bodenglanz: 0.18, bodenKorn: 0.07, bodenKoernung: 3, bodenFugen: 0.34, muster: 'keine', musterStaerke: 0 },
-  B11: { name: 'Industrieplatten',  bodenOben: '#454b52', bodenUnten: '#272b31', horizont: 0.75,
-         bodenglanz: 0.14, bodenKorn: 0.11, bodenKoernung: 5, bodenFugen: 0.40, muster: 'keine', musterStaerke: 0 },
-  B12: { name: 'Beton, hell rau',   bodenOben: '#b6b3ac', bodenUnten: '#918d85', horizont: 0.74,
-         bodenglanz: 0.07, bodenKorn: 0.14, bodenKoernung: 7, bodenFugen: 0.16, muster: 'keine', musterStaerke: 0 },
-  B13: { name: 'Beton, poliert',    bodenOben: '#c9c6c1', bodenUnten: '#a8a5a0', horizont: 0.74,
-         bodenglanz: 0.30, bodenKorn: 0.10, bodenKoernung: 5, bodenFugen: 0,
-         muster: 'keine', musterStaerke: 0 },
-  B14: { name: 'Terrazzo, hell',    bodenOben: '#dedbd4', bodenUnten: '#c0bcb3', horizont: 0.74,
-         bodenglanz: 0.22, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0,
-         muster: 'terrazzo', musterStaerke: 0.85 },
-  B15: { name: 'Marmor, weiß',      bodenOben: '#eceae6', bodenUnten: '#d5d2cd', horizont: 0.74,
-         bodenglanz: 0.30, bodenKorn: 0.03, bodenKoernung: 3, bodenFugen: 0.10,
-         muster: 'marmor', musterStaerke: 0.9 },
-  B16: { name: 'Dielen, dunkel',    bodenOben: '#4a382a', bodenUnten: '#2a1e14', horizont: 0.74,
-         bodenglanz: 0.12, bodenKorn: 0.08, bodenKoernung: 4, bodenFugen: 0,
-         muster: 'diele_dunkel', musterStaerke: 0.95 },
-  B17: { name: 'Geriffelt, dunkel', bodenOben: '#33363b', bodenUnten: '#191b1e', horizont: 0.74,
-         bodenglanz: 0.14, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0,
-         muster: 'geriffelt', musterStaerke: 0.85 },
-  B18: { name: 'Textil, grau',      bodenOben: '#8b8b88', bodenUnten: '#6a6a67', horizont: 0.74,
-         bodenglanz: 0.02, bodenKorn: 0.12, bodenKoernung: 2, bodenFugen: 0,
-         muster: 'textil', musterStaerke: 0.9 },
-  B19: { name: 'Muster, geometrisch', bodenOben: '#b9bcc1', bodenUnten: '#94989e', horizont: 0.74,
-         bodenglanz: 0.14, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0,
-         muster: 'geometrisch', musterStaerke: 0.75 },
-  B20: { name: 'Travertin',         bodenOben: '#cfc6b7', bodenUnten: '#ab9f8d', horizont: 0.74,
-         bodenglanz: 0.10, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0,
-         muster: 'travertin', musterStaerke: 0.85 },
-  B21: { name: 'Flussstein',        bodenOben: '#a9a396', bodenUnten: '#837d71', horizont: 0.74,
-         bodenglanz: 0.06, bodenKorn: 0.14, bodenKoernung: 5, bodenFugen: 0,
-         muster: 'flussstein', musterStaerke: 0.9 },
-  B22: { name: 'Dielen, grau',      bodenOben: '#9a968f', bodenUnten: '#75716b', horizont: 0.74,
-         bodenglanz: 0.10, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0,
-         muster: 'diele_grau', musterStaerke: 0.9 },
+  B01: { name: 'Beton, poliert',   bodenOben: '#c9c6c1', bodenUnten: '#a8a5a0', horizont: 0.74,
+         bodenglanz: 0.26, bodenKorn: 0.04, bodenKoernung: 4, bodenFugen: 0,
+         textur: 'beton_poliert.jpg', texturWiederholungen: 3, texturStaerke: 0.80 },
+  B02: { name: 'Beton, rau',       bodenOben: '#b3b0aa', bodenUnten: '#8f8c86', horizont: 0.74,
+         bodenglanz: 0.08, bodenKorn: 0.05, bodenKoernung: 4, bodenFugen: 0,
+         textur: 'beton_rau.jpg', texturWiederholungen: 4, texturStaerke: 0.85 },
+  B03: { name: 'Großfliesen',      bodenOben: '#c4c7cb', bodenUnten: '#a2a5aa', horizont: 0.74,
+         bodenglanz: 0.20, bodenKorn: 0.03, bodenKoernung: 3, bodenFugen: 0,
+         textur: 'grossfliesen.jpg', texturWiederholungen: 3, texturStaerke: 0.85 },
+  B04: { name: 'Marmor',           bodenOben: '#e6e4e0', bodenUnten: '#cbc8c3', horizont: 0.74,
+         bodenglanz: 0.28, bodenKorn: 0.02, bodenKoernung: 3, bodenFugen: 0,
+         textur: 'marmor.jpg', texturWiederholungen: 2, texturStaerke: 0.88 },
+  B05: { name: 'Terrazzo',         bodenOben: '#dad7d0', bodenUnten: '#b9b6af', horizont: 0.74,
+         bodenglanz: 0.20, bodenKorn: 0.03, bodenKoernung: 3, bodenFugen: 0,
+         textur: 'terrazzo.jpg', texturWiederholungen: 3, texturStaerke: 0.88 },
+  B06: { name: 'Travertin',        bodenOben: '#cfc6b7', bodenUnten: '#ab9f8d', horizont: 0.74,
+         bodenglanz: 0.12, bodenKorn: 0.04, bodenKoernung: 4, bodenFugen: 0,
+         textur: 'travertin.jpg', texturWiederholungen: 3, texturStaerke: 0.85 },
+  B07: { name: 'Holz, dunkel',     bodenOben: '#5a4534', bodenUnten: '#38291d', horizont: 0.74,
+         bodenglanz: 0.14, bodenKorn: 0.04, bodenKoernung: 4, bodenFugen: 0,
+         textur: 'holz_dunkel.jpg', texturWiederholungen: 3, texturStaerke: 0.88 },
+  B08: { name: 'Holz, grau',       bodenOben: '#9c968d', bodenUnten: '#78736b', horizont: 0.74,
+         bodenglanz: 0.10, bodenKorn: 0.04, bodenKoernung: 4, bodenFugen: 0,
+         textur: 'holz_grau.jpg', texturWiederholungen: 3, texturStaerke: 0.88 },
+  B09: { name: 'Asphalt',          bodenOben: '#3a3f45', bodenUnten: '#20242a', horizont: 0.76,
+         bodenglanz: 0.10, bodenKorn: 0.06, bodenKoernung: 4, bodenFugen: 0,
+         textur: 'asphalt.jpg', texturWiederholungen: 5, texturStaerke: 0.85 },
+  B10: { name: 'Teppich, grau',    bodenOben: '#8b8b88', bodenUnten: '#6a6a67', horizont: 0.74,
+         bodenglanz: 0.02, bodenKorn: 0.04, bodenKoernung: 3, bodenFugen: 0,
+         textur: 'teppich.jpg', texturWiederholungen: 6, texturStaerke: 0.85 },
+  B11: { name: 'Hell, glänzend',   bodenOben: '#d3d7dd', bodenUnten: '#b3b8c0', horizont: 0.74,
+         bodenglanz: 0.30, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0,
+         textur: null, texturWiederholungen: 4, texturStaerke: 0 },
+  B12: { name: 'Schwarz, Spiegel', bodenOben: '#191d23', bodenUnten: '#07090c', horizont: 0.74,
+         bodenglanz: 0.34, bodenKorn: 0.04, bodenKoernung: 3, bodenFugen: 0,
+         textur: null, texturWiederholungen: 4, texturStaerke: 0 },
 };
 
 /**
@@ -460,7 +454,7 @@ export async function studioHintergrund(
   <rect x="${ex - 1}" width="2" height="${hY}" fill="#ffffff" opacity="0.05"/>`;
   })();
 
-  const svg = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">
+  const svgGanz = `<svg width="${breite}" height="${hoehe}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="wand" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%"   stop-color="${v.wandOben}"/>
@@ -504,8 +498,8 @@ export async function studioHintergrund(
   <rect y="${hY}" width="${breite}" height="${hoehe - hY}" fill="url(#boden)"/>
   <rect y="${hY - uebergang}" width="${breite}" height="${uebergang * 2}" fill="url(#kehle)"/>
 ${fugen(breite, hoehe, hY, v.bodenFugen)}
-${bodenMuster(v.muster, breite, hoehe, hY, v.musterStaerke)}
 ${eckeSvg}
+  <!-- TRENNUNG: alles darunter wird NACH der Bodentextur gezeichnet -->
 ${bodenreflexe}
   <rect width="${breite}" height="${hoehe}" fill="url(#licht)"/>
 ${deckeH > 0 ? `
@@ -516,6 +510,55 @@ ${deckeH > 0 ? `
 ${strahlerSvg}
   <rect width="${breite}" height="${hoehe}" fill="url(#rand)"/>
 </svg>`;
+
+
+  /*
+   * Zwei Durchgaenge statt einem.
+   *
+   * Die Bodentextur muss UNTER Licht, Spiegelungen und Randabfall
+   * liegen — sonst leuchtet sie gleichmaessig ueber den ganzen Boden
+   * und der Raum verliert seine Beleuchtung. Deshalb wird die
+   * Zeichnung an der Trennmarke aufgeteilt: erst Waende und
+   * Bodenfarbe, dann das Material, dann alles Leuchtende darueber.
+   */
+  const [teilUnten, teilOben] = svgGanz.split(
+    '  <!-- TRENNUNG: alles darunter wird NACH der Bodentextur gezeichnet -->',
+  );
+  const svgUnten = teilUnten + '</svg>';
+  const svgOben = svgGanz.slice(0, svgGanz.indexOf('</defs>') + 8) + teilOben;
+
+  /*
+   * Jede Ebene wird einzeln fertiggestellt, bevor die naechste kommt.
+   *
+   * sharp.composite() ist NICHT additiv: Ein zweiter Aufruf auf
+   * derselben Instanz ersetzt die Liste des ersten. Genau daran ist
+   * der erste Versuch gescheitert — die Bodentextur wurde eingereiht
+   * und dann vom Lichtaufsatz ueberschrieben, also nie gezeichnet. Im
+   * Bild war nur die Bodenfarbe zu sehen, und es sah aus, als taugte
+   * die Textur nichts.
+   */
+  let stand = await sharp(Buffer.from(svgUnten)).png().toBuffer();
+
+  if (v.textur) {
+    const pfad = join(process.cwd(), 'public', 'backgrounds', 'boden', v.textur);
+    if (existsSync(pfad)) {
+      const flaeche = await bodenTextur(readFileSync(pfad), breite, hoehe, hY, {
+        wiederholungen: v.texturWiederholungen,
+        staerke: v.texturStaerke,
+        dunst: 0.35,
+      });
+      if (flaeche) {
+        stand = await sharp(stand).composite([{ input: flaeche }]).png().toBuffer();
+      }
+    } else {
+      // Fehlende Datei darf kein Fehler sein — dann eben ohne Material.
+      console.warn('[hintergrund] Bodentextur fehlt:', v.textur);
+    }
+  }
+
+  stand = await sharp(stand).composite([{ input: Buffer.from(svgOben) }]).png().toBuffer();
+  const bild = sharp(stand);
+
 
   /*
    * Korn zuletzt, in zwei Ebenen: eine feine ueber das ganze Bild fuer
@@ -571,8 +614,7 @@ ${strahlerSvg}
     });
   }
 
-  const gezeichnet = sharp(Buffer.from(svg));
-  const fertig = ebenen.length ? gezeichnet.composite(ebenen) : gezeichnet;
+  const fertig = ebenen.length ? bild.composite(ebenen) : bild;
 
   return fertig.jpeg({ quality: 92, chromaSubsampling: '4:4:4' }).toBuffer();
 }
