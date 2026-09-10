@@ -18,7 +18,7 @@
  */
 
 import sharp from 'sharp';
-import { bodenTextur } from './bodentextur';
+import { bodenTextur, wandTextur } from './bodentextur';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -71,6 +71,23 @@ export interface StudioHintergrund {
 
   /** Korn der Wand, 0 bis 1. Ohne Korn wirkt sie wie Vektorgrafik. */
   wandKorn: number;
+  /*
+   * Materialkachel fuer die Wand. Optional, und das mit Absicht.
+   *
+   * Der Ansatz, Wand und Boden aus Kacheln zusammenzurechnen, wird durch
+   * tools/raum_render.py abgeloest: Blender legt Material und Perspektive
+   * richtig, ohne dass hier eine projektive Verzerrung nachgebaut werden
+   * muss, die sharp gar nicht kann. Die zwoelf Waende W01 bis W12 sind
+   * noch die alten Verlaeufe und kennen diese drei Felder nicht — sie als
+   * Pflicht zu fuehren hiesse, zwoelf Eintraege fuer einen Weg zu
+   * ergaenzen, den wir gerade verlassen.
+   */
+  /** Materialkachel unter public/backgrounds/wand, oder null. */
+  wandTexturDatei?: string | null;
+  /** Wie oft die Wandkachel ueber die Bildbreite passt. */
+  wandTexturWiederholungen?: number;
+  /** Deckkraft der Wandtextur, 0 bis 1. */
+  wandTexturStaerke?: number;
   /** Korn des Bodens, 0 bis 1. */
   bodenKorn: number;
   /** Groesse des Bodenkorns in Pixeln. Gross = grober Beton. */
@@ -100,7 +117,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.34, lichtGroesse: 0.62, lichtStaerke: 0.22,
     decke: 0.13, strahler: 4, strahlerStaerke: 0.55, ecke: 0.30,
     randabfall: 0.42, bodenglanz: 0.30,
-    wandKorn: 0.055, bodenKorn: 0.06, bodenKoernung: 4, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
+    wandTexturDatei: null, wandTexturWiederholungen: 3, wandTexturStaerke: 0, wandKorn: 0.055, bodenKorn: 0.06, bodenKoernung: 4, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
   studio_hell: {
     name: 'Studio hell',
@@ -109,7 +126,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.30, lichtGroesse: 0.66, lichtStaerke: 0.30,
     decke: 0.14, strahler: 5, strahlerStaerke: 0.85, ecke: 0.28,
     randabfall: 0.26, bodenglanz: 0.22,
-    wandKorn: 0.06, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
+    wandTexturDatei: null, wandTexturWiederholungen: 3, wandTexturStaerke: 0, wandKorn: 0.06, bodenKorn: 0.05, bodenKoernung: 3, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
   studio_grau: {
     name: 'Studio grau',
@@ -118,7 +135,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.5, lichtY: 0.32, lichtGroesse: 0.64, lichtStaerke: 0.26,
     decke: 0.12, strahler: 4, strahlerStaerke: 0.70, ecke: 0.32,
     randabfall: 0.30, bodenglanz: 0.20,
-    wandKorn: 0.055, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
+    wandTexturDatei: null, wandTexturWiederholungen: 3, wandTexturStaerke: 0, wandKorn: 0.055, bodenKorn: 0.10, bodenKoernung: 4, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
   studio_warm: {
     name: 'Studio warm',
@@ -127,7 +144,7 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
     horizont: 0.74, lichtX: 0.46, lichtY: 0.33, lichtGroesse: 0.60, lichtStaerke: 0.24,
     decke: 0.13, strahler: 3, strahlerStaerke: 0.60, ecke: 0.34,
     randabfall: 0.40, bodenglanz: 0.26,
-    wandKorn: 0.10, bodenKorn: 0.13, bodenKoernung: 5, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
+    wandTexturDatei: null, wandTexturWiederholungen: 3, wandTexturStaerke: 0, wandKorn: 0.10, bodenKorn: 0.13, bodenKoernung: 5, bodenFugen: 0, textur: null, texturWiederholungen: 4, texturStaerke: 0,
   },
 };
 
@@ -153,7 +170,8 @@ export const STUDIO_VORLAGEN: Record<string, { name: string } & StudioHintergrun
 /** Der Teil eines Raums oberhalb des Horizonts. */
 export type Wand = Pick<StudioHintergrund,
   'wandOben' | 'wandUnten' | 'decke' | 'strahler' | 'strahlerStaerke' |
-  'ecke' | 'lichtX' | 'lichtY' | 'lichtGroesse' | 'lichtStaerke' | 'randabfall' | 'wandKorn'
+  'ecke' | 'lichtX' | 'lichtY' | 'lichtGroesse' | 'lichtStaerke' | 'randabfall' | 'wandKorn' |
+  'wandTexturDatei' | 'wandTexturWiederholungen' | 'wandTexturStaerke'
 > & { name: string };
 
 /** Der Teil unterhalb des Horizonts. */
@@ -538,6 +556,21 @@ ${strahlerSvg}
    * die Textur nichts.
    */
   let stand = await sharp(Buffer.from(svgUnten)).png().toBuffer();
+
+  if (v.wandTexturDatei) {
+    const wandPfad = join(process.cwd(), 'public', 'backgrounds', 'wand', v.wandTexturDatei);
+    if (existsSync(wandPfad)) {
+      const wandFlaeche = await wandTextur(
+        readFileSync(wandPfad), breite, hY,
+        v.wandTexturStaerke ?? 0, v.wandTexturWiederholungen ?? 3,
+      );
+      if (wandFlaeche) {
+        stand = await sharp(stand).composite([{ input: wandFlaeche, top: 0, left: 0 }]).png().toBuffer();
+      }
+    } else {
+      console.warn('[hintergrund] Wandtextur fehlt:', v.wandTexturDatei);
+    }
+  }
 
   if (v.textur) {
     const pfad = join(process.cwd(), 'public', 'backgrounds', 'boden', v.textur);

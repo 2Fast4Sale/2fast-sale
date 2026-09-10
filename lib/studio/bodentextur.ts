@@ -151,3 +151,55 @@ export async function bodenTextur(
     .png()
     .toBuffer();
 }
+
+/**
+ * Legt eine Materialkachel auf die Wand.
+ *
+ * Viel einfacher als der Boden: Eine Wand steht frontal zur Kamera,
+ * da gibt es keine Flucht und nichts zu verzerren — die Kachel wird
+ * schlicht wiederholt. Die ganze Baender-Rechnerei von oben faellt
+ * weg.
+ *
+ * Eine Kleinigkeit ist trotzdem noetig: Nach unten hin wird die
+ * Struktur schwaecher. Am Uebergang zum Boden liegt die Hohlkehle,
+ * und dort duerfte eine Ziegelwand nicht mit voller Schaerfe stehen —
+ * sonst schneidet sie die Kehle durch und der Raum knickt.
+ */
+export async function wandTextur(
+  kachel: Buffer,
+  breite: number,
+  hY: number,
+  staerke: number,
+  wiederholungen: number,
+): Promise<Buffer | null> {
+  if (hY < 8 || staerke <= 0) return null;
+
+  const kachelBreite = Math.max(32, Math.round(breite / Math.max(1, wiederholungen)));
+  const klein = await sharp(kachel)
+    .resize(kachelBreite, kachelBreite, { fit: 'cover' })
+    .toBuffer();
+
+  const gekachelt = await sharp({
+    create: { width: breite, height: hY, channels: 3, background: '#808080' },
+  })
+    .composite([{ input: klein, tile: true }])
+    .png()
+    .toBuffer();
+
+  // Ausblenden zur Kehle hin.
+  const verlauf = Buffer.from(
+    `<svg width="${breite}" height="${hY}">
+       <defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1">
+         <stop offset="0%"  stop-color="#fff" stop-opacity="${Math.max(0, Math.min(1, staerke)).toFixed(3)}"/>
+         <stop offset="82%" stop-color="#fff" stop-opacity="${(staerke * 0.9).toFixed(3)}"/>
+         <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+       </linearGradient></defs>
+       <rect width="${breite}" height="${hY}" fill="url(#a)"/>
+     </svg>`,
+  );
+
+  return sharp(gekachelt)
+    .composite([{ input: await sharp(verlauf).png().toBuffer(), blend: 'dest-in' }])
+    .png()
+    .toBuffer();
+}

@@ -391,6 +391,20 @@ function Step2Inner() {
         ? (localStorage.getItem('studio_raum_code') || 'W02B02')
         : 'W02B02';
 
+      /*
+       * Der gerenderte Studioraum. Er loest die gerechneten Verlaeufe
+       * ab: Wand, Ecke, Sockelleiste und Boden kommen aus Blender
+       * (tools/raum_render.py), mit echtem Material statt Farbverlauf.
+       *
+       * Wichtiger als das Aussehen sind die Kameradaten, die daneben in
+       * einer .json liegen. Der Kompositor rechnet den Bodenschatten
+       * damit in Metern auf der Bodenebene, statt ihn im Bild zu
+       * schaetzen — und das geht nur, wenn er weiss, WELCHER Raum es ist.
+       */
+      const raumName = typeof window !== 'undefined'
+        ? (localStorage.getItem('studio_raum') || 'weiss_beton')
+        : 'weiss_beton';
+
       let studioWerte: Record<string, number> | undefined;
       try {
         const roh = localStorage.getItem('studio_einstellungen_v1');
@@ -404,6 +418,7 @@ function Step2Inner() {
           image: compressed,
           draftId: entwurfId(),
           code: raumCode,
+          raum: raumName,
           hintergrundUrl: customBackgroundUrl || undefined,
           kompositor: studioWerte,
         }),

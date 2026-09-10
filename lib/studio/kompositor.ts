@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Setzt ein freigestelltes Fahrzeug in einen Hintergrund.
  *
  * Das ist der Teil, den PhotoRoom "AI Backgrounds" und "AI Shadows"
@@ -6,11 +6,11 @@
  * (0,10 EUR) je Bild ausmacht. Hier laeuft er lokal und kostet nichts.
  *
  * Voraussetzung ist ein bereits freigestelltes Bild mit Alphakanal.
- * Das Freistellen selbst passiert nicht hier — dafuer braucht es ein
+ * Das Freistellen selbst passiert nicht hier â€” dafuer braucht es ein
  * trainiertes Modell, und das ist der einzige Schritt, der weiterhin
  * eingekauft wird.
  *
- * ── Was hier passiert, in dieser Reihenfolge ──
+ * â”€â”€ Was hier passiert, in dieser Reihenfolge â”€â”€
  *
  *   1. Fahrzeug zuschneiden und auf Zielgroesse skalieren
  *   2. Bodenschatten aus der Silhouette erzeugen
@@ -21,12 +21,12 @@
  * Schritt 5 ist der, an dem der erste Versuch dieses Projekts
  * gescheitert ist: Ohne Angleichung sieht das Fahrzeug aufgeklebt aus,
  * weil es das Licht seiner alten Umgebung mitbringt. Der Megane-Test
- * hat das gezeigt — im schwarzen Lack spiegelten sich noch die Baeume
+ * hat das gezeigt â€” im schwarzen Lack spiegelten sich noch die Baeume
  * vom Feldweg, waehrend das Auto angeblich in einer Halle stand.
  *
  * Ehrlich dazu: Diese Angleichung ist eine Rechnung, kein Modell. Sie
  * kann Helligkeit und Farbstich verschieben. Spiegelungen im Lack
- * bekommt sie nicht weg — das kann auch PhotoRoom nicht.
+ * bekommt sie nicht weg â€” das kann auch PhotoRoom nicht.
  */
 
 import sharp from 'sharp';
@@ -48,6 +48,54 @@ export interface KompositorEinstellungen {
   /** Seitlicher Versatz des Schattens als Anteil der Fahrzeugbreite. */
   schattenVersatz: number;
 
+  /**
+   * Deckkraft des Kontaktschattens, 0 bis 1.
+   *
+   * Der grosse, weiche Schatten oben gibt dem Fahrzeug Gewicht, aber er
+   * nagelt es nicht fest. Im Urus-Test stand der Wagen dadurch einen
+   * Fingerbreit ueber dem Boden: Unter den Reifen war fast nichts Dunkles.
+   *
+   * Dort, wo Gummi den Beton beruehrt, kommt aber gar kein Licht mehr hin.
+   * Dieser zweite Schatten ist deshalb schmal, dunkel und kaum
+   * weichgezeichnet â€” er zeichnet nur die Aufstandsflaeche nach.
+   */
+  kontaktStaerke: number;
+  /** Hoehe des Kontaktschattens als Anteil der Fahrzeughoehe. */
+  kontaktHoehe: number;
+
+  /**
+   * Schraege des Schattens: waagerechter Versatz je Pixel Abstand.
+   *
+   * 0 laesst den Schatten senkrecht unter dem Fahrzeug haengen. Das war
+   * die erste Fassung, und es sah aus wie ein Aufkleber — ein Schatten
+   * ohne Lichtrichtung kommt in der Wirklichkeit nicht vor.
+   */
+  lichtNeigung: number;
+
+  /**
+   * Lage des Horizonts, als Anteil der Bildhoehe.
+   *
+   * Das ist die Zahl, mit der aus einer flachen Rechnung eine
+   * raeumliche wird: Auf einer Bodenebene haengen Tiefe und Bildzeile
+   * fest zusammen. Ein Punkt in Zeile y liegt in der Entfernung
+   * 1 / (y - Horizont); je naeher an der Horizontlinie, desto weiter
+   * weg. Damit laesst sich ein Schatten in Bodenkoordinaten zeichnen
+   * und richtig verzerrt ins Bild bringen, statt ihn im Bild zu
+   * schaetzen.
+   *
+   * tools/raum_render.py schreibt den Wert neben jedes Hallenbild.
+   */
+  horizont: number;
+  /** Kamerahoehe in Metern. Steht in der .json des Raums. */
+  kameraHoehe: number;
+  /** Brennweite in Millimetern, Kleinbild. Steht ebenfalls dort. */
+  brennweite: number;
+  /**
+   * Wie viel dunkler die Aufstandsflaeche der Reifen wird, als Faktor.
+   * 0,8 bedeutet dort 80 Prozent mehr Deckkraft als daneben.
+   */
+  kernBoost: number;
+
   /** Deckkraft der Bodenspiegelung, 0 bis 1. 0 schaltet sie ab. */
   spiegelungStaerke: number;
   /** Wie weit die Spiegelung nach unten reicht, als Anteil der Fahrzeughoehe. */
@@ -61,15 +109,51 @@ export interface KompositorEinstellungen {
 }
 
 export const STANDARD: KompositorEinstellungen = {
-  breitenanteil:     0.82,
-  bodenabstand:      0.10,
+  /*
+   * 0,60 und nicht mehr 0,82.
+   *
+   * Bei 0,82 fuellte der Urus das Bild bis an beide Raender â€” der Raum,
+   * den wir extra rendern, war kaum noch zu sehen, und der Wagen wirkte
+   * hingestellt statt aufgenommen. Mit Boden davor sitzt er sofort
+   * richtig.
+   */
+  breitenanteil:     0.60,
+  bodenabstand:      0.16,
   ausrichtung:       0.50,
-  schattenStaerke:   0.55,
+  /*
+   * Gemessen am Originalfoto: Der Boden unter dem Wagen ist auf etwa ein
+   * Fuenftel der offenen Flaeche abgedunkelt. Mit "multiply" heisst das
+   * eine Deckkraft um 0,8 — hier stand vorher 0,50, und deshalb sah der
+   * Schatten aus wie ein grauer Hauch statt wie Schatten.
+   */
+  schattenStaerke:   0.78,
   schattenWeichheit: 26,
-  schattenHoehe:     0.10,
-  schattenVersatz:   0.02,
-  spiegelungStaerke: 0.22,
-  spiegelungLaenge:  0.35,
+  /*
+   * Klein, nicht gross.
+   *
+   * Im Originalfoto ist der Boden direkt vor dem Vorderrad wieder hell —
+   * bei diffusem Licht von oben reicht der Schatten kaum ueber die
+   * Aufstandsflaeche hinaus. Hier standen 0,10 und spaeter 0,075, und
+   * damit lag ein breites dunkles Band bis weit vor das Fahrzeug. Auf
+   * Weiss sah das noch passabel aus, auf dem Betonboden wie ein
+   * hingelegtes Brett.
+   */
+  schattenHoehe:     0.032,
+  schattenVersatz:   0.01,
+  kontaktStaerke:    0.92,
+  kontaktHoehe:      0.022,
+  lichtNeigung:      0.28,
+  kernBoost:         0.85,
+  horizont:          0.45,
+  kameraHoehe:       1.55,
+  brennweite:        55,
+  /*
+   * Zurueckhaltend, weil der Standardboden matter Beton ist. Wer einen
+   * polierten Boden rendert, hebt den Wert ueber die .json des Raums an
+   * â€” siehe tools/raum_render.py. Bei 0,22 sah der Beton aus wie nass.
+   */
+  spiegelungStaerke: 0.08,
+  spiegelungLaenge:  0.30,
   angleichung:       0.45,
 };
 
@@ -77,7 +161,7 @@ export interface Ergebnis {
   bild: Buffer;
   breite: number;
   hoehe: number;
-  /** Was der Kompositor gemessen hat — fuer die Einstellungsseite. */
+  /** Was der Kompositor gemessen hat â€” fuer die Einstellungsseite. */
   messwerte: {
     fahrzeugBreite: number;
     fahrzeugHoehe: number;
@@ -85,6 +169,85 @@ export interface Ergebnis {
     helligkeitFahrzeug: number;
     helligkeitHintergrund: number;
   };
+}
+
+/**
+ * Behaelt nur das groesste zusammenhaengende Objekt und loescht den Rest.
+ *
+ * Die Freistellung liefert alles, was das Modell fuer Vordergrund haelt â€”
+ * nicht nur das Fahrzeug. Im Test mit dem Sandbox-Bild kam ein weisser
+ * Kreis mit, der frei an der Hallenwand schwebte. Beim Kundenfoto ist das
+ * kein Kreis: Da ist es der zweite Wagen daneben, ein Werbeschild oder
+ * eine Person. Beides landet sonst im Inserat, fuer das der Haendler
+ * 3,50 EUR bezahlt hat.
+ *
+ * Der zweite Schaden ist unsichtbarer und wiegt schwerer. Der Rahmen um
+ * alles Freigestellte bestimmt Groesse und Standlinie des Fahrzeugs.
+ * Ein Fremdteil oben im Bild zieht diesen Rahmen nach oben, das Fahrzeug
+ * rutscht darin nach unten â€” und der Schatten landet zweihundert Pixel
+ * unter den Raedern. Genau so war es im Test zu sehen.
+ *
+ * Ein Auto ist immer EIN Stueck. Was nicht daran haengt, gehoert nicht
+ * dazu. Mehr Annahme steckt hier nicht drin.
+ *
+ * Gezaehlt wird ueber eine Flutfuellung mit eigenem Stapel, nicht
+ * rekursiv: Ein Fahrzeug auf einem 2000er Bild hat leicht eine Million
+ * Pixel, und so viele verschachtelte Aufrufe sprengen den Aufrufstapel.
+ */
+async function nurGroesstesObjekt(freigestellt: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(freigestellt)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { width: b, height: h, channels: k } = info;
+  const n = b * h;
+
+  // 0 = Hintergrund, sonst die Nummer des Objekts.
+  const marke = new Int32Array(n);
+  const stapel = new Int32Array(n);
+  let naechste = 0;
+  let besteMarke = 0;
+  let besteGroesse = 0;
+
+  for (let start = 0; start < n; start++) {
+    if (marke[start] !== 0 || data[start * k + 3] <= 8) continue;
+
+    naechste++;
+    let groesse = 0;
+    let oben = 0;
+    stapel[oben++] = start;
+    marke[start] = naechste;
+
+    while (oben > 0) {
+      const p = stapel[--oben];
+      groesse++;
+      const x = p % b;
+      const y = (p - x) / b;
+
+      // Vierer-Nachbarschaft. Diagonale Verbindungen wuerden ueber
+      // einzelne Rauschpixel Objekte zusammenkleben, die nichts
+      // miteinander zu tun haben.
+      if (x > 0)     { const q = p - 1; if (marke[q] === 0 && data[q * k + 3] > 8) { marke[q] = naechste; stapel[oben++] = q; } }
+      if (x < b - 1) { const q = p + 1; if (marke[q] === 0 && data[q * k + 3] > 8) { marke[q] = naechste; stapel[oben++] = q; } }
+      if (y > 0)     { const q = p - b; if (marke[q] === 0 && data[q * k + 3] > 8) { marke[q] = naechste; stapel[oben++] = q; } }
+      if (y < h - 1) { const q = p + b; if (marke[q] === 0 && data[q * k + 3] > 8) { marke[q] = naechste; stapel[oben++] = q; } }
+    }
+
+    if (groesse > besteGroesse) { besteGroesse = groesse; besteMarke = naechste; }
+  }
+
+  if (besteMarke === 0) throw new Error('Freigestelltes Bild ist vollstaendig leer');
+  // Nur ein Objekt gefunden: nichts zu tun, das Bild unveraendert lassen.
+  if (naechste === 1) return freigestellt;
+
+  for (let p = 0; p < n; p++) {
+    if (marke[p] !== besteMarke) data[p * k + 3] = 0;
+  }
+
+  return sharp(data, { raw: { width: b, height: h, channels: k as 4 } })
+    .png()
+    .toBuffer();
 }
 
 /**
@@ -142,114 +305,205 @@ async function mittlereHelligkeit(bild: Buffer, nurSichtbare = false): Promise<n
 }
 
 /**
- * Erzeugt den Bodenschatten aus der Silhouette des Fahrzeugs.
+ * Der Bodenschatten, in Bodenkoordinaten gerechnet.
  *
- * Kein trainiertes Modell, sondern eine Projektion: Die Silhouette
- * wird flachgedrueckt, weichgezeichnet und unter das Fahrzeug gelegt.
- * Das ergibt einen glaubwuerdigen Kontaktschatten, solange das
- * Fahrzeug von der Seite oder leicht schraeg aufgenommen ist.
+ * ── Warum noch eine Fassung ────────────────────────────────────────
  *
- * Bei einer Aufnahme steil von oben stimmt die Projektion nicht — dann
- * liegt der Schatten falsch, und das faellt auf. Genau deshalb ist die
- * gefuehrte Aufnahme kein Beiwerk.
+ * Die Fassungen davor haben im Bild gerechnet: Unterkante der
+ * Silhouette suchen, etwas nach unten versetzen, weichzeichnen. Damit
+ * laesst sich vieles einstellen und nichts richtig machen. Jeder Regler
+ * hat einen Fehler gegen einen anderen getauscht — dunkler ergab ein
+ * Brett, weicher ergab einen schwebenden Wagen.
+ *
+ * Der Grund ist, dass ein Schatten nicht im Bild liegt, sondern auf dem
+ * Boden. Und die Bodenebene ist bekannt: Auf ihr gehoert zu jeder
+ * Bildzeile y genau eine Entfernung,
+ *
+ *     Tiefe(y) = 1 / (y - Horizont)
+ *
+ * und eine seitliche Massstabszahl (y - Horizont). Mehr braucht es
+ * nicht. Der Schatten wird als Flaeche in echten Bodenkoordinaten
+ * beschrieben — eine Ellipse unter dem Fahrzeug, zwei dunkle Kerne an
+ * den Radaufstandsflaechen — und beim Zeichnen wird fuer jedes Pixel
+ * zurueckgerechnet, wo auf dem Boden es liegt.
+ *
+ * Die Perspektive kommt damit von allein: Der Schatten wird zum
+ * Betrachter hin breit und lang und staucht sich nach hinten zusammen,
+ * ohne dass irgendwo ein Verzerrungsfaktor eingestellt wird.
+ *
+ * Der Horizont steht in der .json neben jedem Hallenbild — genau
+ * deshalb rendern wir die Raeume selbst.
  */
-async function schattenBauen(
+async function bodenschattenProjiziert(
   fahrzeug: Buffer,
-  breite: number,
-  hoehe: number,
+  fBreite: number,
+  fHoehe: number,
+  fahrzeugX: number,
+  fahrzeugY: number,
+  zielBreite: number,
+  zielHoehe: number,
   e: KompositorEinstellungen,
-): Promise<{ bild: Buffer; breite: number; hoehe: number }> {
-  const schattenHoehe = Math.max(4, Math.round(hoehe * e.schattenHoehe));
+): Promise<Buffer | null> {
+  if (e.schattenStaerke <= 0) return null;
+
+  const alpha = await sharp(fahrzeug).ensureAlpha().extractChannel(3).raw().toBuffer();
+
+  /* ── 1. Wo beruehrt das Fahrzeug den Boden ── */
+  const unten = new Int32Array(fBreite).fill(-1);
+  for (let x = 0; x < fBreite; x++) {
+    for (let y = fHoehe - 1; y >= 0; y--) {
+      if (alpha[y * fBreite + x] > 8) { unten[x] = y; break; }
+    }
+  }
+
+  let xVon = -1, xBis = -1, radA = -1, radB = -1;
+  for (let x = 0; x < fBreite; x++) {
+    if (unten[x] < 0) continue;
+    if (xVon < 0) xVon = x;
+    xBis = x;
+    // Die tiefste Stelle je Fahrzeughaelfte ist die Radaufstandsflaeche.
+    if (x < fBreite / 2) { if (radA < 0 || unten[x] > unten[radA]) radA = x; }
+    else                 { if (radB < 0 || unten[x] > unten[radB]) radB = x; }
+  }
+  if (xVon < 0 || radA < 0 || radB < 0) return null;
+
+  // Alles ab hier in Bildkoordinaten des fertigen Bildes.
+  const hY = zielHoehe * e.horizont;
+  const radAx = fahrzeugX + radA, radAy = fahrzeugY + unten[radA];
+  const radBx = fahrzeugX + radB, radBy = fahrzeugY + unten[radB];
 
   /*
-   * Nur das untere Viertel der Silhouette.
+   * Umrechnung Bild → Boden, in METERN.
    *
-   * Der erste Versuch quetschte die GANZE Silhouette flach. Damit ging
-   * auch das Dach in den Schatten ein, und heraus kam ein ueber die
-   * volle Laenge gleich dunkler Balken mit harten Enden — im Test
-   * deutlich als Fremdkoerper zu sehen.
+   * Der erste Anlauf hat hier zwei verschiedene Groessen in dieselbe
+   * Ellipse gesteckt: seitlich einen Winkel (x geteilt durch den
+   * Horizontabstand), in der Tiefe einen Kehrwert. Die sind nicht
+   * vergleichbar — der Ersatzwert fuer die Tiefe geriet dadurch
+   * zweihundertfach zu gross, und heraus kam ein schwarzer Kegel ueber
+   * den halben Boden.
    *
-   * Ein Kontaktschatten entsteht aber dort, wo das Fahrzeug den Boden
-   * beruehrt: an den Raedern und am Unterboden. Deshalb zaehlt hier nur
-   * der untere Teil.
+   * Mit einer Brennweite in Pixeln wird beides eine Laenge:
+   *
+   *     Tiefe Z = Kamerahoehe · f / (y - Horizont)
+   *     Seite X = (x - Bildmitte) · Kamerahoehe / (y - Horizont)
+   *
+   * Damit ist ein Auto 2,0 m breit und 5,1 m lang statt 1,31 "Einheiten",
+   * und man kann die Zahlen gegen die Wirklichkeit pruefen.
    */
-  const bandHoehe = Math.max(2, Math.round(hoehe * 0.25));
-  const band = await sharp(fahrzeug)
-    .ensureAlpha()
-    .extractChannel(3)
-    .extract({ left: 0, top: hoehe - bandHoehe, width: breite, height: bandHoehe })
-    .toBuffer();
+  const kMin = Math.max(4, zielHoehe * 0.01);
+  const fPx = (e.brennweite / 36) * zielBreite;   // Kleinbild, 36 mm breit
+  const abstand = (y: number) => Math.max(kMin, y - hY);
+  const tiefeVon = (y: number) => e.kameraHoehe * fPx / abstand(y);
+  const seiteVon = (x: number, y: number) =>
+    (x - zielBreite / 2) * e.kameraHoehe / abstand(y);
+
+  /* ── 2. Die Schattenflaeche in Bodenkoordinaten ── */
+  const mitteX = fahrzeugX + (xVon + xBis) / 2;
+  const mitteY = (radAy + radBy) / 2;
+  const u0 = seiteVon(mitteX, mitteY);
+  const t0 = tiefeVon(mitteY);
 
   /*
-   * Seitlicher Auslauf. Ohne ihn endet der Schatten senkrecht an der
-   * Fahrzeugkante, was es wie ein aufgeklebtes Rechteck aussehen laesst.
-   */
-  /*
-   * Der Verlauf muss DECKEND sein, ohne Alphakanal.
+   * Halbe Breite: aus der Fahrzeugbreite an der Standlinie, aber etwas
+   * schmaler.
    *
-   * Zuerst stand hier stop-opacity="0" an den Enden. Das war genau
-   * falsch herum: Bei blend "multiply" laesst sharp den Untergrund
-   * dort, wo die aufgelegte Ebene durchsichtig ist, UNVERAENDERT. Der
-   * Schatten lief also nicht aus, sondern blieb an den Enden voll
-   * stehen — im Test ein schwarzer Balken mit senkrechten Kanten.
-   *
-   * Deckendes Schwarz an den Enden multipliziert dagegen auf null.
+   * Der Schatten darf seitlich kaum unter dem Fahrzeug hervorschauen.
+   * Auf die volle Breite gezogen entsteht ein dunkles Kissen, das links
+   * und rechts sichtbar uebersteht — im Vergleich mit PhotoRoom war das
+   * der auffaelligste Rest.
    */
-  const auslauf = Buffer.from(
-    `<svg width="${breite}" height="${schattenHoehe}">
-       <defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="0">
-         <stop offset="0%"   stop-color="#000"/>
-         <stop offset="22%"  stop-color="#fff"/>
-         <stop offset="78%"  stop-color="#fff"/>
-         <stop offset="100%" stop-color="#000"/>
-       </linearGradient></defs>
-       <rect width="${breite}" height="${schattenHoehe}" fill="url(#a)"/>
-     </svg>`,
-  );
+  const uHalb = 0.92 * Math.abs(
+    seiteVon(fahrzeugX + xBis, mitteY) - seiteVon(fahrzeugX + xVon, mitteY),
+  ) / 2;
 
   /*
-   * Maske als ROHE Graustufen, ein Kanal. Die Deckkraft wird gleich
-   * hier eingerechnet (linear), nicht spaeter ueber eine zweite Ebene.
+   * Halbe Tiefe: aus dem Abstand der beiden Radaufstandsflaechen. Beim
+   * 3/4-Winkel stehen sie unterschiedlich weit weg, das ergibt die
+   * Tiefe des Grundrisses. Steht der Wagen exakt seitlich, sind beide
+   * gleich weit weg und der Abstand ist null — dann greift der
+   * Ersatzwert: Ein Auto ist etwa 0,4 mal so tief wie lang.
    */
-  const maske = await sharp(band)
-    .resize(breite, schattenHoehe, { fit: 'fill' })
-    .blur(Math.max(0.3, e.schattenWeichheit))
-    .composite([{
-      input: await sharp(auslauf).removeAlpha().greyscale().png().toBuffer(),
-      blend: 'multiply',
-    }])
-    .linear(Math.max(0, Math.min(1, e.schattenStaerke)), 0)
-    .greyscale()
+  const tRadA = tiefeVon(radAy), tRadB = tiefeVon(radBy);
+  // Beide Werte jetzt in Metern, also vergleichbar. Ein Auto ist etwa
+  // 0,38-mal so tief wie lang; das greift, wenn der Wagen genau seitlich
+  // steht und beide Raeder gleich weit weg sind.
+  // 1,05 statt 1,30: Der Schatten reichte sonst deutlich vor die
+  // Stossstange, und davor ist bei diffusem Hallenlicht heller Boden.
+  const tHalb = Math.max(Math.abs(tRadA - tRadB) / 2 * 1.05, uHalb * 0.30);
+
+  const uRadA = seiteVon(radAx, radAy), uRadB = seiteVon(radBx, radBy);
+  const uKern = uHalb * 0.16, tKern = tHalb * 0.22;
+
+  /* ── 3. Zeichnen ── */
+  const maske = Buffer.alloc(zielBreite * zielHoehe, 0);
+  const yAb = Math.max(0, Math.floor(hY + kMin));
+
+  for (let y = yAb; y < zielHoehe; y++) {
+    const t = tiefeVon(y);
+    const k = abstand(y);
+    for (let x = 0; x < zielBreite; x++) {
+      const u = (x - zielBreite / 2) * e.kameraHoehe / k;
+
+      /*
+       * Grundflaeche: eine Ellipse mit FLACHEM Kern und kurzer Kante.
+       *
+       * Vorher stand hier eine Glocke. Die hat kein Plateau — sie ist
+       * nur in der Mitte dunkel und wird nach aussen gleichmaessig
+       * heller. Gemessen ergab das einen Uebergang ueber vierzig Pixel,
+       * waehrend PhotoRoom in zehn fertig ist. Genau daran sah man den
+       * Unterschied: ihrer ist ein Schatten, meiner war ein Hauch.
+       *
+       * Ein echter Schlagschatten sieht anders aus: unter dem Fahrzeug
+       * ueberall gleich dunkel, weil dort ueberall dasselbe Licht fehlt,
+       * und am Rand ein kurzer Auslauf. Genau das ist es hier — voll bis
+       * `PLATEAU`, dann in einem schmalen Band auf null.
+       */
+      const du = (u - u0) / uHalb;
+      const dt = (t - t0) / tHalb;
+      const r = Math.sqrt(du * du + dt * dt);
+
+      const PLATEAU = 0.72;
+      const RAND = 1.00;
+      let form: number;
+      if (r <= PLATEAU) form = 1;
+      else if (r >= RAND) form = 0;
+      else {
+        const a = (RAND - r) / (RAND - PLATEAU);
+        form = a * a * (3 - 2 * a);   // weicher Ein- und Ausstieg
+      }
+      let wert = e.schattenStaerke * form;
+
+      // Zwei dunkle Kerne an den Radaufstandsflaechen. Dort kommt gar
+      // kein Licht mehr hin; das erzeugt kein Weichzeichner.
+      for (const [ur, tr] of [[uRadA, tRadA], [uRadB, tRadB]]) {
+        const a = (u - ur) / uKern, b = (t - tr) / tKern;
+        wert += e.schattenStaerke * e.kernBoost * Math.exp(-(a * a + b * b) / 2);
+      }
+
+      if (wert <= 0.004) continue;
+      maske[y * zielBreite + x] = Math.min(255, Math.round(Math.min(1, wert) * 255));
+    }
+  }
+
+  const weich = await sharp(maske, { raw: { width: zielBreite, height: zielHoehe, channels: 1 } })
+    // Klein halten: Die Form ist schon glatt, der Weichzeichner soll nur
+    // die Rasterstufen nehmen.
+    .blur(Math.max(0.8, zielBreite * 0.004))
+    .toColourspace('b-w')
     .raw()
     .toBuffer();
 
-  /*
-   * Die Maske gehoert in den ALPHAKANAL, nicht in die Farbe.
-   *
-   * Zuerst stand hier ein schwarzes Rechteck, auf das die Maske per
-   * blend "dest-in" gelegt wurde. Das konnte nicht funktionieren:
-   * dest-in liest die Durchsichtigkeit der aufgelegten Ebene, und eine
-   * Graustufenmaske hat gar keine — sie ist ueberall deckend. Also
-   * blieb das Rechteck vollstaendig stehen, und im Bild lag ein
-   * schwarzer Balken unter dem Fahrzeug.
-   *
-   * joinChannel haengt die Maske als vierten Kanal an drei schwarze
-   * Kanaele. Damit ist der Schatten dort dunkel, wo die Maske hell
-   * ist, und sonst durchsichtig.
-   */
   const schwarz = await sharp({
-    create: { width: breite, height: schattenHoehe, channels: 3, background: { r: 0, g: 0, b: 0 } },
+    create: { width: zielBreite, height: zielHoehe, channels: 3, background: { r: 0, g: 0, b: 0 } },
   }).raw().toBuffer();
 
-  const schatten = await sharp(schwarz, {
-    raw: { width: breite, height: schattenHoehe, channels: 3 },
-  })
-    .joinChannel(maske, { raw: { width: breite, height: schattenHoehe, channels: 1 } })
+  return sharp(schwarz, { raw: { width: zielBreite, height: zielHoehe, channels: 3 } })
+    .joinChannel(weich, { raw: { width: zielBreite, height: zielHoehe, channels: 1 } })
     .png()
     .toBuffer();
-
-  return { bild: schatten, breite, hoehe: schattenHoehe };
 }
+
+
 
 /**
  * Spiegelt das Fahrzeug am Boden und blendet die Spiegelung aus.
@@ -278,7 +532,7 @@ async function spiegelungBauen(
 
   /*
    * Verlauf als SVG. Das ist der kuerzeste Weg zu einem weichen
-   * Uebergang, den sharp direkt lesen kann — eine Pixelschleife waere
+   * Uebergang, den sharp direkt lesen kann â€” eine Pixelschleife waere
    * hier nur langsamer.
    */
   const verlauf = Buffer.from(
@@ -303,7 +557,7 @@ async function spiegelungBauen(
  * Gleicht Helligkeit und Farbstich des Fahrzeugs an den Hintergrund an.
  *
  * Bewusst zurueckhaltend. Ein Fahrzeug, das vollstaendig auf die
- * Hintergrundhelligkeit gezogen wird, verliert seine Lackfarbe — ein
+ * Hintergrundhelligkeit gezogen wird, verliert seine Lackfarbe â€” ein
  * schwarzer Wagen vor weisser Wand wuerde grau. Deshalb wird nur ein
  * Teil des Unterschieds ausgeglichen, gesteuert ueber `angleichung`.
  */
@@ -343,7 +597,8 @@ export async function komponieren(
   const zielBreite = hgDaten.width ?? 2000;
   const zielHoehe  = hgDaten.height ?? 1333;
 
-  const zugeschnitten = await aufFahrzeugZuschneiden(freigestellt);
+  const bereinigt = await nurGroesstesObjekt(freigestellt);
+  const zugeschnitten = await aufFahrzeugZuschneiden(bereinigt);
   const zMeta = await sharp(zugeschnitten).metadata();
   const zBreite = zMeta.width ?? 1;
   const zHoehe  = zMeta.height ?? 1;
@@ -369,13 +624,38 @@ export async function komponieren(
 
   const ebenen: sharp.OverlayOptions[] = [];
 
-  // Schatten zuerst, er liegt unter allem.
-  const schatten = await schattenBauen(fahrzeug, fBreite, fHoehe, e);
-  ebenen.push({
-    input: schatten.bild,
-    left: Math.max(0, fahrzeugX + Math.round(fBreite * e.schattenVersatz)),
-    top:  Math.max(0, bodenY - Math.round(schatten.hoehe / 2)),
-  });
+  /*
+   * Schatten zuerst, er liegt unter allem. Zwei Lagen aus derselben
+   * Rechnung: ein breiter weicher fuer das Gewicht, ein schmaler harter
+   * fuer die Aufstandsflaeche.
+   *
+   * Beide folgen der Unterkante Spalte fuer Spalte. Die Fassung davor
+   * quetschte stattdessen das untere Viertel der Silhouette flach â€” und
+   * weil ein Auto dort ueber die volle Breite ausgefuellt ist, kam ein
+   * gleichmaessiger Balken heraus. Unter den Raedern war er genauso hell
+   * wie unter dem Schweller; im Bild sah man eine gerade Kante quer durch
+   * den Boden laufen, und der Wagen schwebte.
+   */
+  {
+    const s = await bodenschattenProjiziert(
+      fahrzeug, fBreite, fHoehe, fahrzeugX, fahrzeugY, zielBreite, zielHoehe, e,
+    );
+    if (s) ebenen.push({
+      input: s,
+      left: 0,
+      top:  0,
+      /*
+       * "multiply" statt einfachem Ueberlagern.
+       *
+       * Ein deckendes Schwarz mit Alpha legt sich als Farbe ueber den
+       * Boden und deckt dessen Struktur zu — an der dunkelsten Stelle
+       * ist von Beton nichts mehr zu sehen. Multiplizieren dunkelt
+       * stattdessen ab, was da ist: Die Koernung bleibt im Schatten
+       * sichtbar, so wie in Wirklichkeit auch.
+       */
+      blend: 'multiply',
+    });
+  }
 
   const spiegelung = await spiegelungBauen(fahrzeug, fBreite, fHoehe, e);
   if (spiegelung) {

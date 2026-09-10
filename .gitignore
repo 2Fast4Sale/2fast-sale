@@ -56,3 +56,25 @@ kuendigungen-aufraeumen.mjs
 
 # Bildschirmaufnahmen aus dem Pruefen
 .*.png
+
+# Rohmaterial fuer die Raum-Renders (ambientCG, CC0).
+#
+# Das sind rund 20 MB Farb-, Rauheits- und Normalenkarten, aus denen
+# tools/raum_render.py die Hintergruende baut. Ins Repo gehoert das
+# Ergebnis unter public/backgrounds/raum, nicht das Ausgangsmaterial:
+# Es ist jederzeit neu ladbar und wuerde jeden Klon aufblaehen.
+# Die Herkunft steht in public/backgrounds/HERKUNFT.md.
+tools/texturen/
+
+# Testfotos zum Ausprobieren des Kompositors.
+#
+# Das Urus-Foto gehoert dem Haendler, von dessen Seite es stammt - es ist
+# Vergleichsmaterial fuer die Entwicklung und gehoert weder ins Repository
+# noch in den oeffentlichen Ordner, aus dem es jeder abrufen koennte.
+tools/proben/
+
+# ONNX-Modelle - 224 MB, jederzeit neu ladbar von huggingface.co
+tools/modelle/
+
+# Probekomposite mit fremden Fahrzeugfotos - gehoeren nicht ins Repo
+public/backgrounds/raum/katalog/
