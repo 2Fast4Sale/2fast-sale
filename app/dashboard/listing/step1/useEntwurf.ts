@@ -184,6 +184,50 @@ export const PFLICHT_NAME: Record<string, string> = {
   bodyType: 'Karosserieform', vatType: 'Umsatzsteuer',
 };
 
+/**
+ * Alter in Jahren aus der Erstzulassung, oder null wenn unlesbar.
+ *
+ * Fuenf Schreibweisen, weil das Feld aus zwei Quellen kommt: aus dem
+ * Scan, der "MM/JJJJ" liefern soll, und aus der Tastatur des Haendlers,
+ * der schreibt, was auf dem Papier steht. Im Fahrzeugschein steht in
+ * Feld B ein VOLLSTAENDIGES Datum mit Tag.
+ */
+export function alterInJahren(erstzulassung: string): number | null {
+  const s = (erstzulassung || '').trim();
+  if (!s) return null;
+
+  let jahr: number | undefined;
+  let monat = 1;
+  let m: RegExpMatchArray | null;
+
+  if ((m = s.match(/^(\d{1,2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{4})$/))) {
+    monat = Number(m[2]); jahr = Number(m[3]);        // Tag.Monat.Jahr
+  } else if ((m = s.match(/^(\d{4})\s*[.\-/]\s*(\d{1,2})$/))) {
+    jahr = Number(m[1]); monat = Number(m[2]);        // Jahr-Monat
+  } else if ((m = s.match(/^(\d{1,2})\s*[.\-/]\s*(\d{4})$/))) {
+    monat = Number(m[1]); jahr = Number(m[2]);        // Monat/Jahr
+  } else if ((m = s.match(/^(\d{4})$/))) {
+    jahr = Number(m[1]);                              // nur das Jahr
+  } else {
+    return null;
+  }
+
+  if (!jahr || jahr < 1900 || monat < 1 || monat > 12) return null;
+
+  const jetzt = new Date();
+  const monate = (jetzt.getFullYear() - jahr) * 12 + (jetzt.getMonth() + 1 - monat);
+  return monate < 0 ? null : monate / 12;
+}
+
+/**
+ * Ab welchem Alter die Fahrzeugart sicher "Gebrauchtwagen" ist.
+ *
+ * Zwei Jahre, nicht eines. Ein Jahreswagen ist per Definition rund ein
+ * Jahr alt, ein Vorfuehrwagen laeuft oft bis anderthalb — bei einer
+ * Grenze von einem Jahr wuerde genau die falsch gestempelt.
+ */
+export const GEBRAUCHT_AB_JAHREN = 2;
+
 export function useEntwurf() {
   const router = useRouter();
   const dateiRef = useRef<HTMLInputElement>(null);
@@ -266,6 +310,31 @@ export function useEntwurf() {
    */
   const PFLICHT = ['brand', 'km', 'price', 'gearbox', 'bodyType', 'vatType'] as const;
   const offenePflicht = PFLICHT.filter(k => !String(data[k]).trim());
+
+  /*
+   * Fahrzeugart vorbelegen, wenn das Alter sie eindeutig macht.
+   *
+   * Diese Vorbelegung stand bisher NUR in Formular.tsx. Die zweite
+   * Oberflaeche — Showroom.tsx — hat dieselben Daten benutzt, aber nie
+   * die Vorbelegung bekommen; wer sie eingestellt hatte, musste die
+   * Fahrzeugart jedes Mal von Hand waehlen und kam ohne sie nicht
+   * weiter. Deshalb steht sie jetzt hier, in den gemeinsamen Daten:
+   * Was fuer das Fahrzeug gilt, kann nicht davon abhaengen, welche
+   * Ansicht der Haendler eingestellt hat.
+   *
+   * Vorbelegt wird nur, was abgelesen ist. Ueber zwei Jahren bleibt
+   * keine der drei EnVKV-pflichtigen Arten uebrig: Ein Neuwagen ist
+   * nicht zwei Jahre zugelassen, eine Tageszulassung ist Tage alt.
+   */
+  useEffect(() => {
+    if (data.envkv.vehicleKind) return;
+    const alter = alterInJahren(data.firstRegistration);
+    if (alter === null || alter < GEBRAUCHT_AB_JAHREN) return;
+    setData(p => p.envkv.vehicleKind
+      ? p
+      : { ...p, envkv: { ...p.envkv, vehicleKind: 'gebrauchtwagen' } });
+    setFehler(p => (p.envkv ? { ...p, envkv: '' } : p));
+  }, [data.firstRegistration, data.envkv.vehicleKind]);
 
   /*
    * Sind die Verbrauchsangaben vorgeschrieben? Bei Gebrauchtwagen nicht —

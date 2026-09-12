@@ -324,15 +324,13 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
    * "gebrauchtwagen" fest im Formular, unabhaengig vom Fahrzeug. Hier
    * steht ein abgelesenes Datum dahinter.
    */
-  useEffect(() => {
-    if (data.envkv.vehicleKind) return;
-    const alter = alterInJahren(data.firstRegistration);
-    if (alter === null || alter < GEBRAUCHT_AB_JAHREN) return;
-    setData(p => p.envkv.vehicleKind
-      ? p
-      : { ...p, envkv: { ...p.envkv, vehicleKind: 'gebrauchtwagen' } });
-    setFehler(p => (p.envkv ? { ...p, envkv: '' } : p));
-  }, [data.firstRegistration, data.envkv.vehicleKind]);
+  /*
+   * Die Vorbelegung der Fahrzeugart stand hier und NUR hier. Die zweite
+   * Oberflaeche, Showroom.tsx, hat sie nie bekommen — dort musste die
+   * Fahrzeugart jedes Mal von Hand gewaehlt werden. Sie liegt jetzt in
+   * useEntwurf.ts bei den gemeinsamen Daten, damit beide Ansichten sich
+   * gleich verhalten.
+   */
 
   const envkvPflicht = isEnvkvRequired(data.envkv.vehicleKind);
 
