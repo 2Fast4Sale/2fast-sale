@@ -42,7 +42,8 @@ def leeren():
 TEXTUREN = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'texturen')
 
 
-def material(name, farbe, rauheit, satz=None, kachel_m=2.0):
+def material(name, farbe, rauheit, satz=None, kachel_m=2.0, rauheit_mult=1.0,
+             relief=1.0):
     """
     Ein Oberflaechenmaterial, wahlweise mit fotografiertem Material.
 
@@ -102,12 +103,25 @@ def material(name, farbe, rauheit, satz=None, kachel_m=2.0):
 
     rau = karte("_Roughness.jpg", 'Non-Color')
     if rau:
-        nt.links.new(rau.outputs["Color"], bsdf.inputs["Roughness"])
+        if rauheit_mult != 1.0:
+            # Glanzboden: dieselbe Rauheitskarte, aber insgesamt glatter.
+            # So bleiben die matten Flecken im Estrich erhalten, und der
+            # Boden spiegelt trotzdem.
+            mal = nt.nodes.new("ShaderNodeMath")
+            mal.operation = 'MULTIPLY'
+            mal.inputs[1].default_value = rauheit_mult
+            nt.links.new(rau.outputs["Color"], mal.inputs[0])
+            nt.links.new(mal.outputs["Value"], bsdf.inputs["Roughness"])
+        else:
+            nt.links.new(rau.outputs["Color"], bsdf.inputs["Roughness"])
 
     norm = karte("_NormalGL.jpg", 'Non-Color')
     if norm:
         nk = nt.nodes.new("ShaderNodeNormalMap")
-        nk.inputs["Strength"].default_value = 1.0
+        # Auf einem glaenzenden Boden verzerrt volles Relief jede
+        # Spiegelung zu Wellen — im ersten Galerie-Render sah der Estrich
+        # aus wie eine Wasserflaeche. Dort nur ein Hauch davon.
+        nk.inputs["Strength"].default_value = relief
         nt.links.new(norm.outputs["Color"], nk.inputs["Color"])
         nt.links.new(nk.outputs["Normal"], bsdf.inputs["Normal"])
 
@@ -427,11 +441,89 @@ def licht():
     bpy.context.scene.world = welt
 
 
-def kamera():
-    bpy.ops.object.camera_add(location=KAMERA_POS)
+def galerie(wandfarbe, bodenfarbe, bodensatz):
+    """
+    Ein heller Ausstellungsraum: weisse Waende, dunkler glaenzender Boden,
+    Decke mit eingelassenen Strahlern.
+
+    Gebaut nach einem Beispielfoto, das Fabian geschickt hat. Die ersten
+    Raeume sahen trotz Material und Pflanzen nicht echt aus, und der
+    Vergleich mit dem Foto zeigte warum — vier Dinge fehlten ihnen:
+
+      1. Eine sichtbare Decke. Ohne sie ist der Raum nach oben offen,
+         und das kommt in keiner Halle vor.
+      2. Lichtboegen an der Wand. Ein Strahler nah an der Wand malt einen
+         hellen Bogen darunter; gleichmaessig beleuchtete Waende gibt es
+         nur im Computer.
+      3. Ein Boden, der glaenzt. Dunkler Estrich spiegelt Wand und Licht
+         unscharf wider — das gibt dem Raum Tiefe.
+      4. Echte Lichtberechnung. Deshalb laeuft dieser Raum nur mit Cycles:
+         EEVEE hellt die Ecken nicht ab und wirft kein Licht vom Boden an
+         die Wand zurueck.
+    """
+    m_wand   = material('Wand', wandfarbe, 0.9)
+    m_decke  = material('Decke', (0.82, 0.82, 0.82), 0.95)
+    m_boden  = material('Boden', bodenfarbe, 0.30, bodensatz, kachel_m=4.0,
+                        rauheit_mult=0.55, relief=0.08)
+
+    flaeche('Boden', 60, (0, 0, 0), (0, 0, 0), m_boden)
+    flaeche('Rueckwand', 60, (0, 6.0, 0), (math.radians(90), 0, 0), m_wand)
+    flaeche('Seitenwand', 60, (5.6, 0, 0), (0, math.radians(90), 0), m_wand)
+    flaeche('Decke', 60, (0, 0, 3.4), (math.radians(180), 0, 0), m_decke)
+
+    # Schmale weisse Sockelleiste, kaum sichtbar — wie im Vorbild.
+    m_sock = material('Sockel', (0.70, 0.70, 0.70), 0.6)
+    for ort, mass in (((0, 5.99, 0.04), (30, 0.012, 0.04)),
+                      ((5.59, 0, 0.04), (0.012, 30, 0.04))):
+        bpy.ops.mesh.primitive_cube_add(location=ort)
+        ob = bpy.context.active_object
+        ob.scale = mass
+        ob.data.materials.append(m_sock)
+
+    # Einbaustrahler: sichtbare Leuchtscheibe in der Decke plus ein
+    # Spot, der nach unten zeigt. Die Reihe an der Rueckwand steht 0,8 m
+    # davor — nah genug fuer die Boegen an der Wand.
+    leucht = bpy.data.materials.new('Leuchte')
+    leucht.use_nodes = True
+    nt = leucht.node_tree
+    nt.nodes.remove(nt.nodes['Principled BSDF'])
+    em = nt.nodes.new('ShaderNodeEmission')
+    em.inputs['Strength'].default_value = 25.0
+    nt.links.new(em.outputs['Emission'], nt.nodes['Material Output'].inputs['Surface'])
+
+    reihen = [(x, 5.2) for x in (-4.5, -1.5, 1.5, 4.5)] + \
+             [(x, 1.5) for x in (-3.0, 0.0, 3.0)] + \
+             [(4.8, y) for y in (-1.5, 2.5)]
+    for x, y in reihen:
+        bpy.ops.mesh.primitive_cylinder_add(radius=0.09, depth=0.02, location=(x, y, 3.39))
+        bpy.context.active_object.data.materials.append(leucht)
+        bpy.ops.object.light_add(type='SPOT', location=(x, y, 3.3))
+        spot = bpy.context.active_object
+        spot.rotation_euler = (0, 0, 0)          # Spots zeigen per Vorgabe nach unten
+        spot.data.energy = 900
+        spot.data.spot_size = math.radians(95)
+        spot.data.spot_blend = 0.55
+        spot.data.shadow_soft_size = 0.05
+
+    # Grundhelligkeit, damit die Decke nicht schwarz wird.
+    bpy.ops.object.light_add(type='AREA', location=(0, -2, 3.2))
+    flaechig = bpy.context.active_object.data
+    flaechig.size, flaechig.size_y = 10, 6
+    flaechig.energy = 700
+
+    welt = bpy.data.worlds.new('Welt')
+    welt.use_nodes = True
+    welt.node_tree.nodes['Background'].inputs['Color'].default_value = (0.5, 0.5, 0.5, 1)
+    welt.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.15
+    bpy.context.scene.world = welt
+
+
+def kamera(pos=None, ziel=None, brennweite=None):
+    pos = pos or KAMERA_POS
+    bpy.ops.object.camera_add(location=pos)
     cam = bpy.context.active_object
-    cam.data.lens = BRENNWEITE
-    richtung = KAMERA_ZIEL - KAMERA_POS
+    cam.data.lens = brennweite or BRENNWEITE
+    richtung = (ziel or KAMERA_ZIEL) - pos
     cam.rotation_euler = richtung.to_track_quat('-Z', 'Y').to_euler()
     bpy.context.scene.camera = cam
     return cam
@@ -520,18 +612,28 @@ def main():
     glanz  = float(opt.get('glanz', '0.08'))
 
     leeren()
-    raum(wand, boden, sockel,
-         opt.get('wandsatz', 'PaintedPlaster017_1K-JPG'),
-         opt.get('bodensatz', 'Concrete046_1K-JPG'),
-         opt.get('bauart', 'ecke'),
-         opt.get('schmuck', ''))
-    licht()
-    cam = kamera()
+    bauart = opt.get('bauart', 'ecke')
+    if bauart == 'galerie':
+        galerie(wand, boden, opt.get('bodensatz', 'Concrete034_1K-JPG'))
+        # 35 mm und waagerechter Blick: Nur so kommt die Decke ins Bild.
+        # Bei 55 mm und leicht gesenkter Kamera endet das Bild unter der
+        # Decke, und genau das hat die fruehen Raeume kuenstlich gemacht.
+        cam_pos, cam_brenn = KAMERA_POS, 35.0
+        cam = kamera(cam_pos, Vector((0.0, 6.0, 1.35)), cam_brenn)
+    else:
+        raum(wand, boden, sockel,
+             opt.get('wandsatz', 'PaintedPlaster017_1K-JPG'),
+             opt.get('bodensatz', 'Concrete046_1K-JPG'),
+             bauart,
+             opt.get('schmuck', ''))
+        licht()
+        cam_pos, cam_brenn = KAMERA_POS, BRENNWEITE
+        cam = kamera()
     rendern(ziel, proben, opt.get('maschine', 'cycles'))
 
     daten = {
-        'kameraHoehe': KAMERA_POS.z,
-        'brennweite': BRENNWEITE,
+        'kameraHoehe': cam_pos.z,
+        'brennweite': cam_brenn,
         'horizont': horizont_in_prozent(cam, opt.get('bauart', 'ecke')),
         'bauart': opt.get('bauart', 'ecke'),
         'breite': BREITE, 'hoehe': HOEHE,

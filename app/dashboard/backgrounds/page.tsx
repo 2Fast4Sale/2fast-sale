@@ -36,10 +36,13 @@ export default function RaumAuswahl() {
   const [eigenerUrl, setEigenerUrl] = useState<string | null>(null);
   const [eigenerAktiv, setEigenerAktiv] = useState(false);
   const [laedt, setLaedt] = useState(false);
+  const [horizont, setHorizont] = useState<number | null>(null);
   const dateiRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEigenerUrl(localStorage.getItem('dealer_custom_background_url'));
+    const h = Number(localStorage.getItem('dealer_custom_background_horizont') || '');
+    setHorizont(h > 0 ? h : null);
     setEigenerAktiv(localStorage.getItem('dealer_background') === OWN_SHOWROOM_ID);
 
     fetch('/api/studio-eigen/raeume')
@@ -100,6 +103,10 @@ export default function RaumAuswahl() {
       const { data } = supabase.storage.from('vehicle-images').getPublicUrl(pfad);
       const url = `${data.publicUrl}?v=${Date.now()}`;
       setEigenerUrl(url);
+      // Neues Foto, neue Bodenlinie — die alte Markierung gehoert zum
+      // alten Bild und wuerde den Schatten falsch setzen.
+      setHorizont(null);
+      localStorage.removeItem('dealer_custom_background_horizont');
       localStorage.setItem('dealer_custom_background_url', url);
       localStorage.setItem('dealer_background', OWN_SHOWROOM_ID);
       setEigenerAktiv(true);
@@ -114,6 +121,8 @@ export default function RaumAuswahl() {
     setEigenerUrl(null);
     setEigenerAktiv(false);
     localStorage.removeItem('dealer_custom_background_url');
+    localStorage.removeItem('dealer_custom_background_horizont');
+    setHorizont(null);
     localStorage.setItem('dealer_background', 'raum');
   };
 
@@ -257,6 +266,48 @@ export default function RaumAuswahl() {
               </div>
             </div>
           </div>
+          {/*
+            Bodenlinie markieren.
+
+            Ohne diese Linie weiss der Schatten nicht, wo in einem
+            fremden Foto der Boden liegt, und das Auto schwebt. Ein Klick
+            genuegt; die Linie wird als Anteil der Bildhoehe gespeichert
+            und in Schritt 2 mitgeschickt.
+          */}
+          {eigenerUrl && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4 }}>
+                Bodenlinie markieren
+              </div>
+              <p style={{ margin: '0 0 10px', fontSize: 13, color: G.buehneLeise, lineHeight: 1.55, maxWidth: '62ch' }}>
+                Klicke auf die Stelle, an der der Boden auf die hintere Wand trifft.
+                Daran richtet sich der Schatten unter deinen Fahrzeugen aus.
+                {horizont === null && <strong style={{ color: '#fbbf24' }}> Noch nicht markiert.</strong>}
+              </p>
+              <div
+                onClick={e => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const anteil = Math.min(0.9, Math.max(0.1, (e.clientY - r.top) / r.height));
+                  setHorizont(anteil);
+                  localStorage.setItem('dealer_custom_background_horizont', anteil.toFixed(4));
+                  bestaetigen();
+                }}
+                style={{
+                  position: 'relative', cursor: 'crosshair', maxWidth: 720, borderRadius: 10,
+                  overflow: 'hidden', border: `1px solid ${G.buehneLinie}44`, aspectRatio: '3 / 2',
+                }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={eigenerUrl} alt="Eigene Halle – Bodenlinie markieren"
+                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                {horizont !== null && (
+                  <div style={{
+                    position: 'absolute', left: 0, right: 0, top: `${horizont * 100}%`,
+                    borderTop: `2px dashed ${G.buehneAkzent}`, pointerEvents: 'none',
+                  }} />
+                )}
+              </div>
+            </div>
+          )}
           <input ref={dateiRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={e => { const d = e.target.files?.[0]; if (d) hochladen(d); e.target.value = ''; }} />
         </section>

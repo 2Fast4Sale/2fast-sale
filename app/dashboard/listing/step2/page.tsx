@@ -435,6 +435,10 @@ function Step2Inner() {
           raum: raumName,
           firma: firma || undefined,
           hintergrundUrl: customBackgroundUrl || undefined,
+          // Die vom Haendler markierte Bodenlinie seines Hallenfotos.
+          hallenHorizont: customBackgroundUrl
+            ? Number(localStorage.getItem('dealer_custom_background_horizont') || '') || undefined
+            : undefined,
           kompositor: studioWerte,
         }),
       });

@@ -46,8 +46,10 @@ function hintergrundErlaubt(adresse: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, breite } =
+    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, breite } =
       await req.json() as {
+        /** Bodenlinie im eigenen Hallenfoto, Anteil der Bildhoehe von oben. */
+        hallenHorizont?: number;
         image?: string;
         draftId?: string | null;
         code?: string;
@@ -251,15 +253,37 @@ export async function POST(req: NextRequest) {
      * 0,50, und ein gegen 0,45 gerechneter Schatten liegt darin
      * sichtbar falsch.
      */
-    const ausRaum: Partial<KompositorEinstellungen> = halle ? {
+    const eigeneHalle = !!hintergrundUrl && hintergrundErlaubt(hintergrundUrl);
+
+    let ausRaum: Partial<KompositorEinstellungen> = halle ? {
       horizont:          halle.horizont,
       kameraHoehe:       halle.kameraHoehe,
       brennweite:        halle.brennweite,
       spiegelungStaerke: halle.bodenglanz,
     } : {};
 
+    /*
+     * Eigenes Hallenfoto des Haendlers.
+     *
+     * Hier galten bisher die Kameradaten des GEWAEHLTEN gerenderten
+     * Raums — also Werte, die mit dem hochgeladenen Foto nichts zu tun
+     * haben. Der Schatten wurde gegen eine fremde Bodenlinie gerechnet,
+     * und das Auto schwebte oder steckte im Boden.
+     *
+     * Die Bodenlinie markiert der Haendler jetzt selbst mit einem Klick
+     * auf der Hintergrundseite. Kamerahoehe und Brennweite sind fuer ein
+     * Handyfoto auf Kotfluegelhoehe geschaetzt; die Linie ist der Wert,
+     * der den Unterschied macht. Spiegelung aus: Ein fremder Boden
+     * koennte alles sein.
+     */
+    if (eigeneHalle) {
+      const h = typeof hallenHorizont === 'number' && hallenHorizont > 0.1 && hallenHorizont < 0.9
+        ? hallenHorizont : 0.5;
+      ausRaum = { horizont: h, kameraHoehe: 1.2, brennweite: 30, spiegelungStaerke: 0 };
+    }
+
     let hg: Buffer;
-    if (hintergrundUrl && hintergrundErlaubt(hintergrundUrl)) {
+    if (eigeneHalle) {
       try {
         const eigenes = await fetch(hintergrundUrl);
         if (!eigenes.ok) throw new Error('HTTP ' + eigenes.status);
