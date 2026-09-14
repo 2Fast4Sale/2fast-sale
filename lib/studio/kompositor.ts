@@ -6,11 +6,11 @@
  * (0,10 EUR) je Bild ausmacht. Hier laeuft er lokal und kostet nichts.
  *
  * Voraussetzung ist ein bereits freigestelltes Bild mit Alphakanal.
- * Das Freistellen selbst passiert nicht hier â€” dafuer braucht es ein
+ * Das Freistellen selbst passiert nicht hier — dafuer braucht es ein
  * trainiertes Modell, und das ist der einzige Schritt, der weiterhin
  * eingekauft wird.
  *
- * â”€â”€ Was hier passiert, in dieser Reihenfolge â”€â”€
+ * ── Was hier passiert, in dieser Reihenfolge ──
  *
  *   1. Fahrzeug zuschneiden und auf Zielgroesse skalieren
  *   2. Bodenschatten aus der Silhouette erzeugen
@@ -21,12 +21,12 @@
  * Schritt 5 ist der, an dem der erste Versuch dieses Projekts
  * gescheitert ist: Ohne Angleichung sieht das Fahrzeug aufgeklebt aus,
  * weil es das Licht seiner alten Umgebung mitbringt. Der Megane-Test
- * hat das gezeigt â€” im schwarzen Lack spiegelten sich noch die Baeume
+ * hat das gezeigt — im schwarzen Lack spiegelten sich noch die Baeume
  * vom Feldweg, waehrend das Auto angeblich in einer Halle stand.
  *
  * Ehrlich dazu: Diese Angleichung ist eine Rechnung, kein Modell. Sie
  * kann Helligkeit und Farbstich verschieben. Spiegelungen im Lack
- * bekommt sie nicht weg â€” das kann auch PhotoRoom nicht.
+ * bekommt sie nicht weg — das kann auch PhotoRoom nicht.
  */
 
 import sharp from 'sharp';
@@ -57,7 +57,7 @@ export interface KompositorEinstellungen {
    *
    * Dort, wo Gummi den Beton beruehrt, kommt aber gar kein Licht mehr hin.
    * Dieser zweite Schatten ist deshalb schmal, dunkel und kaum
-   * weichgezeichnet â€” er zeichnet nur die Aufstandsflaeche nach.
+   * weichgezeichnet — er zeichnet nur die Aufstandsflaeche nach.
    */
   kontaktStaerke: number;
   /** Hoehe des Kontaktschattens als Anteil der Fahrzeughoehe. */
@@ -112,7 +112,7 @@ export const STANDARD: KompositorEinstellungen = {
   /*
    * 0,60 und nicht mehr 0,82.
    *
-   * Bei 0,82 fuellte der Urus das Bild bis an beide Raender â€” der Raum,
+   * Bei 0,82 fuellte der Urus das Bild bis an beide Raender — der Raum,
    * den wir extra rendern, war kaum noch zu sehen, und der Wagen wirkte
    * hingestellt statt aufgenommen. Mit Boden davor sitzt er sofort
    * richtig.
@@ -150,7 +150,7 @@ export const STANDARD: KompositorEinstellungen = {
   /*
    * Zurueckhaltend, weil der Standardboden matter Beton ist. Wer einen
    * polierten Boden rendert, hebt den Wert ueber die .json des Raums an
-   * â€” siehe tools/raum_render.py. Bei 0,22 sah der Beton aus wie nass.
+   * — siehe tools/raum_render.py. Bei 0,22 sah der Beton aus wie nass.
    */
   spiegelungStaerke: 0.08,
   spiegelungLaenge:  0.30,
@@ -161,7 +161,7 @@ export interface Ergebnis {
   bild: Buffer;
   breite: number;
   hoehe: number;
-  /** Was der Kompositor gemessen hat â€” fuer die Einstellungsseite. */
+  /** Was der Kompositor gemessen hat — fuer die Einstellungsseite. */
   messwerte: {
     fahrzeugBreite: number;
     fahrzeugHoehe: number;
@@ -174,7 +174,7 @@ export interface Ergebnis {
 /**
  * Behaelt nur das groesste zusammenhaengende Objekt und loescht den Rest.
  *
- * Die Freistellung liefert alles, was das Modell fuer Vordergrund haelt â€”
+ * Die Freistellung liefert alles, was das Modell fuer Vordergrund haelt —
  * nicht nur das Fahrzeug. Im Test mit dem Sandbox-Bild kam ein weisser
  * Kreis mit, der frei an der Hallenwand schwebte. Beim Kundenfoto ist das
  * kein Kreis: Da ist es der zweite Wagen daneben, ein Werbeschild oder
@@ -184,7 +184,7 @@ export interface Ergebnis {
  * Der zweite Schaden ist unsichtbarer und wiegt schwerer. Der Rahmen um
  * alles Freigestellte bestimmt Groesse und Standlinie des Fahrzeugs.
  * Ein Fremdteil oben im Bild zieht diesen Rahmen nach oben, das Fahrzeug
- * rutscht darin nach unten â€” und der Schatten landet zweihundert Pixel
+ * rutscht darin nach unten — und der Schatten landet zweihundert Pixel
  * unter den Raedern. Genau so war es im Test zu sehen.
  *
  * Ein Auto ist immer EIN Stueck. Was nicht daran haengt, gehoert nicht
@@ -429,7 +429,19 @@ async function bodenschattenProjiziert(
   // steht und beide Raeder gleich weit weg sind.
   // 1,05 statt 1,30: Der Schatten reichte sonst deutlich vor die
   // Stossstange, und davor ist bei diffusem Hallenlicht heller Boden.
-  const tHalb = Math.max(Math.abs(tRadA - tRadB) / 2 * 1.05, uHalb * 0.30);
+  const tHalb = Math.max(Math.abs(tRadA - tRadB) / 2 * 1.05, uHalb * 0.22);
+
+  /*
+   * Die Flaeche nach HINTEN schieben, bis ihre Vorderkante am vorderen
+   * Rad liegt.
+   *
+   * Um die Mitte zwischen den Raedern zentriert, wirkt die Perspektive
+   * ungleich: Die vordere Haelfte liegt naeher an der Kamera und wird
+   * im Bild viel laenger gezogen als die hintere. Im Galerie-Raum mit
+   * 35 mm lag der Schatten dadurch als Fleck vor den Reifen, und das
+   * Auto schwebte. Groessere Tiefe heisst weiter weg.
+   */
+  const t0Unterm = t0 + tHalb * 0.55;
 
   /*
    * Die Aufstandsflaechen der Reifen — eng und tief schwarz.
@@ -471,7 +483,7 @@ async function bodenschattenProjiziert(
        * `PLATEAU`, dann in einem schmalen Band auf null.
        */
       const du = (u - u0) / uHalb;
-      const dt = (t - t0) / tHalb;
+      const dt = (t - t0Unterm) / tHalb;
       const r = Math.sqrt(du * du + dt * dt);
 
       // Laengeres Plateau, kuerzerer Auslauf: Der Uebergang soll eine
@@ -550,7 +562,7 @@ async function spiegelungBauen(
 
   /*
    * Verlauf als SVG. Das ist der kuerzeste Weg zu einem weichen
-   * Uebergang, den sharp direkt lesen kann â€” eine Pixelschleife waere
+   * Uebergang, den sharp direkt lesen kann — eine Pixelschleife waere
    * hier nur langsamer.
    */
   const verlauf = Buffer.from(
@@ -575,15 +587,32 @@ async function spiegelungBauen(
  * Gleicht Helligkeit und Farbstich des Fahrzeugs an den Hintergrund an.
  *
  * Bewusst zurueckhaltend. Ein Fahrzeug, das vollstaendig auf die
- * Hintergrundhelligkeit gezogen wird, verliert seine Lackfarbe â€” ein
+ * Hintergrundhelligkeit gezogen wird, verliert seine Lackfarbe — ein
  * schwarzer Wagen vor weisser Wand wuerde grau. Deshalb wird nur ein
  * Teil des Unterschieds ausgeglichen, gesteuert ueber `angleichung`.
  */
+/** Mittlere Farbe (R, G, B) der sichtbaren, nicht ueberstrahlten Pixel. */
+async function mittlereFarbe(bild: Buffer, nurSichtbare: boolean): Promise<[number, number, number]> {
+  const { data, info } = await sharp(bild).ensureAlpha().resize(256, 256, { fit: 'inside' })
+    .raw().toBuffer({ resolveWithObject: true });
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let i = 0; i < data.length; i += info.channels) {
+    if (nurSichtbare && data[i + 3] < 128) continue;
+    const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    // Fast schwarze Reifen und ausgebrannte Glanzlichter tragen keine
+    // Information ueber das Licht, nur ueber Lack und Sonne.
+    if (l < 18 || l > 245) continue;
+    r += data[i]; g += data[i + 1]; b += data[i + 2]; n++;
+  }
+  return n ? [r / n, g / n, b / n] : [128, 128, 128];
+}
+
 async function angleichen(
   fahrzeug: Buffer,
   helligkeitFahrzeug: number,
   helligkeitHintergrund: number,
   e: KompositorEinstellungen,
+  hintergrund?: Buffer,
 ): Promise<Buffer> {
   if (e.angleichung <= 0) return fahrzeug;
 
@@ -594,7 +623,36 @@ async function angleichen(
   // Grenzen, damit die Angleichung das Bild nie zerstoert.
   const sicher = Math.max(0.75, Math.min(1.35, faktor));
 
-  return sharp(fahrzeug).ensureAlpha().linear(sicher, 0).png().toBuffer();
+  /*
+   * Lichtfarbe angleichen, nicht nur Helligkeit.
+   *
+   * Im ersten Test mit echten Hallenfotos stand ein Urus im kalten
+   * Neonlicht einer Lagerhalle, aber mit dem warmen Tageslicht seines
+   * Originalfotos. Die Helligkeit stimmte ungefaehr, der Farbstich
+   * nicht — und genau das verraet eine Montage auf den ersten Blick.
+   *
+   * Verglichen wird das Verhaeltnis der Kanaele, nicht ihre Hoehe: Ein
+   * gruener Lack bleibt gruen, nur der Grauwert des Lichts wandert. Die
+   * Korrektur ist auf plus/minus zwoelf Prozent je Kanal begrenzt, damit
+   * aus einem weissen Auto kein blaues wird.
+   */
+  let gewinn: [number, number, number] = [sicher, sicher, sicher];
+  if (hintergrund) {
+    const [hr, hg, hb] = await mittlereFarbe(hintergrund, false);
+    const [fr, fg, fb] = await mittlereFarbe(fahrzeug, true);
+    const hGrau = (hr + hg + hb) / 3, fGrau = (fr + fg + fb) / 3;
+    const anteil = Math.min(1, e.angleichung) * 0.6;
+    const kanal = (h: number, f: number) => {
+      const soll = (h / hGrau) / Math.max(0.01, f / fGrau);
+      const weich = 1 + (soll - 1) * anteil;
+      return Math.max(0.88, Math.min(1.12, weich)) * sicher;
+    };
+    gewinn = [kanal(hr, fr), kanal(hg, fg), kanal(hb, fb)];
+  }
+
+  const alpha = await sharp(fahrzeug).ensureAlpha().extractChannel(3).toBuffer();
+  const farbe = await sharp(fahrzeug).removeAlpha().linear(gewinn, [0, 0, 0]).toBuffer();
+  return sharp(farbe).joinChannel(alpha).png().toBuffer();
 }
 
 /**
@@ -633,7 +691,7 @@ export async function komponieren(
   const helligkeitFahrzeug   = await mittlereHelligkeit(fahrzeugRoh, true);
   const helligkeitHintergrund = await mittlereHelligkeit(hintergrund);
 
-  const fahrzeug = await angleichen(fahrzeugRoh, helligkeitFahrzeug, helligkeitHintergrund, e);
+  const fahrzeug = await angleichen(fahrzeugRoh, helligkeitFahrzeug, helligkeitHintergrund, e, hintergrund);
 
   // Standlinie: Unterkante des Fahrzeugs im Zielbild.
   const bodenY = Math.round(zielHoehe * (1 - e.bodenabstand));
@@ -648,7 +706,7 @@ export async function komponieren(
    * fuer die Aufstandsflaeche.
    *
    * Beide folgen der Unterkante Spalte fuer Spalte. Die Fassung davor
-   * quetschte stattdessen das untere Viertel der Silhouette flach â€” und
+   * quetschte stattdessen das untere Viertel der Silhouette flach — und
    * weil ein Auto dort ueber die volle Breite ausgefuellt ist, kam ein
    * gleichmaessiger Balken heraus. Unter den Raedern war er genauso hell
    * wie unter dem Schweller; im Bild sah man eine gerade Kante quer durch
