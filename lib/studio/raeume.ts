@@ -39,8 +39,25 @@ export interface Raum {
 
 const ORDNER = join(process.cwd(), 'public', 'backgrounds', 'raum');
 
+/**
+ * Anzeigenamen fuer die Auswahlseite. Was hier fehlt, bekommt einen
+ * Namen aus dem Dateinamen — ein neu gerenderter Raum erscheint also
+ * sofort, nur eben mit einem schlichteren Titel.
+ */
+const TITEL: Record<string, string> = {
+  weiss_klar:    'Weiß, schlicht',
+  weiss_kreis:   'Weiß mit Bodenkreis',
+  weiss_gruen:   'Weiß mit Pflanzen',
+  showroom_hell: 'Showroom hell',
+  grau_sockel:   'Grau mit Sockelzone',
+  grau_asphalt:  'Grau auf Asphalt',
+  anthrazit:     'Anthrazit',
+  werkstatt:     'Sichtbeton mit Pflanzen',
+};
+
 /** Aus "weiss_beton" wird "Weiss Beton". */
 function titelAus(name: string): string {
+  if (TITEL[name]) return TITEL[name];
   return name.split('_')
     .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
     .join(' ');

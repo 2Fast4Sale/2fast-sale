@@ -1,81 +1,62 @@
 'use client';
 
 /**
- * Raum-Konfigurator.
+ * Raumauswahl.
  *
- * Vierter Anlauf, und der erste mit dem richtigen Aufbau. Die drei
- * vorherigen boten fertige Raeume zur Auswahl oder Schieberegler zum
- * Einstellen. Beides ist falsch fuer diese Aufgabe:
+ * Fuenfter Anlauf. Die vorigen vier boten gerechnete Raeume — erst
+ * Vorlagen, dann Regler, dann zwei Kataloge fuer Wand und Boden mit 144
+ * Kombinationen. Die sahen alle nach Computergrafik aus, und 144 davon
+ * helfen nicht, wenn keine einzige echt wirkt.
  *
- * Fertige Raeume sind zu wenige. Ein Dutzend Vorlagen deckt nicht ab, was
- * Haendler wollen — heller Raum mit dunklem Boden, dunkler Raum mit
- * hellem Boden, warm mit Estrich.
+ * Jetzt sind es wenige Raeume, dafuer gerendert: echte Materialien,
+ * echte Perspektive, Pflanzen und Bodenkreis als Modelle. Die Liste
+ * kommt vom Server (/api/studio-eigen/raeume), damit ein neu
+ * gerenderter Raum ohne Codeaenderung auftaucht.
  *
- * Regler sind zu viel. Wer eine Wandfarbe waehlen soll, ist mit vier
- * Farbfeldern und fuenf Reglern beschaeftigt, statt zu entscheiden.
- *
- * Der Weg dazwischen: zwei Kataloge, frei kombinierbar. Zwoelf
- * Waende und zwoelf Boeden ergeben 144 Raeume, und der Haendler
- * trifft zwei Entscheidungen statt neun. Abgeschaut beim
- * Gecko-Konfigurator von Octopus, dessen Setup-Code "BD0089R1015"
- * genau dasselbe ausdrueckt: Wand plus Boden.
- *
- * Der Schalter "Fahrzeug ausblenden" hat denselben Grund wie dort: In
- * der grossen Vorschau will man sehen, wie ein Auto im Raum steht — im
- * Katalog will man die Wand sehen, und da steht ein Auto davor nur im
- * Weg.
+ * Gespeichert wird in `studio_raum`; Schritt 2 liest genau diesen
+ * Schluessel und schickt ihn an /api/studio-eigen/verarbeiten.
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Check, Upload, Trash2, Camera, ChevronLeft, ChevronRight,
-  Eye, EyeOff, Copy, Shuffle,
-} from 'lucide-react';
+import { Check, Upload, Trash2, Camera } from 'lucide-react';
 import { createClient } from '../../../lib/supabase/client';
 import { OWN_SHOWROOM_ID } from '../../../lib/backgrounds';
 import { G } from '../listing/gestaltung';
 
 const F = G.schrift;
+const RAUM_SCHLUESSEL = 'studio_raum';
 
-/* Muss zu WAENDE/BOEDEN in lib/studio/hintergrund.ts passen. Dort steht
- * die Wahrheit; hier nur die Namen, weil sharp nicht ins Browser-Bundle
- * darf. */
-const WAENDE: [string, string][] = [
-  ['W01', 'Weiß, nahtlos'],    ['W02', 'Weiß mit Decke'],  ['W03', 'Hellgrau'],
-  ['W04', 'Mittelgrau'],       ['W05', 'Anthrazit'],       ['W06', 'Schwarz'],
-  ['W07', 'Warm, Nussbaum'],   ['W08', 'Blaugrau, kühl'],  ['W09', 'Beton, roh'],
-  ['W10', 'Sandbeige'],        ['W11', 'Petrol, dunkel'],  ['W12', 'Weiß, hohe Decke'],
-];
-const BOEDEN: [string, string][] = [
-  ['B01', 'Beton, poliert'],  ['B02', 'Beton, rau'],      ['B03', 'Großfliesen'],
-  ['B04', 'Marmor'],          ['B05', 'Terrazzo'],        ['B06', 'Travertin'],
-  ['B07', 'Holz, dunkel'],    ['B08', 'Holz, grau'],      ['B09', 'Asphalt'],
-  ['B10', 'Teppich, grau'],   ['B11', 'Hell, glänzend'],  ['B12', 'Schwarz, Spiegel'],
-];
+interface Raum { name: string; titel: string; pfad: string }
 
-const STANDARD_CODE = 'W02B02';
-const CODE_SCHLUESSEL = 'studio_raum_code';
-
-export default function RaumKonfigurator() {
-  const [wand, setWand]   = useState('W02');
-  const [boden, setBoden] = useState('B02');
-  const [reiter, setReiter] = useState<'wand' | 'boden'>('wand');
-  const [mitAuto, setMitAuto] = useState(true);
+export default function RaumAuswahl() {
+  const [liste, setListe] = useState<Raum[]>([]);
+  const [gewaehlt, setGewaehlt] = useState<string>('');
   const [gemerkt, setGemerkt] = useState(false);
-  const [kopiert, setKopiert] = useState(false);
+  const [fehler, setFehler] = useState('');
   const [eigenerUrl, setEigenerUrl] = useState<string | null>(null);
   const [eigenerAktiv, setEigenerAktiv] = useState(false);
   const [laedt, setLaedt] = useState(false);
   const dateiRef = useRef<HTMLInputElement>(null);
 
-  const code = `${wand}${boden}`;
-
   useEffect(() => {
-    const gespeichert = localStorage.getItem(CODE_SCHLUESSEL) || STANDARD_CODE;
-    const t = gespeichert.match(/^(W\d{2})(B\d{2})$/i);
-    if (t) { setWand(t[1].toUpperCase()); setBoden(t[2].toUpperCase()); }
     setEigenerUrl(localStorage.getItem('dealer_custom_background_url'));
     setEigenerAktiv(localStorage.getItem('dealer_background') === OWN_SHOWROOM_ID);
+
+    fetch('/api/studio-eigen/raeume')
+      .then(r => r.json())
+      .then((d: { standard: string; raeume: Raum[] }) => {
+        setListe(d.raeume);
+        const gespeichert = localStorage.getItem(RAUM_SCHLUESSEL);
+        /*
+         * Ein gespeicherter Name, den es nicht mehr gibt — etwa
+         * "weiss_beton" aus dem vorigen Satz —, faellt auf den Standard
+         * zurueck. Sonst waere kein Raum markiert und der Haendler
+         * wuesste nicht, womit seine Bilder gerade entstehen.
+         */
+        const gueltig = d.raeume.some(r => r.name === gespeichert) ? gespeichert! : d.standard;
+        setGewaehlt(gueltig);
+      })
+      .catch(() => setFehler('Die Räume konnten nicht geladen werden.'));
 
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -85,62 +66,25 @@ export default function RaumKonfigurator() {
     });
   }, []);
 
-  /* Jede Wahl gilt sofort — ein Speichern-Knopf waere hier nur eine
-   * zusaetzliche Handlung ohne Nutzen. */
-  const merken = (w: string, b: string) => {
-    localStorage.setItem(CODE_SCHLUESSEL, `${w}${b}`);
-    localStorage.setItem('dealer_background', `${w}${b}`);
-    localStorage.removeItem('dealer_custom_background_url_aktiv');
-    setEigenerAktiv(false);
+  const bestaetigen = () => {
     setGemerkt(true);
     setTimeout(() => setGemerkt(false), 1500);
   };
 
-  const setzeWand  = (w: string) => { setWand(w);  merken(w, boden); };
-  const setzeBoden = (b: string) => { setBoden(b); merken(wand, b); };
-
-  /*
-   * Blaettern, getrennt fuer Wand und Boden.
-   *
-   * Vorher bezogen sich die Pfeile auf den gerade offenen Reiter. Das
-   * ist zwar sparsam, aber man muss erst wissen, welcher Reiter offen
-   * ist, um zu verstehen, was ein Pfeil tut. Zwei ausdrueckliche
-   * Zeilen sind laenger und dafuer eindeutig.
-   */
-  const blaettern = (teil: 'wand' | 'boden', richtung: -1 | 1) => {
-    const liste = teil === 'wand' ? WAENDE : BOEDEN;
-    const jetzt = teil === 'wand' ? wand : boden;
-    const i = liste.findIndex(([id]) => id === jetzt);
-    const neu = liste[(i + richtung + liste.length) % liste.length][0];
-    if (teil === 'wand') setzeWand(neu); else setzeBoden(neu);
-  };
-
-  const nameVon = (teil: 'wand' | 'boden') => {
-    const liste = teil === 'wand' ? WAENDE : BOEDEN;
-    const jetzt = teil === 'wand' ? wand : boden;
-    return liste.find(([id]) => id === jetzt)?.[1] ?? jetzt;
-  };
-
-  const zufall = () => {
-    const w = WAENDE[Math.floor(Math.random() * WAENDE.length)][0];
-    const b = BOEDEN[Math.floor(Math.random() * BOEDEN.length)][0];
-    setWand(w); setBoden(b); merken(w, b);
-  };
-
-  const codeKopieren = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setKopiert(true);
-      setTimeout(() => setKopiert(false), 1500);
-    } catch { /* ohne Zwischenablage-Recht passiert eben nichts */ }
+  /* Jede Wahl gilt sofort — ein Speichern-Knopf waere nur ein Klick mehr. */
+  const waehlen = (name: string) => {
+    setGewaehlt(name);
+    localStorage.setItem(RAUM_SCHLUESSEL, name);
+    localStorage.setItem('dealer_background', 'raum');
+    setEigenerAktiv(false);
+    bestaetigen();
   };
 
   const eigenenWaehlen = () => {
     if (!eigenerUrl) return;
     localStorage.setItem('dealer_background', OWN_SHOWROOM_ID);
     setEigenerAktiv(true);
-    setGemerkt(true);
-    setTimeout(() => setGemerkt(false), 1500);
+    bestaetigen();
   };
 
   const hochladen = async (datei: File) => {
@@ -170,10 +114,10 @@ export default function RaumKonfigurator() {
     setEigenerUrl(null);
     setEigenerAktiv(false);
     localStorage.removeItem('dealer_custom_background_url');
-    localStorage.setItem('dealer_background', code);
+    localStorage.setItem('dealer_background', 'raum');
   };
 
-  const liste = reiter === 'wand' ? WAENDE : BOEDEN;
+  const aktuell = liste.find(r => r.name === gewaehlt);
 
   return (
     <div style={{ background: G.buehneGrund, minHeight: '100vh', color: G.buehneText, fontFamily: F }}>
@@ -191,153 +135,56 @@ export default function RaumKonfigurator() {
             )}
           </div>
           <p style={{ margin: '8px 0 0', color: G.buehneLeise, fontSize: 14.5, maxWidth: '70ch', lineHeight: 1.6 }}>
-            Wand und Boden werden getrennt gewählt und frei kombiniert — zwölf mal zwölf ergibt 144 Räume. Alle werden gerechnet und kosten nichts.
+            In diesem Raum stehen alle deine Fahrzeuge. Die Wahl gilt sofort für alle neuen Fotos —
+            so sehen deine Inserate einheitlich aus.
           </p>
         </header>
 
-        {/* ── Grosse Vorschau ── */}
-        <div style={{
-          border: `1px solid ${G.buehneLinie}44`, borderRadius: 13, overflow: 'hidden',
-          background: '#000', position: 'relative', marginBottom: 14,
-        }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img key={`${code}-${mitAuto}`}
-               src={`/api/studio-eigen/vorschau?code=${code}&b=1200${mitAuto ? '' : '&leer=1'}`}
-               alt={`Raum ${code}`}
-               style={{ width: '100%', display: 'block', aspectRatio: '3 / 2', objectFit: 'cover' }} />
+        {fehler && <p style={{ color: '#f87171', fontSize: 14 }}>{fehler}</p>}
 
-          <button onClick={() => blaettern('wand', -1)} aria-label="Vorherige Wand"
-            style={{ ...pfeilStil, left: 14 }}><ChevronLeft size={20} /></button>
-          <button onClick={() => blaettern('wand', 1)} aria-label="Nächste Wand"
-            style={{ ...pfeilStil, right: 14 }}><ChevronRight size={20} /></button>
-
-          <button onClick={() => setMitAuto(m => !m)}
-            style={{
-              position: 'absolute', top: 13, right: 13, display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '7px 13px', cursor: 'pointer', background: 'rgba(10,12,17,0.72)',
-              border: `1px solid ${G.buehneLinie}55`, borderRadius: 20,
-              color: G.buehneText, fontFamily: F, fontSize: 12, fontWeight: 600,
-            }}>
-            {mitAuto ? <EyeOff size={13} /> : <Eye size={13} />}
-            {mitAuto ? 'Fahrzeug ausblenden' : 'Fahrzeug zeigen'}
-          </button>
-        </div>
-
-        {/* ── Blättern, getrennt für Wand und Boden ── */}
-        <div style={{
-          display: 'grid', gap: 10, marginBottom: 14,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        }}>
-          {(['wand', 'boden'] as const).map(teil => (
-            <div key={teil} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              border: `1px solid ${G.buehneLinie}44`, borderRadius: 10,
-              padding: '8px 10px', background: 'rgba(255,255,255,0.02)',
-            }}>
-              <button onClick={() => blaettern(teil, -1)} aria-label={`Vorherige ${teil}`}
-                style={kleinerPfeil}><ChevronLeft size={15} /></button>
-              <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-                <div style={{
-                  fontSize: 9.5, fontWeight: 700, letterSpacing: '.09em',
-                  textTransform: 'uppercase', color: G.buehneLeise,
-                }}>{teil === 'wand' ? 'Wand' : 'Boden'}</div>
-                <div style={{
-                  fontSize: 13, fontWeight: 600, color: G.buehneText,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>{nameVon(teil)}</div>
-              </div>
-              <button onClick={() => blaettern(teil, 1)} aria-label={`Nächste ${teil}`}
-                style={kleinerPfeil}><ChevronRight size={15} /></button>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Code-Leiste ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-          border: `1px solid ${G.buehneLinie}44`, borderRadius: 10,
-          padding: '11px 15px', marginBottom: 24, background: 'rgba(255,255,255,0.02)',
-        }}>
-          <span style={{ fontSize: 12.5, color: G.buehneLeise }}>Dein Raum-Code</span>
-          <code style={{
-            fontFamily: G.ziffern, fontSize: 15, fontWeight: 700, letterSpacing: '.06em',
-            color: G.buehneAkzent, background: G.buehneAkzent + '18',
-            border: `1px dashed ${G.buehneAkzent}66`, borderRadius: 7, padding: '4px 11px',
-          }}>{code}</code>
-          <button onClick={codeKopieren}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 11px', cursor: 'pointer',
-              background: 'transparent', border: `1px solid ${G.buehneLinie}55`, borderRadius: 7,
-              color: kopiert ? '#4ade80' : G.buehneLeise, fontFamily: F, fontSize: 12, fontWeight: 600,
-            }}>
-            {kopiert ? <Check size={12} /> : <Copy size={12} />} {kopiert ? 'Kopiert' : 'Kopieren'}
-          </button>
-          <button onClick={zufall}
-            style={{
-              marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 11px', cursor: 'pointer', background: 'transparent',
-              border: `1px solid ${G.buehneLinie}55`, borderRadius: 7,
-              color: G.buehneLeise, fontFamily: F, fontSize: 12, fontWeight: 600,
-            }}>
-            <Shuffle size={12} /> Überraschung
-          </button>
-        </div>
+        {/* ── Große Vorschau ── */}
+        {aktuell && !eigenerAktiv && (
+          <div style={{
+            border: `1px solid ${G.buehneLinie}44`, borderRadius: 13, overflow: 'hidden',
+            background: '#000', marginBottom: 12,
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={aktuell.pfad} alt={aktuell.titel}
+                 style={{ width: '100%', display: 'block', aspectRatio: '3 / 2', objectFit: 'cover' }} />
+          </div>
+        )}
+        {aktuell && !eigenerAktiv && (
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 24 }}>{aktuell.titel}</div>
+        )}
 
         {/* ── Katalog ── */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          {(['wand', 'boden'] as const).map(r => (
-            <button key={r} onClick={() => setReiter(r)}
-              style={{
-                padding: '8px 18px', cursor: 'pointer', fontFamily: F, fontSize: 13,
-                fontWeight: reiter === r ? 700 : 500, borderRadius: 8,
-                border: `1px solid ${reiter === r ? G.buehneAkzent : G.buehneLinie + '44'}`,
-                background: reiter === r ? G.buehneAkzent + '1e' : 'transparent',
-                color: reiter === r ? G.buehneAkzent : G.buehneLeise,
-              }}>
-              {r === 'wand' ? 'Wand' : 'Boden'}
-            </button>
-          ))}
-        </div>
-
         <div style={{
-          display: 'grid', gap: 11, marginBottom: 34,
-          gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))',
+          display: 'grid', gap: 12, marginBottom: 36,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
         }}>
-          {liste.map(([id, name]) => {
-            const aktiv = reiter === 'wand' ? wand === id : boden === id;
-            /*
-             * Die Kachel zeigt NUR den eigenen Baustein: eine Wand vor
-             * neutralem Boden, ein Boden unter neutraler Wand. Sonst
-             * saehe man immer die aktuelle Kombination und koennte
-             * nicht beurteilen, was der Baustein selbst beitraegt.
-             */
-            const kachelCode = reiter === 'wand' ? `${id}B03` : `W04${id}`;
+          {liste.map(r => {
+            const aktiv = !eigenerAktiv && gewaehlt === r.name;
             return (
-              <button key={id}
-                onClick={() => (reiter === 'wand' ? setzeWand(id) : setzeBoden(id))}
-                aria-pressed={aktiv}
+              <button key={r.name} onClick={() => waehlen(r.name)} aria-pressed={aktiv}
                 style={{
                   padding: 0, cursor: 'pointer', overflow: 'hidden', fontFamily: F,
-                  background: G.buehneGrund, textAlign: 'left',
+                  background: G.buehneGrund, textAlign: 'left', borderRadius: 10,
                   border: `1.5px solid ${aktiv ? G.buehneAkzent : G.buehneLinie + '33'}`,
-                  borderRadius: 10,
                   boxShadow: aktiv ? `0 0 0 3px ${G.buehneAkzent}22` : 'none',
                 }}>
                 <div style={{ position: 'relative', aspectRatio: '3 / 2', background: '#111' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/api/studio-eigen/vorschau?code=${kachelCode}&b=300&leer=1`} alt=""
-                       loading="lazy"
+                  <img src={r.pfad} alt="" loading="lazy"
                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   {aktiv && (
                     <div style={{
-                      position: 'absolute', top: 6, right: 6, width: 21, height: 21, borderRadius: '50%',
+                      position: 'absolute', top: 7, right: 7, width: 22, height: 22, borderRadius: '50%',
                       background: G.buehneAkzent, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}><Check size={12} color="#0a0c11" strokeWidth={3} /></div>
+                    }}><Check size={13} color="#0a0c11" strokeWidth={3} /></div>
                   )}
                 </div>
-                <div style={{ padding: '8px 10px 9px', borderTop: `1px solid ${G.buehneLinie}22` }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: G.buehneText }}>{name}</div>
-                  <div style={{ fontSize: 10, color: G.buehneLeise, fontFamily: G.ziffern }}>{id}</div>
+                <div style={{ padding: '9px 11px 10px', borderTop: `1px solid ${G.buehneLinie}22` }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: G.buehneText }}>{r.titel}</div>
                 </div>
               </button>
             );
@@ -348,7 +195,7 @@ export default function RaumKonfigurator() {
         <section>
           <h2 style={{ margin: '0 0 5px', fontSize: 15, fontWeight: 700 }}>Oder deine eigene Halle</h2>
           <p style={{ margin: '0 0 13px', fontSize: 13, color: G.buehneLeise, lineHeight: 1.55, maxWidth: '62ch' }}>
-            Statt eines gerechneten Raums ein Foto deiner Halle — leer, quer aufgenommen, die Kamera
+            Statt eines unserer Räume ein Foto deiner Halle — leer, quer aufgenommen, die Kamera
             etwa auf Kotflügelhöhe. Dann stehen deine Fahrzeuge dort, wo sie wirklich stehen.
           </p>
 
@@ -417,16 +264,3 @@ export default function RaumKonfigurator() {
     </div>
   );
 }
-
-const kleinerPfeil: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: 7, cursor: 'pointer', flexShrink: 0,
-  background: 'transparent', border: '1px solid rgba(255,255,255,0.14)',
-  color: '#c7cede', display: 'flex', alignItems: 'center', justifyContent: 'center',
-};
-
-const pfeilStil: React.CSSProperties = {
-  position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-  width: 40, height: 40, borderRadius: '50%', cursor: 'pointer',
-  background: 'rgba(10,12,17,0.68)', border: '1px solid rgba(255,255,255,0.16)',
-  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-};
