@@ -186,7 +186,128 @@ def hallentore(mat_tor, mat_rahmen):
         sturz.data.materials.append(mat_rahmen)
 
 
-def raum(wandfarbe, bodenfarbe, sockel, wandsatz, bodensatz, bauart='ecke'):
+def podest(farbe, radius=4.6, staerke=0.10):
+    """
+    Der Kreis auf dem Boden, auf dem das Fahrzeug steht.
+
+    Sieht man in jedem Autohaus: eine flache, hellere Scheibe, oft mit
+    einem schmalen Ring als Kante. Sie tut zwei Dinge auf einmal — der
+    Raum bekommt eine Mitte, und das Auge bekommt eine Flaeche, an der es
+    ablesen kann, wie der Boden in die Tiefe laeuft. Ein leerer Boden
+    ohne Struktur gibt diese Auskunft nicht, und genau deshalb sahen die
+    ersten acht Raeume alle gleich und alle ein bisschen leer aus.
+
+    Zwei Millimeter ueber dem Boden, damit die Flaechen nicht ineinander
+    flackern (z-fighting).
+    """
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=staerke,
+                                        location=(0, 0.6, staerke / 2 - 0.002),
+                                        vertices=96)
+    scheibe = bpy.context.active_object
+    scheibe.name = 'Podest'
+    scheibe.data.materials.append(farbe)
+    return scheibe
+
+
+def bodenkreis(mat_ring, radius=4.6, breite=0.06):
+    """Nur der Ring, ohne erhoehte Scheibe — flacher und dezenter."""
+    bpy.ops.mesh.primitive_torus_add(
+        major_radius=radius, minor_radius=breite,
+        location=(0, 0.6, 0.004), major_segments=96, minor_segments=8,
+    )
+    ring = bpy.context.active_object
+    ring.name = 'Bodenkreis'
+    ring.scale = (1, 1, 0.25)     # flachgedrueckt, liegt auf dem Boden
+    ring.data.materials.append(mat_ring)
+    return ring
+
+
+MODELLE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'modelle', 'polyhaven')
+
+
+def modell(name, ort, drehung=0.0, groesse=1.0):
+    """
+    Haengt ein fertiges Modell aus tools/modelle/polyhaven in die Szene.
+
+    Der erste Versuch hat Pflanzen selbst gebaut — ein Kegel als Topf und
+    elf gedrehte Flaechen als Blaetter. Das Ergebnis sah aus wie ein
+    Tannenbaum aus Papier, und zwar sofort und aus jeder Entfernung.
+    Pflanzen bestehen aus Hunderten leicht verschiedener Blaetter mit
+    Adern, Kruemmung und durchscheinendem Rand; das ist nichts, was man
+    aus Grundkoerpern zusammensetzt.
+
+    Poly Haven gibt seine Modelle unter CC0 heraus, kommerzielle Nutzung
+    ausdruecklich erlaubt, Namensnennung nicht noetig (polyhaven.com/license,
+    geprueft 12.09.2026). Dieselbe Ueberlegung wie bei den Texturen:
+    einkaufen statt basteln.
+
+    Die .blend-Dateien liegen NICHT im Repository — jederzeit neu ladbar.
+    """
+    pfad = os.path.join(MODELLE, f'{name}.blend')
+    if not os.path.isfile(pfad):
+        print(f'[raum_render] Modell fehlt, wird uebersprungen: {name}')
+        return None
+
+    vorher = set(bpy.context.scene.objects)
+    with bpy.data.libraries.load(pfad, link=False) as (quelle, ziel):
+        # Nur die Objekte der obersten Ebene; Kinder kommen mit.
+        ziel.objects = list(quelle.objects)
+
+    neu = []
+    for ob in ziel.objects:
+        if ob is None or ob.parent is not None:
+            continue
+        bpy.context.collection.objects.link(ob)
+        neu.append(ob)
+
+    for ob in neu:
+        ob.location = (ort[0], ort[1], ob.location.z)
+        ob.rotation_euler = (ob.rotation_euler.x, ob.rotation_euler.y, drehung)
+        ob.scale = tuple(s * groesse for s in ob.scale)
+
+    # Die .blend verweist auf Texturen in einem Unterordner, den der
+    # Download nicht mitbringt — Cycles meldete "Failed to load 10 image
+    # files" und rechnete die Pflanze in Grau. find_missing_files sucht
+    # sie unter tools/modelle/polyhaven/textures und haengt sie wieder an.
+    texturen = os.path.join(MODELLE, 'textures')
+    if os.path.isdir(texturen) and any(i.filepath and not i.has_data for i in bpy.data.images):
+        bpy.ops.file.find_missing_files(directory=texturen)
+
+    print(f'[raum_render] {name}: {len(neu)} Objekte, '
+          f'{len(set(bpy.context.scene.objects) - vorher)} neu in der Szene')
+    return neu
+
+
+def wandband(mat, hoehe=0.9, oben=2.6):
+    """
+    Ein waagerechtes Farbband auf der Rueckwand.
+
+    Der billigste Weg, aus derselben Wand eine andere zu machen — und
+    einer, den Autohaeuser tatsaechlich benutzen: unten ein dunkler
+    Streifen, oben Weiss.
+    """
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 5.985, oben - hoehe / 2),
+                                     rotation=(math.radians(90), 0, 0))
+    band = bpy.context.active_object
+    band.name = 'Wandband'
+    band.scale = (40, hoehe, 1)
+
+    # Skalierung in das Netz einrechnen.
+    #
+    # Die Materialien greifen auf Objektkoordinaten zu, damit eine
+    # Kachel eine echte Laenge in Metern bekommt. Objektkoordinaten
+    # skalieren aber mit dem Objekt: Bei einer vierzigfach gestreckten
+    # Flaeche wurde die Putztextur zu waagerechten Schlieren gezogen.
+    # Nach transform_apply steckt die Groesse im Netz, und die
+    # Koordinaten stimmen wieder mit den Metern ueberein.
+    bpy.context.view_layer.objects.active = band
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+    band.data.materials.append(mat)
+
+
+def raum(wandfarbe, bodenfarbe, sockel, wandsatz, bodensatz, bauart='ecke',
+         schmuck=''):
     """
     Boden, Rueckwand, Seitenwand rechts, dunkler Sockel.
 
@@ -227,6 +348,58 @@ def raum(wandfarbe, bodenfarbe, sockel, wandsatz, bodensatz, bauart='ecke'):
         ob = bpy.context.active_object
         ob.scale = mass
         ob.data.materials.append(m_sock)
+
+    ausstattung(schmuck, bodenfarbe, wandfarbe, wandsatz, bodensatz)
+
+
+def ausstattung(schmuck, bodenfarbe, wandfarbe, wandsatz=None, bodensatz=None):
+    """
+    Was den Raum von den anderen unterscheidet.
+
+    `schmuck` ist eine Liste durch Komma getrennt, z.B. "podest,pflanzen".
+    Ohne Angabe bleibt der Raum leer — das war der Zustand der ersten
+    acht: dieselbe Ecke in acht Farben, und deshalb keine acht Raeume,
+    sondern einer.
+    """
+    teile = {s.strip() for s in schmuck.split(',') if s.strip()}
+    if not teile:
+        return
+
+    # Nur eine Spur heller als der Boden. c*1.35+0.05 ergab auf einem
+    # hellen Boden fast Weiss — im Bild ein weisser Fleck, der aussah
+    # wie verschuetteter Lack und nicht wie eine Standflaeche.
+    heller = tuple(min(1.0, c * 1.12 + 0.02) for c in bodenfarbe)
+    dunkler = tuple(c * 0.45 for c in bodenfarbe)
+
+    if 'podest' in teile:
+        # Radius 3,2 statt 4,6 und nur zwei Zentimeter hoch. Der erste
+        # Versuch war eine Buehne, die den halben Boden gefuellt hat —
+        # ein Podest soll unter dem Auto verschwinden, nicht auffallen.
+        #
+        # Und dasselbe Material wie der Boden: Ein Podest ist anderer
+        # Belag, kein anderer Werkstoff. Ohne Textur war es eine glatte
+        # Scheibe und damit sofort als Fremdkoerper zu sehen.
+        podest(material('Podest', heller, 0.45, bodensatz, kachel_m=3.0),
+               radius=3.2, staerke=0.02)
+    if 'kreis' in teile:
+        bodenkreis(material('Ring', dunkler, 0.35), radius=3.4)
+    if 'band' in teile:
+        # Das Band bekommt DIESELBE Putztextur wie die Wand, nur dunkler
+        # getoent. Ohne Textur war es eine glatte Farbflaeche und wirkte
+        # dadurch heller als die Wand daneben — im Bild ein weisser
+        # Streifen, obwohl der Farbwert dunkler war.
+        wandband(material('Band', tuple(c * 0.62 for c in wandfarbe), 0.85,
+                          wandsatz, kachel_m=2.5),
+                 hoehe=1.15, oben=1.15)
+    if 'pflanzen' in teile:
+        # Nur potted_plant_01 — das ist eine kniehohe Kuebelpflanze.
+        # potted_plant_04 ist eine Sukkulente von fuenfzehn Zentimetern
+        # und sah neben einem Auto aus wie Spielzeug.
+        #
+        # Beide Stellen liegen im Bild und trotzdem weit weg vom
+        # Fahrzeug: links am Rand, rechts hinter der Ecke.
+        modell('potted_plant_01', (-3.9, 5.35), drehung=math.radians(25), groesse=1.6)
+        modell('potted_plant_01', (2.75, 5.45), drehung=math.radians(-40), groesse=1.25)
 
 
 def licht():
@@ -350,7 +523,8 @@ def main():
     raum(wand, boden, sockel,
          opt.get('wandsatz', 'PaintedPlaster017_1K-JPG'),
          opt.get('bodensatz', 'Concrete046_1K-JPG'),
-         opt.get('bauart', 'ecke'))
+         opt.get('bauart', 'ecke'),
+         opt.get('schmuck', ''))
     licht()
     cam = kamera()
     rendern(ziel, proben, opt.get('maschine', 'cycles'))

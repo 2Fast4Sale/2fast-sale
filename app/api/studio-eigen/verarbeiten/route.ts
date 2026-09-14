@@ -5,6 +5,7 @@ import { budget, istSandbox, reservieren, freigeben } from '../../../../lib/phot
 import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../../lib/studio/kompositor';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 import { raum, raumBild } from '../../../../lib/studio/raeume';
+import { ersetzeKennzeichen } from '../../../../lib/studio/kennzeichen';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,12 +46,14 @@ function hintergrundErlaubt(adresse: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, draftId, code, raum: raumName, kompositor, hintergrund, hintergrundUrl, breite } =
+    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, breite } =
       await req.json() as {
         image?: string;
         draftId?: string | null;
         code?: string;
         raum?: string;
+        /** Firmenname des Haendlers — kommt auf das Ersatzschild. */
+        firma?: string;
         kompositor?: Partial<KompositorEinstellungen>;
         hintergrund?: Partial<StudioHintergrund>;
         hintergrundUrl?: string;
@@ -116,7 +119,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const roh = Buffer.from(image.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+    let roh: Buffer = Buffer.from(image.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+
+    /*
+     * Kennzeichen ersetzen — VOR allem anderen.
+     *
+     * Ein Kennzeichen ist ein personenbezogenes Datum des Halters. Wer
+     * es im Inserat stehen laesst, veroeffentlicht es; das ist der
+     * Haendler, und wir liefern ihm das Problem mit, wenn unser Werkzeug
+     * es stehen laesst.
+     *
+     * Hier und nicht am fertigen Bild, aus zwei Gruenden: Das
+     * Originalfoto hat die volle Aufloesung, das Schild ist also
+     * groesser und sicherer zu finden. Und alles, was danach kommt —
+     * Freistellen, Skalieren, Schatten — traegt den Ersatz automatisch
+     * mit, ohne dass ihn ein Pfad vergessen kann.
+     */
+    let kennzeichenErsetzt = false;
+    try {
+      const kz = await ersetzeKennzeichen(roh, firma ?? null);
+      roh = kz.bild;
+      kennzeichenErsetzt = kz.ersetzt;
+    } catch (err) {
+      /*
+       * Ein Fehler beim Ersetzen darf das Bild nicht kosten. Dann bleibt
+       * das Kennzeichen stehen — und `kennzeichenErsetzt: false` in der
+       * Antwort sagt der Oberflaeche, dass sie warnen muss.
+       */
+      console.error('[verarbeiten] Kennzeichenersatz fehlgeschlagen:', err);
+    }
+
     const zielBreite = Math.max(600, Math.min(2400, Math.round(breite ?? 2000)));
     const zielHoehe  = Math.round(zielBreite / 1.5);
 
@@ -135,9 +167,9 @@ export async function POST(req: NextRequest) {
     /* ── Weg 1: PhotoRoom Plus macht alles ── */
     if (weg === 'plus' && halle && !hintergrundUrl) {
       const plus = new FormData();
-      plus.append('imageFile', new Blob([roh], { type: 'image/jpeg' }), 'auto.jpg');
       // new Uint8Array(...) statt des Buffers direkt: TypeScript nimmt
       // Buffer nicht als BlobPart an, obwohl es zur Laufzeit ginge.
+      plus.append('imageFile', new Blob([new Uint8Array(roh)], { type: 'image/jpeg' }), 'auto.jpg');
       plus.append(
         'background.imageFile',
         new Blob([new Uint8Array(raumBild(halle))], { type: 'image/jpeg' }),
@@ -182,6 +214,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         result: `data:image/jpeg;base64,${fertig.toString('base64')}`,
+        kennzeichenErsetzt,
         weg: 'plus',
         raum: halle.name,
         sandbox,
@@ -190,7 +223,7 @@ export async function POST(req: NextRequest) {
 
     /* ── Weg 2: nur freistellen, Rest selbst rechnen ── */
     const form = new FormData();
-    form.append('image_file', new Blob([roh], { type: 'image/jpeg' }), 'auto.jpg');
+    form.append('image_file', new Blob([new Uint8Array(roh)], { type: 'image/jpeg' }), 'auto.jpg');
     // PNG, weil nur PNG einen Alphakanal hat. Der Kompositor braucht die
     // Freistellungskante als Teiltransparenz, sonst harte Raender.
     form.append('format', 'png');
@@ -269,6 +302,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       result: `data:image/jpeg;base64,${ergebnis.bild.toString('base64')}`,
+      kennzeichenErsetzt,
       eigenbau: true,
       sandbox,
     });

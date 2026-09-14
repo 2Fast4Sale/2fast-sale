@@ -431,8 +431,20 @@ async function bodenschattenProjiziert(
   // Stossstange, und davor ist bei diffusem Hallenlicht heller Boden.
   const tHalb = Math.max(Math.abs(tRadA - tRadB) / 2 * 1.05, uHalb * 0.30);
 
+  /*
+   * Die Aufstandsflaechen der Reifen — eng und tief schwarz.
+   *
+   * Gemessen an einer Spalte durch das Vorderrad: Bei PhotoRoom geht es
+   * vom schwarzen Reifen in acht Zeilen auf Bodenhelligkeit, bei der
+   * Fassung davor brauchte es dreissig. Eine Luecke gab es nie — der
+   * Kontakt war nur eine Rampe statt einer Kante, und genau das liest
+   * das Auge als "schwebt auf einem Kissen".
+   *
+   * Wo Gummi den Beton beruehrt, kommt gar kein Licht mehr hin. Das ist
+   * eine harte Kante, kein Verlauf.
+   */
   const uRadA = seiteVon(radAx, radAy), uRadB = seiteVon(radBx, radBy);
-  const uKern = uHalb * 0.16, tKern = tHalb * 0.22;
+  const uKern = uHalb * 0.085, tKern = tHalb * 0.10;
 
   /* ── 3. Zeichnen ── */
   const maske = Buffer.alloc(zielBreite * zielHoehe, 0);
@@ -462,7 +474,10 @@ async function bodenschattenProjiziert(
       const dt = (t - t0) / tHalb;
       const r = Math.sqrt(du * du + dt * dt);
 
-      const PLATEAU = 0.72;
+      // Laengeres Plateau, kuerzerer Auslauf: Der Uebergang soll eine
+      // Kante sein, keine Rampe. Vorher 0,72 - der Rand lief dadurch
+      // ueber knapp ein Drittel des Radius aus.
+      const PLATEAU = 0.86;
       const RAND = 1.00;
       let form: number;
       if (r <= PLATEAU) form = 1;
@@ -488,7 +503,10 @@ async function bodenschattenProjiziert(
   const weich = await sharp(maske, { raw: { width: zielBreite, height: zielHoehe, channels: 1 } })
     // Klein halten: Die Form ist schon glatt, der Weichzeichner soll nur
     // die Rasterstufen nehmen.
-    .blur(Math.max(0.8, zielBreite * 0.004))
+    // 0,004 der Bildbreite waren bei 1920 Pixeln knapp acht Pixel und
+    // haben die Kante am Reifen wieder verschmiert, die oben mit Muehe
+    // erzeugt wurde. Halb so viel reicht gegen die Rasterstufen.
+    .blur(Math.max(0.8, zielBreite * 0.002))
     .toColourspace('b-w')
     .raw()
     .toBuffer();

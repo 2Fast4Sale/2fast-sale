@@ -402,8 +402,22 @@ function Step2Inner() {
        * schaetzen — und das geht nur, wenn er weiss, WELCHER Raum es ist.
        */
       const raumName = typeof window !== 'undefined'
-        ? (localStorage.getItem('studio_raum') || 'weiss_beton')
-        : 'weiss_beton';
+        ? (localStorage.getItem('studio_raum') || 'weiss_klar')
+        : 'weiss_klar';
+
+      /*
+       * Der Firmenname kommt auf das Ersatzschild am Fahrzeug.
+       *
+       * Das Kennzeichen wird serverseitig ueberdeckt — es ist ein
+       * personenbezogenes Datum des Halters und hat in einem Inserat
+       * nichts zu suchen. Statt eines schwarzen Balkens kommt das
+       * Haendlerschild darauf, so wie es die Haendler ohnehin
+       * anschrauben. Ohne hinterlegten Namen bleibt das Schild leer,
+       * aber es wird trotzdem ueberdeckt.
+       */
+      const firma = typeof window !== 'undefined'
+        ? (localStorage.getItem('dealer_company') || '').trim()
+        : '';
 
       let studioWerte: Record<string, number> | undefined;
       try {
@@ -419,6 +433,7 @@ function Step2Inner() {
           draftId: entwurfId(),
           code: raumCode,
           raum: raumName,
+          firma: firma || undefined,
           hintergrundUrl: customBackgroundUrl || undefined,
           kompositor: studioWerte,
         }),

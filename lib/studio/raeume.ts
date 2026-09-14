@@ -101,4 +101,4 @@ export function raumBild(r: Raum): Buffer {
   return readFileSync(join(ORDNER, `${r.name}.jpg`));
 }
 
-export const STANDARD_RAUM = 'weiss_beton';
+export const STANDARD_RAUM = 'weiss_klar';
