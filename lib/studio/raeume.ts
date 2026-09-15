@@ -53,6 +53,9 @@ const TITEL: Record<string, string> = {
   grau_asphalt:  'Grau auf Asphalt',
   anthrazit:     'Anthrazit',
   werkstatt:     'Sichtbeton mit Pflanzen',
+  galerie_dunkel: 'Galerie, dunkler Boden',
+  galerie_hell:   'Galerie, heller Boden',
+  galerie_warm:   'Galerie, warm',
 };
 
 /** Aus "weiss_beton" wird "Weiss Beton". */
