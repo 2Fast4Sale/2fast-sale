@@ -451,6 +451,14 @@ function Step2Inner() {
           leser.onerror = () => fehler(leser.error);
           leser.readAsDataURL(ergebnis);
         });
+      } else if (process.env.NEXT_PUBLIC_FREISTELLEN !== 'photoroom') {
+        /*
+         * Kein Server eingerichtet: im Browser freistellen, kostenlos.
+         * Mit NEXT_PUBLIC_FREISTELLEN=photoroom geht es wieder ueber
+         * PhotoRoom, sobald dort ein Tarif aktiv ist.
+         */
+        const { freistellenImBrowser } = await import('../../../../lib/studio/browserFreistellen');
+        vorab = await freistellenImBrowser(compressed);
       }
 
       const res = await fetch('/api/studio-eigen/verarbeiten', {
