@@ -1,7 +1,10 @@
 'use client';
 
 /**
- * Freistellen direkt im Browser des Haendlers — BiRefNet ueber Transformers.js.
+ * Freistellen direkt im Browser des Haendlers — ormbg ueber Transformers.js.
+ *
+ * (Zuerst BiRefNet lite; das passte im Browser weder auf die Grafikkarte
+ * noch in den Speicher. Einzelheiten in freistellWorker.ts.)
  *
  * ── Warum im Browser ───────────────────────────────────────────────
  *
@@ -15,103 +18,73 @@
  * gerechnet auf dem Geraet des Haendlers. Beim ersten Foto laedt der
  * Browser das Modell herunter; danach liegt es im Cache.
  *
- * Mit Grafikkarte (WebGPU) wird die halbe Genauigkeit genommen — halb so
- * gross, deutlich schneller, fuer eine Maske ohne sichtbaren Unterschied.
- * Ohne WebGPU (viele Handys, aeltere Browser) laeuft die volle Fassung auf
- * dem Prozessor. Das ist langsam, aber es funktioniert.
+ * Gerechnet wird in einem Web Worker (freistellWorker.ts) — dort steht auch,
+ * warum: Die Seite fror sonst ein, und Grafikkarten scheitern teils erst
+ * beim Rechnen.
  */
 
-const MODELL = 'onnx-community/BiRefNet_lite-ONNX';
-// 1600 statt 2000: Das Bild geht als Text an die Website, und Vercel nimmt
-// hoechstens 4,5 MB je Anfrage an. So bleibt reichlich Abstand.
-const MAX_BREITE = 1600;
+const MAX_BREITE = 1600;   // Vercel nimmt hoechstens 4,5 MB je Anfrage an
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let geladen: Promise<any> | null = null;
-
-/**
- * Wer den Download-Fortschritt sehen will. Beim ersten Foto laedt der
- * Browser 115 MB, und ohne Anzeige sitzt der Haendler ein, zwei Minuten
- * vor einem Bild, das scheinbar nichts tut.
- */
 type LadeHoerer = (geladenBytes: number, gesamtBytes: number) => void;
 let ladeHoerer: LadeHoerer | null = null;
+
+/** Download-Fortschritt des Modells beim ersten Foto. */
 export function beiModellDownload(hoerer: LadeHoerer | null): void {
   ladeHoerer = hoerer;
 }
 
-/*
- * Transformers.js meldet den Fortschritt je Datei (Modell, Konfiguration).
- * Hier wird ueber alle Dateien summiert, damit eine einzige Zahl entsteht.
- */
-const dateien = new Map<string, { geladen: number; gesamt: number }>();
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function fortschritt(info: any): void {
-  if (info?.status !== 'progress' || !info.file) return;
-  dateien.set(info.file, { geladen: info.loaded ?? 0, gesamt: info.total ?? 0 });
-  let g = 0, t = 0;
-  for (const d of dateien.values()) { g += d.geladen; t += d.gesamt; }
-  ladeHoerer?.(g, t);
+let worker: Worker | null = null;
+let naechsteId = 1;
+const offen = new Map<number, { fertig: (b: Blob) => void; fehler: (e: Error) => void }>();
+
+function holeWorker(): Worker {
+  if (worker) return worker;
+  worker = new Worker(new URL('./freistellWorker.ts', import.meta.url), { type: 'module' });
+  worker.onmessage = (e: MessageEvent) => {
+    const d = e.data;
+    if (d.art === 'download') ladeHoerer?.(d.geladen, d.gesamt);
+    else if (d.art === 'geraet') console.info('[freistellen] rechnet auf:', d.geraet);
+    else if (d.art === 'fertig') { offen.get(d.id)?.fertig(d.blob); offen.delete(d.id); }
+    else if (d.art === 'fehler') { offen.get(d.id)?.fehler(new Error(d.meldung)); offen.delete(d.id); }
+  };
+  worker.onerror = (e) => {
+    // Ein abgestuerzter Worker nimmt alle wartenden Fotos mit — die sollen
+    // einen Fehler sehen, statt ewig zu warten. Der naechste Aufruf startet neu.
+    for (const w of offen.values()) w.fehler(new Error(e.message || 'Freistell-Worker abgestuerzt'));
+    offen.clear();
+    worker = null;
+  };
+  return worker;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function laden(): Promise<any> {
-  if (geladen) return geladen;
-  geladen = (async () => {
-    const { pipeline, env } = await import('@huggingface/transformers');
-    env.allowLocalModels = false;
-
-    const webgpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
-    if (webgpu) {
-      try {
-        return await pipeline('background-removal', MODELL,
-          { device: 'webgpu', dtype: 'fp16', progress_callback: fortschritt });
-      } catch (err) {
-        // WebGPU gemeldet, aber nicht nutzbar (Treiber, Energiesparmodus):
-        // auf den Prozessor ausweichen statt aufzugeben.
-        console.warn('[freistellen] WebGPU nicht nutzbar, nehme Prozessor:', err);
-      }
-    }
-    dateien.clear();
-    return pipeline('background-removal', MODELL,
-      { device: 'wasm', dtype: 'fp32', progress_callback: fortschritt });
-  })();
-  // Ein Fehler beim Laden darf nicht fuer immer haengen bleiben —
-  // beim naechsten Foto wird es neu versucht.
-  geladen.catch(() => { geladen = null; });
-  return geladen;
-}
-
-/** Laedt das Modell schon vorab, z.B. sobald Schritt 2 geoeffnet wird. */
+/** Startet den Worker schon vorab, z.B. sobald Schritt 2 geoeffnet wird. */
 export function freistellerVorwaermen(): void {
-  laden().catch(() => {});
+  holeWorker();
 }
 
 /**
  * Nimmt ein Foto als Data-URL und gibt das freigestellte Fahrzeug als
- * Data-URL (WebP mit Transparenz) zurueck.
+ * Data-URL (WebP mit Transparenz, hoechstens 1600 px breit) zurueck.
  */
 export async function freistellenImBrowser(foto: string): Promise<string> {
-  const verarbeiter = await laden();
-  const ausgabe = await verarbeiter(foto);
-  const bild = Array.isArray(ausgabe) ? ausgabe[0] : ausgabe;
+  const id = naechsteId++;
+  const blob = await new Promise<Blob>((fertig, fehler) => {
+    offen.set(id, { fertig, fehler });
+    holeWorker().postMessage({ id, foto });
+  });
 
-  // RawImage → Canvas. Je nach Umgebung ein OffscreenCanvas oder ein
-  // normales Canvas-Element; beide werden unten gleich behandelt.
-  const quelle = bild.toCanvas() as HTMLCanvasElement | OffscreenCanvas;
-
-  const faktor = Math.min(1, MAX_BREITE / quelle.width);
-  const b = Math.round(quelle.width * faktor);
-  const h = Math.round(quelle.height * faktor);
-  const ziel = document.createElement('canvas');
-  ziel.width = b;
-  ziel.height = h;
-  const ctx = ziel.getContext('2d');
+  const bitmap = await createImageBitmap(blob);
+  const faktor = Math.min(1, MAX_BREITE / bitmap.width);
+  const b = Math.round(bitmap.width * faktor);
+  const h = Math.round(bitmap.height * faktor);
+  const leinwand = document.createElement('canvas');
+  leinwand.width = b;
+  leinwand.height = h;
+  const ctx = leinwand.getContext('2d');
   if (!ctx) throw new Error('Canvas nicht verfuegbar');
-  ctx.drawImage(quelle as CanvasImageSource, 0, 0, b, h);
+  ctx.drawImage(bitmap, 0, 0, b, h);
+  bitmap.close();
 
-  // WebP haelt die Transparenz und ist deutlich kleiner als PNG — wichtig,
-  // weil das Bild danach als JSON an die Website geht.
-  const webp = ziel.toDataURL('image/webp', 0.92);
-  return webp.startsWith('data:image/webp') ? webp : ziel.toDataURL('image/png');
+  const webp = leinwand.toDataURL('image/webp', 0.9);
+  return webp.startsWith('data:image/webp') ? webp : leinwand.toDataURL('image/png');
 }
