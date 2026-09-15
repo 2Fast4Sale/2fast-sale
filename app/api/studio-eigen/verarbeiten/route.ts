@@ -32,6 +32,28 @@ export const dynamic = 'force-dynamic';
  */
 const SEGMENT = 'https://sdk.photoroom.com/v1/segment';
 
+/**
+ * Fehlermeldung zu einer abgelehnten PhotoRoom-Anfrage.
+ *
+ * Vorher hiess es bei jedem Fehler "gerade nicht verfuegbar, bitte gleich
+ * nochmal versuchen". Als die kostenlosen Bilder aufgebraucht waren, stand
+ * das unter jedem Foto — und "nochmal versuchen" half nie, weil es kein
+ * voruebergehender Fehler war. 402, 403 und 429 heissen bei PhotoRoom:
+ * Kontingent leer, Tarif fehlt oder zu viele Anfragen.
+ */
+function photoroomFehler(status: number): { error: string; kontingentErschoepft?: boolean } {
+  if (status === 402 || status === 403) {
+    return {
+      error: 'Das Bildkontingent bei PhotoRoom ist aufgebraucht. Studio-Fotos sind wieder möglich, sobald der Tarif aktiv ist.',
+      kontingentErschoepft: true,
+    };
+  }
+  if (status === 429) {
+    return { error: 'Zu viele Bilder auf einmal. Bitte in einer Minute noch einmal versuchen.' };
+  }
+  return { error: 'Studio-Bearbeitung gerade nicht verfügbar. Bitte gleich nochmal versuchen.' };
+}
+
 function hintergrundErlaubt(adresse: string): boolean {
   try {
     const ziel = new URL(adresse);
@@ -208,10 +230,7 @@ export async function POST(req: NextRequest) {
         const text = await a.text();
         console.error('[verarbeiten] PhotoRoom Plus fehlgeschlagen:', a.status, text.slice(0, 300));
         await freigeben(buchung);
-        return NextResponse.json(
-          { error: 'Studio-Bearbeitung gerade nicht verfügbar. Bitte gleich nochmal versuchen.' },
-          { status: 503 },
-        );
+        return NextResponse.json(photoroomFehler(a.status), { status: 503 });
       }
       const fertig = Buffer.from(await a.arrayBuffer());
 
@@ -244,10 +263,7 @@ export async function POST(req: NextRequest) {
       const text = await antwort.text();
       console.error('[verarbeiten] Freistellen fehlgeschlagen:', antwort.status, text.slice(0, 300));
       await freigeben(buchung);
-      return NextResponse.json(
-        { error: 'Studio-Bearbeitung gerade nicht verfügbar. Bitte gleich nochmal versuchen.' },
-        { status: 503 },
-      );
+      return NextResponse.json(photoroomFehler(antwort.status), { status: 503 });
     }
     const freigestellt = Buffer.from(await antwort.arrayBuffer());
 
