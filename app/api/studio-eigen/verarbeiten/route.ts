@@ -97,7 +97,16 @@ export async function POST(req: NextRequest) {
      * Ueber STUDIO_WEG=eigenbau laesst sich zurueckschalten, falls der
      * Schatten spaeter besser wird oder PhotoRoom die Preise anhebt.
      */
-    const weg = process.env.STUDIO_WEG === 'eigenbau' ? 'eigenbau' : 'plus';
+    /*
+     * Standard ist der EIGENBAU. Plus nur, wenn STUDIO_WEG=plus gesetzt ist.
+     *
+     * Hier stand es andersherum: Ohne Variable lief alles ueber Plus zu
+     * 0,10 EUR je Bild — obwohl der Eigenbau als Standard gedacht und so
+     * auch angekuendigt war. Aufgefallen ist es an einem Testbild, auf dem
+     * das Fahrzeug mit PhotoRooms Raendern fast das ganze Bild fuellte.
+     * Ein teurer Weg darf nie der sein, auf den man ohne Einstellung faellt.
+     */
+    const weg = process.env.STUDIO_WEG === 'plus' ? 'plus' : 'eigenbau';
     const tarif = weg === 'plus' ? 'photoroom' : 'photoroom_basic';
 
     let buchung: string | null = null;
