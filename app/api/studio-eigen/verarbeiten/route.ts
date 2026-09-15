@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         breite?: number;
       };
 
-    if (!image) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
+    if (!image && !reqFreigestellt) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
 
     /*
      * Vom eigenen Freistell-Server geliefert? Dann entfaellt PhotoRoom
@@ -170,7 +170,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let roh: Buffer = Buffer.from(image.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+    /*
+     * Mit vorab freigestelltem Bild kommt KEIN Originalfoto mehr mit. Beide
+     * zusammen lagen ueber den 4,5 MB, die Vercel je Anfrage annimmt — und
+     * jedes Foto endete in Schritt 2 als "Fehler". Das Original wird dann
+     * auch nicht gebraucht: Das Kennzeichen wird am freigestellten Auto
+     * ersetzt.
+     */
+    let roh: Buffer = image
+      ? Buffer.from(image.replace(/^data:image\/\w+;base64,/, ''), 'base64')
+      : Buffer.alloc(0);
 
     /*
      * Kennzeichen ersetzen — VOR allem anderen.
@@ -188,9 +197,11 @@ export async function POST(req: NextRequest) {
      */
     let kennzeichenErsetzt = false;
     try {
-      const kz = await ersetzeKennzeichen(roh, firma ?? null);
-      roh = kz.bild;
-      kennzeichenErsetzt = kz.ersetzt;
+      if (roh.length > 0) {
+        const kz = await ersetzeKennzeichen(roh, firma ?? null);
+        roh = kz.bild;
+        kennzeichenErsetzt = kz.ersetzt;
+      }
     } catch (err) {
       /*
        * Ein Fehler beim Ersetzen darf das Bild nicht kosten. Dann bleibt

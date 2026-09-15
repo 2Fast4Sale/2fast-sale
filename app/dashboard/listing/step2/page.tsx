@@ -217,6 +217,17 @@ function Step2Inner() {
   /** Über welchem Bild die Maus gerade steht — zeigt dort das Original. */
   const [ueberfahren, setUeberfahren] = useState<string | null>(null);
   const [bulkProcessing, setBulk]     = useState(false);
+  /*
+   * Anzeige waehrend der Studio-Bearbeitung: erst der einmalige
+   * Modell-Download, dann "Foto 2 von 5, noch etwa 40 Sekunden". Die Restzeit
+   * kommt aus der gemessenen Dauer der bisherigen Fotos, nicht aus einer
+   * Schaetzung — auf einem Handy dauert ein Foto ein Vielfaches.
+   */
+  const [fortschritt, setFortschritt] = useState<
+    | { art: 'laden'; geladen: number; gesamt: number }
+    | { art: 'foto'; nummer: number; von: number; restSek: number | null }
+    | null
+  >(null);
   const [lightbox, setLightbox]       = useState<string | null>(null);
   const [equipState, setEquipState]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [equipFound, setEquipFound]   = useState<string[]>([]);
@@ -465,7 +476,9 @@ function Step2Inner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: compressed,
+          // Nicht beides schicken — zusammen liegen sie ueber dem Limit von
+          // Vercel. Mit freigestelltem Auto wird das Original nicht gebraucht.
+          image: vorab ? undefined : compressed,
           freigestellt: vorab,
           draftId: entwurfId(),
           code: raumCode,
@@ -479,7 +492,14 @@ function Step2Inner() {
           kompositor: studioWerte,
         }),
       });
-      if (!res.ok) throw new Error('Verarbeitung fehlgeschlagen');
+      if (!res.ok) {
+        // Den echten Grund weitergeben statt nur "fehlgeschlagen" — sonst
+        // steht unter dem Foto "Fehler", und niemand weiss, woran es lag.
+        const text = await res.text().catch(() => '');
+        let meldung = text.slice(0, 200);
+        try { meldung = JSON.parse(text).error ?? meldung; } catch { /* kein JSON, z.B. 413 von Vercel */ }
+        throw new Error(`Server ${res.status}: ${meldung}`);
+      }
       const data = await res.json();
 
       // Wasserzeichen drauf wenn aktiviert
@@ -490,7 +510,10 @@ function Step2Inner() {
       }
 
       setPhotos(p => p.map(x => x.id === photo.id ? { ...x, processed: result, processing: false } : x));
-    } catch {
+    } catch (err) {
+      // In der Konsole (F12) steht der genaue Grund. Ohne diese Zeile wurde
+      // der Fehler verschluckt, und "Fehler" unter dem Foto war alles.
+      console.error('[Studio] Foto fehlgeschlagen:', err);
       setPhotos(p => p.map(x => x.id === photo.id ? { ...x, processing: false, error: true } : x));
     }
   };
@@ -500,9 +523,45 @@ function Step2Inner() {
     // Nur was auch ins Studio soll — der Rest bleibt unangetastet und kostet nichts
     const pending = photos.filter(p => p.studio && !p.processed && !p.processing);
     // Parallel in 3er-Batches  schneller, aber API nicht überlasten
-    const BATCH = 3;
+    /*
+     * Im Browser eins nach dem anderen. Drei Fotos gleichzeitig durch das
+     * Modell zu schicken ist auf demselben Geraet nicht schneller, braucht
+     * aber den dreifachen Speicher — auf einem Handy bricht das ab. Ueber
+     * einen Server oder PhotoRoom bleiben es drei parallel.
+     */
+    const imBrowser = !process.env.NEXT_PUBLIC_FREISTELLER_URL
+      && process.env.NEXT_PUBLIC_FREISTELLEN !== 'photoroom';
+    const BATCH = imBrowser ? 1 : 3;
+
+    if (imBrowser) {
+      const { beiModellDownload } = await import('../../../../lib/studio/browserFreistellen');
+      beiModellDownload((geladen, gesamt) => {
+        // Unter 99 % ist es noch der Download; danach laeuft schon das Foto.
+        if (gesamt > 0 && geladen < gesamt * 0.99) setFortschritt({ art: 'laden', geladen, gesamt });
+      });
+    }
+
+    const dauern: number[] = [];
     for (let i = 0; i < pending.length; i += BATCH) {
+      const schnitt = dauern.length ? dauern.reduce((a, b) => a + b, 0) / dauern.length : null;
+      const offen = pending.length - i;
+      setFortschritt({
+        art: 'foto', nummer: i + 1, von: pending.length,
+        // Vor dem ersten gemessenen Foto lieber keine Zahl als eine falsche.
+        restSek: schnitt === null ? null : Math.round((schnitt * offen) / BATCH),
+      });
+      const start = performance.now();
       await Promise.all(pending.slice(i, i + BATCH).map(p => processOne(p)));
+      const sek = (performance.now() - start) / 1000;
+      // Das erste Foto enthaelt beim ersten Mal den Modell-Download und
+      // wuerde die Restzeit viel zu hoch ansetzen — es zaehlt nur halb.
+      dauern.push(i === 0 ? sek * 0.5 : sek);
+    }
+
+    setFortschritt(null);
+    if (imBrowser) {
+      const { beiModellDownload } = await import('../../../../lib/studio/browserFreistellen');
+      beiModellDownload(null);
     }
     setBulk(false);
   };
@@ -854,6 +913,34 @@ function Step2Inner() {
                 </button>
               </div>
             </div>
+
+            {fortschritt && (
+              <div role="status" aria-live="polite" style={{
+                padding: '12px 14px', marginBottom: '12px', borderRadius: '10px',
+                background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.22)',
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: TH, marginBottom: '8px' }}>
+                  {fortschritt.art === 'laden'
+                    ? `Studio wird vorbereitet (nur beim ersten Mal): ${Math.round(fortschritt.geladen / 1048576)} von ${Math.round(fortschritt.gesamt / 1048576)} MB`
+                    : `Foto ${fortschritt.nummer} von ${fortschritt.von}${
+                        fortschritt.restSek === null
+                          ? ' · Restzeit wird gemessen …'
+                          : fortschritt.restSek < 60
+                            ? ` · noch etwa ${Math.max(5, Math.round(fortschritt.restSek / 5) * 5)} Sekunden`
+                            : ` · noch etwa ${Math.round(fortschritt.restSek / 60)} Minuten`
+                      }`}
+                </div>
+                <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(37,99,235,0.15)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: '3px', background: '#2563eb',
+                    transition: 'width .4s ease',
+                    width: `${fortschritt.art === 'laden'
+                      ? Math.round((fortschritt.geladen / Math.max(1, fortschritt.gesamt)) * 100)
+                      : Math.round(((fortschritt.nummer - 1) / fortschritt.von) * 100)}%`,
+                  }} />
+                </div>
+              </div>
+            )}
 
             {/* Erklaert, warum nicht alle Fotos ins Studio kommen */}
             <div style={{

@@ -22,10 +22,37 @@
  */
 
 const MODELL = 'onnx-community/BiRefNet_lite-ONNX';
-const MAX_BREITE = 2000;   // mehr braucht der Kompositor nicht
+// 1600 statt 2000: Das Bild geht als Text an die Website, und Vercel nimmt
+// hoechstens 4,5 MB je Anfrage an. So bleibt reichlich Abstand.
+const MAX_BREITE = 1600;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let geladen: Promise<any> | null = null;
+
+/**
+ * Wer den Download-Fortschritt sehen will. Beim ersten Foto laedt der
+ * Browser 115 MB, und ohne Anzeige sitzt der Haendler ein, zwei Minuten
+ * vor einem Bild, das scheinbar nichts tut.
+ */
+type LadeHoerer = (geladenBytes: number, gesamtBytes: number) => void;
+let ladeHoerer: LadeHoerer | null = null;
+export function beiModellDownload(hoerer: LadeHoerer | null): void {
+  ladeHoerer = hoerer;
+}
+
+/*
+ * Transformers.js meldet den Fortschritt je Datei (Modell, Konfiguration).
+ * Hier wird ueber alle Dateien summiert, damit eine einzige Zahl entsteht.
+ */
+const dateien = new Map<string, { geladen: number; gesamt: number }>();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fortschritt(info: any): void {
+  if (info?.status !== 'progress' || !info.file) return;
+  dateien.set(info.file, { geladen: info.loaded ?? 0, gesamt: info.total ?? 0 });
+  let g = 0, t = 0;
+  for (const d of dateien.values()) { g += d.geladen; t += d.gesamt; }
+  ladeHoerer?.(g, t);
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function laden(): Promise<any> {
@@ -37,14 +64,17 @@ function laden(): Promise<any> {
     const webgpu = typeof navigator !== 'undefined' && 'gpu' in navigator;
     if (webgpu) {
       try {
-        return await pipeline('background-removal', MODELL, { device: 'webgpu', dtype: 'fp16' });
+        return await pipeline('background-removal', MODELL,
+          { device: 'webgpu', dtype: 'fp16', progress_callback: fortschritt });
       } catch (err) {
         // WebGPU gemeldet, aber nicht nutzbar (Treiber, Energiesparmodus):
         // auf den Prozessor ausweichen statt aufzugeben.
         console.warn('[freistellen] WebGPU nicht nutzbar, nehme Prozessor:', err);
       }
     }
-    return pipeline('background-removal', MODELL, { device: 'wasm', dtype: 'fp32' });
+    dateien.clear();
+    return pipeline('background-removal', MODELL,
+      { device: 'wasm', dtype: 'fp32', progress_callback: fortschritt });
   })();
   // Ein Fehler beim Laden darf nicht fuer immer haengen bleiben —
   // beim naechsten Foto wird es neu versucht.
