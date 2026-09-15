@@ -441,7 +441,7 @@ def licht():
     bpy.context.scene.world = welt
 
 
-def galerie(wandfarbe, bodenfarbe, bodensatz):
+def galerie(wandfarbe, bodenfarbe, bodensatz, extras=''):
     """
     Ein heller Ausstellungsraum: weisse Waende, dunkler glaenzender Boden,
     Decke mit eingelassenen Strahlern.
@@ -491,9 +491,16 @@ def galerie(wandfarbe, bodenfarbe, bodensatz):
     em.inputs['Strength'].default_value = 25.0
     nt.links.new(em.outputs['Emission'], nt.nodes['Material Output'].inputs['Surface'])
 
+    teile = {t.strip() for t in extras.split(',') if t.strip()}
+
     reihen = [(x, 5.2) for x in (-4.5, -1.5, 1.5, 4.5)] + \
              [(x, 1.5) for x in (-3.0, 0.0, 3.0)] + \
              [(4.8, y) for y in (-1.5, 2.5)]
+    # Mit Wabendecke oder LED-Streifen gibt es keine Einbaustrahler — dann
+    # ist die Decke selbst die Lichtquelle, und zwei Lichtsysteme uebereinander
+    # sehen aus wie ein Planungsfehler.
+    if teile & {'waben_decke', 'led'} or 'keine_spots' in teile:
+        reihen = []
     for x, y in reihen:
         bpy.ops.mesh.primitive_cylinder_add(radius=0.09, depth=0.02, location=(x, y, 3.39))
         bpy.context.active_object.data.materials.append(leucht)
@@ -516,6 +523,164 @@ def galerie(wandfarbe, bodenfarbe, bodensatz):
     welt.node_tree.nodes['Background'].inputs['Color'].default_value = (0.5, 0.5, 0.5, 1)
     welt.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.15
     bpy.context.scene.world = welt
+
+    if 'fenster' in teile:
+        fensterfront()
+    if 'waben_wand' in teile:
+        waben_wand(ab_x=0.7 if 'fenster' in teile else -7.5)
+    if 'waben_decke' in teile:
+        waben_decke()
+    if 'led' in teile:
+        led_streifen()
+
+
+def leuchtstoff(name, staerke, farbe=(1.0, 1.0, 1.0)):
+    """Selbstleuchtendes Material — fuer Fensterflaechen, Lichtfugen, LED."""
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nt.nodes.remove(nt.nodes['Principled BSDF'])
+    em = nt.nodes.new('ShaderNodeEmission')
+    em.inputs['Color'].default_value = (*farbe, 1.0)
+    em.inputs['Strength'].default_value = staerke
+    nt.links.new(em.outputs['Emission'], nt.nodes['Material Output'].inputs['Surface'])
+    return mat
+
+
+def quader(ort, mass, mat):
+    bpy.ops.mesh.primitive_cube_add(location=ort)
+    ob = bpy.context.active_object
+    ob.scale = mass
+    ob.data.materials.append(mat)
+    return ob
+
+
+def fensterfront():
+    """
+    Grosse Fensterfront in der linken Haelfte der Rueckwand.
+
+    Die Fenster sind bewusst ueberbelichtet weiss, wie im Vorbild. Draussen
+    etwas zu zeigen waere eine Falle: Baeume oder Haeuser hinter dem Glas
+    passen nie zum Licht auf dem Fahrzeug. Weisses Tageslicht passt zu allem.
+
+    Das Licht kommt zusaetzlich aus einer grossen Flaechenleuchte hinter den
+    Scheiben — nur das leuchtende Glas allein wirft zu wenig Licht in den
+    Raum, und der Boden bekaeme keine Spiegelung der Fensterfront.
+    """
+    glas = leuchtstoff('Fensterglas', 3.5, (1.0, 1.0, 0.99))
+    rahmen = material('Fensterrahmen', (0.035, 0.037, 0.042), 0.4)
+    x0, x1, z0, z1, y = -8.0, 0.4, 0.75, 3.05, 5.985
+
+    quader(((x0 + x1) / 2, y, (z0 + z1) / 2), ((x1 - x0) / 2, 0.005, (z1 - z0) / 2), glas)
+
+    # Pfosten, Riegel und Rahmen: im Vorbild dunkles Aluminium.
+    for x in [x0 + i * 2.1 for i in range(5)]:
+        quader((x, 5.95, (z0 + z1) / 2), (0.05, 0.05, (z1 - z0) / 2 + 0.05), rahmen)
+    for z in (z0, 1.35, z1):
+        quader(((x0 + x1) / 2, 5.95, z), ((x1 - x0) / 2 + 0.05, 0.05, 0.04), rahmen)
+
+    bpy.ops.object.light_add(type='AREA', location=((x0 + x1) / 2, 6.6, 1.9))
+    fl = bpy.context.active_object
+    fl.rotation_euler = (math.radians(90), 0, 0)   # zeigt in den Raum (-y)
+    fl.data.size, fl.data.size_y = x1 - x0, z1 - z0
+    fl.data.energy = 2800
+    fl.data.color = (1.0, 0.99, 0.97)
+
+
+def _wabengitter(r, a_von, a_bis, b_von, b_bis):
+    """
+    Mittelpunkte eines Sechseckgitters, spitze Seite in Richtung b.
+
+    Abstaende passend zu `_sechsecke`: in a genau r*sqrt(3), in b 1,5*r,
+    jede zweite Reihe um eine halbe Breite versetzt. So stossen die Kanten
+    ohne Luecke und ohne Ueberlappung aneinander.
+    """
+    da, db = r * math.sqrt(3), r * 1.5
+    punkte, reihe, b = [], 0, b_von
+    while b <= b_bis:
+        a = a_von + (da / 2 if reihe % 2 else 0)
+        while a <= a_bis:
+            punkte.append((a, b))
+            a += da
+        b += db
+        reihe += 1
+    return punkte
+
+
+def _sechsecke(name, mitten, r_paneel, zu_welt, mat):
+    """
+    Alle Paneele als EIN Netz, Ecken von Hand gerechnet.
+
+    Der erste Versuch hat Blenders Sechseck-Zylinder gedreht. Welche Ecke
+    danach wohin zeigt, haengt von der Reihenfolge der Drehungen ab — an der
+    Wand ueberlappten die Paneele, an der Decke blieben schwarze Rauten
+    zwischen ihnen. Mit selbst gesetzten Ecken (spitze Seite in Richtung b,
+    passend zum Gitter) kann das nicht passieren.
+
+    `zu_welt(a, b)` bildet eine Gitterposition auf einen Weltpunkt ab.
+    """
+    punkte, flaechen = [], []
+    for a0, b0 in mitten:
+        start = len(punkte)
+        for i in range(6):
+            w = math.radians(90 + 60 * i)          # Ecke oben: spitze Seite in b
+            punkte.append(zu_welt(a0 + r_paneel * math.cos(w), b0 + r_paneel * math.sin(w)))
+        flaechen.append(tuple(range(start, start + 6)))
+    netz = bpy.data.meshes.new(name)
+    netz.from_pydata(punkte, [], flaechen)
+    netz.update()
+    ob = bpy.data.objects.new(name, netz)
+    bpy.context.collection.objects.link(ob)
+    ob.data.materials.append(mat)
+    # Etwas Dicke, damit die Paneele an den Fugen eine Kante zeigen.
+    mod = ob.modifiers.new('Dicke', 'SOLIDIFY')
+    mod.thickness = 0.035
+    return ob
+
+
+def waben_wand(ab_x=-7.5, r=0.62):
+    """
+    Sechseck-Paneele mit Lichtfugen auf der Rueckwand.
+
+    Hinter den Paneelen liegt eine leuchtende Flaeche, die Paneele sind etwas
+    kleiner als ihr Gitter. Das Licht kommt dadurch nur aus den Fugen — genau
+    der Effekt im Vorbild, ohne jede Leuchte einzeln bauen zu muessen.
+    """
+    fuge = leuchtstoff('Wabenfuge', 1.6, (0.90, 0.95, 1.0))
+    paneel = material('Wabe', (0.62, 0.63, 0.66), 0.75)
+    x_bis = 5.5
+    mitten = _wabengitter(r, ab_x + r, x_bis - r * 0.6, 0.6, 3.25)
+    # Das Licht liegt als etwas groesseres Sechseck direkt hinter jedem
+    # Paneel. Vorher war es eine rechteckige Leuchtflaeche hinter der ganzen
+    # Gruppe, und die schaute an den Raendern als helles Rechteck hervor.
+    _sechsecke('Wabenfugen', mitten, r * 1.02, lambda a, b: (a, 5.992, b), fuge)
+    _sechsecke('Wabenwand', mitten, r * 0.95, lambda a, b: (a, 5.97, b), paneel)
+
+
+def waben_decke(r=0.9):
+    """Dieselben Waben an der Decke — sie ist dann die Hauptlichtquelle."""
+    fuge = leuchtstoff('Deckenfuge', 2.5)
+    paneel = material('Deckenwabe', (0.70, 0.70, 0.72), 0.8)
+    flaeche('Deckenlicht', 1, (0, 1.0, 3.397), (math.radians(180), 0, 0), fuge).scale = (26, 20, 1)
+    mitten = _wabengitter(r, -12.0, 8.0, -9.0, 6.5)
+    _sechsecke('Wabendecke', mitten, r * 0.95, lambda a, b: (a, b, 3.37), paneel)
+    # Die Fugen allein reichen nicht, um den Boden zu beleuchten. Deutlich
+    # schwaecher als im ersten Versuch — dort brannten Boden und Waende weiss aus.
+    bpy.ops.object.light_add(type='AREA', location=(0, 1.0, 3.3))
+    fl = bpy.context.active_object.data
+    fl.size, fl.size_y = 12, 10
+    fl.energy = 1000
+
+
+def led_streifen():
+    """Lange LED-Linien quer durch die Decke, wie in modernen Autohaeusern."""
+    led = leuchtstoff('LED', 30.0)
+    for x in (-4.5, -1.5, 1.5, 4.5):
+        quader((x, 0.0, 3.39), (0.05, 7.5, 0.01), led)
+    bpy.ops.object.light_add(type='AREA', location=(0, 0.5, 3.3))
+    fl = bpy.context.active_object.data
+    fl.size, fl.size_y = 10, 12
+    fl.energy = 2200
 
 
 def kamera(pos=None, ziel=None, brennweite=None):
@@ -614,7 +779,8 @@ def main():
     leeren()
     bauart = opt.get('bauart', 'ecke')
     if bauart == 'galerie':
-        galerie(wand, boden, opt.get('bodensatz', 'Concrete034_1K-JPG'))
+        galerie(wand, boden, opt.get('bodensatz', 'Concrete034_1K-JPG'),
+                opt.get('extras', ''))
         # 35 mm und waagerechter Blick: Nur so kommt die Decke ins Bild.
         # Bei 55 mm und leicht gesenkter Kamera endet das Bild unter der
         # Decke, und genau das hat die fruehen Raeume kuenstlich gemacht.
