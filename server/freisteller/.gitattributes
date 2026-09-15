@@ -1,0 +1,4 @@
+# Der Server laeuft unter Linux. Mit Windows-Zeilenenden bricht das
+# Dockerfile: Ein "\" am Zeilenende wird dann von einem unsichtbaren
+# Wagenruecklauf gefolgt und verbindet die Zeilen nicht mehr.
+* text eol=lf
