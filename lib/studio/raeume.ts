@@ -56,6 +56,14 @@ const TITEL: Record<string, string> = {
   galerie_dunkel: 'Galerie, dunkler Boden',
   galerie_hell:   'Galerie, heller Boden',
   galerie_warm:   'Galerie, warm',
+  fenster_waben:  'Fensterfront mit Waben',
+  fenster_hell:   'Fensterfront, heller Boden',
+  fenster_dunkel: 'Fensterfront, dunkler Boden',
+  waben_dunkel:   'Waben-Licht, dunkler Boden',
+  waben_hell:     'Waben-Wand, hell',
+  led_dunkel:     'LED-Decke, dunkler Boden',
+  led_fenster:    'LED-Decke mit Fensterfront',
+  galerie_waben:  'Galerie mit Waben-Wand',
 };
 
 /** Aus "weiss_beton" wird "Weiss Beton". */

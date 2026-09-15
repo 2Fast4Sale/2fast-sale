@@ -425,11 +425,40 @@ function Step2Inner() {
         if (roh) studioWerte = JSON.parse(roh)?.werte;
       } catch { /* kaputter Eintrag darf die Verarbeitung nicht kippen */ }
 
+      /*
+       * Eigener Freistell-Server (server/freisteller), wenn eingerichtet.
+       *
+       * Der Browser schickt das Foto DIREKT dorthin, nicht ueber unsere
+       * Website: Das Freistellen dauert auf dem kostenlosen Server ein bis
+       * zwei Minuten, und so lange darf eine Vercel-Funktion nicht laufen.
+       * Zurueck kommt nur das freigestellte Fahrzeug, und das geht dann an
+       * /api/studio-eigen/verarbeiten fuer Raum, Schatten und Kennzeichen.
+       */
+      let vorab: string | undefined;
+      const freistellerUrl = process.env.NEXT_PUBLIC_FREISTELLER_URL;
+      if (freistellerUrl) {
+        const foto = await (await fetch(compressed)).blob();
+        const antwort = await fetch(`${freistellerUrl.replace(/\/$/, '')}/freistellen`, {
+          method: 'POST',
+          headers: { 'Content-Type': foto.type || 'image/jpeg' },
+          body: foto,
+        });
+        if (!antwort.ok) throw new Error(`Freisteller antwortet mit ${antwort.status}`);
+        const ergebnis = await antwort.blob();
+        vorab = await new Promise<string>((fertig, fehler) => {
+          const leser = new FileReader();
+          leser.onload = () => fertig(String(leser.result));
+          leser.onerror = () => fehler(leser.error);
+          leser.readAsDataURL(ergebnis);
+        });
+      }
+
       const res = await fetch('/api/studio-eigen/verarbeiten', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: compressed,
+          freigestellt: vorab,
           draftId: entwurfId(),
           code: raumCode,
           raum: raumName,

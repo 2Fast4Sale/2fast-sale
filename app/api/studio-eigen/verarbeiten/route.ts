@@ -68,10 +68,16 @@ function hintergrundErlaubt(adresse: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, breite } =
+    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite } =
       await req.json() as {
         /** Bodenlinie im eigenen Hallenfoto, Anteil der Bildhoehe von oben. */
         hallenHorizont?: number;
+        /**
+         * Schon freigestelltes Fahrzeug vom eigenen Freistell-Server
+         * (server/freisteller), als Data-URL mit Alphakanal. Ist es da,
+         * wird PhotoRoom gar nicht angefragt.
+         */
+        freigestellt?: string;
         image?: string;
         draftId?: string | null;
         code?: string;
@@ -86,17 +92,27 @@ export async function POST(req: NextRequest) {
 
     if (!image) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
 
+    /*
+     * Vom eigenen Freistell-Server geliefert? Dann entfaellt PhotoRoom
+     * vollstaendig: kein Schluessel noetig, nichts zu buchen, kein
+     * Kontingent. Eingefuehrt, als die kostenlosen PhotoRoom-Bilder
+     * aufgebraucht waren und Schritt 2 unter jedem Foto "Fehler" zeigte.
+     */
+    const vorab = typeof reqFreigestellt === 'string' && reqFreigestellt.startsWith('data:image/')
+      ? Buffer.from(reqFreigestellt.replace(/^data:image\/\w+;base64,/, ''), 'base64')
+      : null;
+
     const roherKey = process.env.PHOTOROOM_API_KEY;
     const apiKey = roherKey && process.env.PHOTOROOM_SANDBOX === 'true'
       ? `sandbox_${roherKey}`
       : roherKey;
-    if (!apiKey) {
+    if (!apiKey && !vorab) {
       return NextResponse.json({ error: 'Studio-Bearbeitung ist nicht konfiguriert.' }, { status: 503 });
     }
 
     // Ein Schluessel mit sandbox_ kann keinen produktiven Aufruf
     // erzeugen — dann wird auch nichts gebucht. Siehe pixelcut/route.ts.
-    const sandbox = istSandbox() || apiKey.startsWith('sandbox_');
+    const sandbox = istSandbox() || (apiKey ?? '').startsWith('sandbox_');
 
     /*
      * ── Welcher Weg ────────────────────────────────────────────────
@@ -128,11 +144,13 @@ export async function POST(req: NextRequest) {
      * das Fahrzeug mit PhotoRooms Raendern fast das ganze Bild fuellte.
      * Ein teurer Weg darf nie der sein, auf den man ohne Einstellung faellt.
      */
-    const weg = process.env.STUDIO_WEG === 'plus' ? 'plus' : 'eigenbau';
+    // Mit vorab freigestelltem Bild gibt es nur den Eigenbau — Plus braucht
+    // das Originalfoto und kostet, beides soll hier gerade nicht passieren.
+    const weg = process.env.STUDIO_WEG === 'plus' && !vorab ? 'plus' : 'eigenbau';
     const tarif = weg === 'plus' ? 'photoroom' : 'photoroom_basic';
 
     let buchung: string | null = null;
-    if (!sandbox) {
+    if (!sandbox && !vorab) {
       const stand = await budget();
       if (stand.erschoepft) {
         return NextResponse.json({
@@ -224,7 +242,8 @@ export async function POST(req: NextRequest) {
       plus.append('horizontalAlignment', 'center');
 
       const a = await fetch('https://image-api.photoroom.com/v2/edit', {
-        method: 'POST', headers: { 'x-api-key': apiKey }, body: plus,
+        // Plus laeuft nur ohne Vorab-Bild, und dann ist der Schluessel oben geprueft.
+        method: 'POST', headers: { 'x-api-key': apiKey! }, body: plus,
       });
       if (!a.ok) {
         const text = await a.text();
@@ -258,14 +277,31 @@ export async function POST(req: NextRequest) {
     // Freistellungskante als Teiltransparenz, sonst harte Raender.
     form.append('format', 'png');
 
-    const antwort = await fetch(SEGMENT, { method: 'POST', headers: { 'x-api-key': apiKey }, body: form });
-    if (!antwort.ok) {
-      const text = await antwort.text();
-      console.error('[verarbeiten] Freistellen fehlgeschlagen:', antwort.status, text.slice(0, 300));
-      await freigeben(buchung);
-      return NextResponse.json(photoroomFehler(antwort.status), { status: 503 });
+    let freigestellt: Buffer;
+    if (vorab) {
+      /*
+       * Das Kennzeichen wurde oben am Originalfoto ersetzt — der
+       * Freistell-Server hat aber das unveraenderte Foto bekommen. Deshalb
+       * hier noch einmal am freigestellten Fahrzeug.
+       */
+      try {
+        const kz = await ersetzeKennzeichen(vorab, firma ?? null);
+        freigestellt = kz.bild;
+        kennzeichenErsetzt = kz.ersetzt;
+      } catch (err) {
+        console.error('[verarbeiten] Kennzeichenersatz am Vorab-Bild fehlgeschlagen:', err);
+        freigestellt = vorab;
+      }
+    } else {
+      const antwort = await fetch(SEGMENT, { method: 'POST', headers: { 'x-api-key': apiKey! }, body: form });
+      if (!antwort.ok) {
+        const text = await antwort.text();
+        console.error('[verarbeiten] Freistellen fehlgeschlagen:', antwort.status, text.slice(0, 300));
+        await freigeben(buchung);
+        return NextResponse.json(photoroomFehler(antwort.status), { status: 503 });
+      }
+      freigestellt = Buffer.from(await antwort.arrayBuffer());
     }
-    const freigestellt = Buffer.from(await antwort.arrayBuffer());
 
     /* ── In den Raum setzen (kostet nichts) ── */
     const gerechnet: StudioHintergrund = { ...raumAusCode(code ?? 'W02B02'), ...(hintergrund ?? {}) };
