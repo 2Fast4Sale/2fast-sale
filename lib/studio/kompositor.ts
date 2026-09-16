@@ -471,10 +471,59 @@ async function bodenschattenProjiziert(
     (x - zielBreite / 2) * e.kameraHoehe / abstand(y);
 
   /* ── 2. Die Schattenflaeche in Bodenkoordinaten ── */
-  const mitteX = fahrzeugX + (xVon + xBis) / 2;
   const mitteY = (radAy + radBy) / 2;
-  const u0 = seiteVon(mitteX, mitteY);
-  const t0 = tiefeVon(mitteY);
+  /*
+   * Der Grundriss des Schattens kommt aus der Silhouette, nicht aus einer
+   * Ellipse.
+   *
+   * Eine Ellipse ist unter jedem Auto dieselbe Form: vorne und hinten
+   * gleich rund, seitlich gleich weit. Ein Auto ist das nicht — vorne
+   * schiebt sich die Schuerze weit vor, hinten zieht sich der Wagen
+   * zusammen, und zwischen den Raedern liegt der Schweller naeher am
+   * Boden als die Kotfluegel. Im Bild sah man genau das: einen Kreis,
+   * ueber den ein Auto gestellt wurde.
+   *
+   * Die Unterkante der Silhouette ist bereits der vordere Rand des
+   * Schattens — Spalte fuer Spalte, mit allen Ausbuchtungen. Umgerechnet
+   * in Bodenkoordinaten ergibt sie eine Kurve, und der Schatten ist die
+   * Flaeche zwischen dieser Kurve und derselben Kurve, um die
+   * Fahrzeugtiefe nach hinten versetzt.
+   */
+  const RASTER = 512;
+  let uMin = Infinity, uMax = -Infinity;
+  const spalten: Array<[number, number]> = [];   // [u, t] je Fahrzeugspalte
+  for (let x = xVon; x <= xBis; x++) {
+    if (unten[x] < 0) continue;
+    const yb = fahrzeugY + unten[x];
+    const u = seiteVon(fahrzeugX + x, yb);
+    spalten.push([u, tiefeVon(yb)]);
+    if (u < uMin) uMin = u;
+    if (u > uMax) uMax = u;
+  }
+  if (spalten.length < 2 || !(uMax > uMin)) return null;
+
+  /*
+   * Je Rasterfach der NAECHSTE Punkt — der Schatten beginnt dort, wo das
+   * Blech dem Boden am naechsten kommt.
+   */
+  const nahT = new Float64Array(RASTER).fill(Infinity);
+  for (const [u, t] of spalten) {
+    const i = Math.min(RASTER - 1, Math.floor((u - uMin) / (uMax - uMin) * RASTER));
+    if (t < nahT[i]) nahT[i] = t;
+  }
+  // Luecken (mehr Faecher als Spalten) linear schliessen.
+  let letzter = -1;
+  for (let i = 0; i < RASTER; i++) {
+    if (!isFinite(nahT[i])) continue;
+    if (letzter >= 0 && i - letzter > 1) {
+      for (let j = letzter + 1; j < i; j++) {
+        const a = (j - letzter) / (i - letzter);
+        nahT[j] = nahT[letzter] + (nahT[i] - nahT[letzter]) * a;
+      }
+    }
+    letzter = i;
+  }
+  for (let i = 0; i < RASTER; i++) if (!isFinite(nahT[i])) nahT[i] = nahT[Math.max(0, letzter)];
 
   /*
    * Halbe Breite: aus der Fahrzeugbreite an der Standlinie, aber etwas
@@ -505,16 +554,13 @@ async function bodenschattenProjiziert(
   const tHalb = Math.max(Math.abs(tRadA - tRadB) / 2 * 1.05, uHalb * 0.22);
 
   /*
-   * Die Flaeche nach HINTEN schieben, bis ihre Vorderkante am vorderen
-   * Rad liegt.
+   * Wie tief der Grundriss nach hinten reicht.
    *
-   * Um die Mitte zwischen den Raedern zentriert, wirkt die Perspektive
-   * ungleich: Die vordere Haelfte liegt naeher an der Kamera und wird
-   * im Bild viel laenger gezogen als die hintere. Im Galerie-Raum mit
-   * 35 mm lag der Schatten dadurch als Fleck vor den Reifen, und das
-   * Auto schwebte. Groessere Tiefe heisst weiter weg.
+   * Die Silhouettenkante ist die zur Kamera zeigende Flanke; dahinter
+   * liegt noch der Rest des Wagens. Aus dem Tiefenunterschied der beiden
+   * Raeder (schraege Ansicht) oder ersatzweise aus der Breite.
    */
-  const t0Unterm = t0 + tHalb * 0.55;
+  const tiefeKoerper = Math.max(tHalb * 1.8, uHalb * 0.45);
 
   /*
    * Die Aufstandsflaechen der Reifen — eng und tief schwarz.
@@ -555,21 +601,28 @@ async function bodenschattenProjiziert(
        * und am Rand ein kurzer Auslauf. Genau das ist es hier — voll bis
        * `PLATEAU`, dann in einem schmalen Band auf null.
        */
-      const du = (u - u0) / uHalb;
-      const dt = (t - t0Unterm) / tHalb;
-      const r = Math.sqrt(du * du + dt * dt);
+      /*
+       * Abstand zum Grundriss, in Metern. Innerhalb negativ, ausserhalb
+       * positiv — seitlich ueber die Fahrzeugkante hinaus, in der Tiefe
+       * vor der Silhouettenkante oder hinter dem Heck.
+       */
+      const iRoh = (u - uMin) / (uMax - uMin) * RASTER;
+      const i = Math.max(0, Math.min(RASTER - 1, Math.floor(iRoh)));
+      const tNah = nahT[i];
 
-      // Laengeres Plateau, kuerzerer Auslauf: Der Uebergang soll eine
-      // Kante sein, keine Rampe. Vorher 0,72 - der Rand lief dadurch
-      // ueber knapp ein Drittel des Radius aus.
-      const PLATEAU = 0.86;
-      const RAND = 1.00;
+      const seitlich = Math.max(uMin - u, u - uMax);
+      const tiefRaus = Math.max(tNah - t, t - (tNah + tiefeKoerper));
+      const abstandAussen = Math.max(seitlich, tiefRaus);
+
+      // Der Auslauf ist kurz — ein Schlagschatten hat eine Kante, keine
+      // Rampe. Gemessen ist PhotoRoom nach etwa zehn Pixeln fertig.
+      const SAUM = Math.max(0.02, uHalb * 0.10);
       let form: number;
-      if (r <= PLATEAU) form = 1;
-      else if (r >= RAND) form = 0;
+      if (abstandAussen <= 0) form = 1;
+      else if (abstandAussen >= SAUM) form = 0;
       else {
-        const a = (RAND - r) / (RAND - PLATEAU);
-        form = a * a * (3 - 2 * a);   // weicher Ein- und Ausstieg
+        const a = (SAUM - abstandAussen) / SAUM;
+        form = a * a * (3 - 2 * a);
       }
       let wert = e.schattenStaerke * form;
 
