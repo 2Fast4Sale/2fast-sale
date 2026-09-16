@@ -740,19 +740,32 @@ def rendern(ziel, proben, maschine):
 
 def horizont_in_prozent(cam, bauart='ecke'):
     """
-    Wo die Bodenkante der Rueckwand im fertigen Bild liegt, 0 bis 1.
+    Die FLUCHTLINIE der Bodenebene, 0 bis 1 von oben.
 
-    Diese Zahl ist der ganze Grund, warum wir selbst rendern. Der
-    Kompositor stellt das Auto darauf ab; schaetzt er sie falsch,
-    schwebt das Fahrzeug oder steckt im Boden.
+    Das ist die Zeile in Augenhoehe der Kamera, in der sich alle
+    Bodenlinien treffen — nicht die Kante zwischen Boden und Rueckwand.
+    Genau das stand hier vorher, und es war der Fehler, an dem die
+    Schattenrechnung monatelang scheiterte: Der Kompositor rechnet die
+    Entfernung eines Bodenpunktes aus seinem Abstand zu dieser Linie
+    (Tiefe = Kamerahoehe * Brennweite / Abstand). Nimmt man die Wandkante,
+    wird der Abstand zu klein, und aus einem 2 m breiten Fahrzeug werden
+    rechnerisch 7 m — der Schatten landet daneben, und das Auto schwebt.
+
+    Gerechnet wird ueber einen Punkt in Kamerahoehe, sehr weit entfernt:
+    Der liegt per Definition auf der Fluchtlinie.
     """
     from bpy_extras.object_utils import world_to_camera_view
-    # Bei der Hohlkehle gibt es keine Wandkante. Massgeblich ist dort der
-    # Punkt, an dem der Boden zu steigen beginnt — weiter hinten kann kein
-    # Fahrzeug mehr stehen.
+    fern = Vector((cam.location.x, cam.location.y + 100000.0, cam.location.z))
+    p = world_to_camera_view(bpy.context.scene, cam, fern)
+    return round(1.0 - p.y, 4)   # Blender zaehlt von unten, Bilder von oben
+
+
+def wandlinie_in_prozent(cam, bauart='ecke'):
+    """Wo Boden und Rueckwand zusammenstossen — nur zur Anschauung."""
+    from bpy_extras.object_utils import world_to_camera_view
     y = 0.0 if bauart == 'kehle' else 6.0
     p = world_to_camera_view(bpy.context.scene, cam, Vector((0.0, y, 0.0)))
-    return round(1.0 - p.y, 4)   # Blender zaehlt von unten, Bilder von oben
+    return round(1.0 - p.y, 4)
 
 
 def hexfarbe(s):
