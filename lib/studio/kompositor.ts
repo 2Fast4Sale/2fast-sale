@@ -334,6 +334,96 @@ async function mittlereHelligkeit(bild: Buffer, nurSichtbare = false): Promise<n
  * Der Horizont steht in der .json neben jedem Hallenbild — genau
  * deshalb rendern wir die Raeume selbst.
  */
+export interface Bodenkontakt {
+  /** Unterste undurchsichtige Zeile je Spalte, -1 wo nichts steht. */
+  unten: Int32Array;
+  /** Erste und letzte Spalte, in der das Fahrzeug steht. */
+  xVon: number;
+  xBis: number;
+  /** Die beiden Radaufstandspunkte, links und rechts. */
+  radA: number;
+  radB: number;
+}
+
+/**
+ * Wo beruehrt das Fahrzeug den Boden?
+ *
+ * Bewusst exportiert und an EINER Stelle: Das Diagnose-Bild
+ * (scripts/schatten-diagnose.ts) zeichnet genau diese Punkte ein. Als es
+ * eine eigene Kopie der Erkennung hatte, zeigte es andere Raeder als der
+ * Kompositor tatsaechlich benutzte — und man sucht den Fehler dann an der
+ * falschen Stelle.
+ *
+ * `fahrzeug` ist das bereits zugeschnittene und auf Zielgroesse gebrachte
+ * Fahrzeug mit Alphakanal.
+ */
+export async function radaufstand(
+  fahrzeug: Buffer,
+  fBreite: number,
+  fHoehe: number,
+): Promise<Bodenkontakt | null> {
+  const alpha = await sharp(fahrzeug).ensureAlpha().extractChannel(3).raw().toBuffer();
+
+  const unten = new Int32Array(fBreite).fill(-1);
+  for (let x = 0; x < fBreite; x++) {
+    for (let y = fHoehe - 1; y >= 0; y--) {
+      if (alpha[y * fBreite + x] > 8) { unten[x] = y; break; }
+    }
+  }
+
+  let xVon = -1, xBis = -1;
+  for (let x = 0; x < fBreite; x++) {
+    if (unten[x] < 0) continue;
+    if (xVon < 0) xVon = x;
+    xBis = x;
+  }
+  if (xVon < 0) return null;
+
+  /*
+   * Die beiden Raeder als echte Tiefpunkte suchen.
+   *
+   * Vorher wurde je Fahrzeughaelfte der tiefste Punkt genommen. Beim Blick
+   * von schraeg vorne faellt die Silhouette nach hinten aber gleichmaessig
+   * an, also liegt das Maximum der hinteren Haelfte immer direkt an der
+   * Trennlinie. Gemessen lagen beide "Raeder" 52 Pixel auseinander, mitten
+   * unter dem Fahrzeug — die Standlinie dazwischen war damit sinnlos, und
+   * der Schatten lag schief.
+   *
+   * Ein Rad ist ein Punkt, der in seiner Umgebung tiefer liegt als alles
+   * andere. Von diesen Tiefpunkten werden die zwei tiefsten genommen, die
+   * weit genug auseinander liegen.
+   */
+  const umgebung = Math.max(6, Math.round(fBreite * 0.06));
+  const abstandMin = Math.round((xBis - xVon) * 0.30);
+  const kandidaten: number[] = [];
+  for (let x = xVon; x <= xBis; x++) {
+    if (unten[x] < 0) continue;
+    let tiefster = true;
+    for (let i = Math.max(xVon, x - umgebung); i <= Math.min(xBis, x + umgebung); i++) {
+      if (unten[i] > unten[x]) { tiefster = false; break; }
+    }
+    if (tiefster) kandidaten.push(x);
+  }
+  kandidaten.sort((a, b) => unten[b] - unten[a]);
+
+  let radA = kandidaten[0] ?? -1;
+  let radB = -1;
+  for (const x of kandidaten) {
+    if (Math.abs(x - radA) >= abstandMin) { radB = x; break; }
+  }
+  if (radA < 0) return null;
+  /*
+   * Nur ein Tiefpunkt: Das Fahrzeug steht quer zur Kamera (Front- oder
+   * Heckansicht). Dann ist eine waagerechte Standlinie richtig, und die
+   * bekommt man, indem der zweite Punkt auf derselben Hoehe am anderen
+   * Ende angenommen wird.
+   */
+  if (radB < 0) { radB = radA === xVon ? xBis : xVon; unten[radB] = unten[radA]; }
+  if (radA > radB) { const h = radA; radA = radB; radB = h; }
+
+  return { unten, xVon, xBis, radA, radB };
+}
+
 async function bodenschattenProjiziert(
   fahrzeug: Buffer,
   fBreite: number,
@@ -346,26 +436,9 @@ async function bodenschattenProjiziert(
 ): Promise<Buffer | null> {
   if (e.schattenStaerke <= 0) return null;
 
-  const alpha = await sharp(fahrzeug).ensureAlpha().extractChannel(3).raw().toBuffer();
-
-  /* ── 1. Wo beruehrt das Fahrzeug den Boden ── */
-  const unten = new Int32Array(fBreite).fill(-1);
-  for (let x = 0; x < fBreite; x++) {
-    for (let y = fHoehe - 1; y >= 0; y--) {
-      if (alpha[y * fBreite + x] > 8) { unten[x] = y; break; }
-    }
-  }
-
-  let xVon = -1, xBis = -1, radA = -1, radB = -1;
-  for (let x = 0; x < fBreite; x++) {
-    if (unten[x] < 0) continue;
-    if (xVon < 0) xVon = x;
-    xBis = x;
-    // Die tiefste Stelle je Fahrzeughaelfte ist die Radaufstandsflaeche.
-    if (x < fBreite / 2) { if (radA < 0 || unten[x] > unten[radA]) radA = x; }
-    else                 { if (radB < 0 || unten[x] > unten[radB]) radB = x; }
-  }
-  if (xVon < 0 || radA < 0 || radB < 0) return null;
+  const kontakt = await radaufstand(fahrzeug, fBreite, fHoehe);
+  if (!kontakt) return null;
+  const { unten, xVon, xBis, radA, radB } = kontakt;
 
   // Alles ab hier in Bildkoordinaten des fertigen Bildes.
   const hY = zielHoehe * e.horizont;

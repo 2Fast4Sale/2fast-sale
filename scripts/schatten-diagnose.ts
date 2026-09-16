@@ -19,7 +19,7 @@
 
 import fs from 'node:fs';
 import sharp from 'sharp';
-import { komponieren, STANDARD } from '../lib/studio/kompositor';
+import { komponieren, STANDARD, radaufstand } from '../lib/studio/kompositor';
 import { raum, raumBild } from '../lib/studio/raeume';
 
 const [autoPfad, raumName, zielPfad] = process.argv.slice(2);
@@ -55,10 +55,13 @@ async function main() {
   const fahrzeugY = bodenY - fHoehe;
 
   /*
-   * Radaufstandspunkte aus dem freigestellten Auto — erst auf das Fahrzeug
-   * zuschneiden, dann skalieren. Ohne den Zuschnitt rechnet man mit den
-   * leeren Raendern des PNG und findet beide "Raeder" nebeneinander in der
-   * Bildmitte; genau das ist beim ersten Lauf passiert.
+   * Radaufstandspunkte — mit DERSELBEN Funktion wie der Kompositor. Eine
+   * eigene Kopie hatte hier zuerst andere Punkte gefunden als der
+   * Kompositor tatsaechlich benutzt; damit zeigt ein Diagnosebild etwas an,
+   * das es so gar nicht gibt.
+   *
+   * Zuerst auf das Fahrzeug zuschneiden, dann skalieren — sonst rechnet man
+   * mit den leeren Raendern des PNG.
    */
   const roh = await sharp(auto).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   let oben = roh.info.height, links = roh.info.width, rechts = -1, unter = -1;
@@ -75,17 +78,11 @@ async function main() {
   const skaliert = await sharp(auto).ensureAlpha()
     .extract({ left: links, top: oben, width: rechts - links + 1, height: unter - oben + 1 })
     .resize(fBreite, fHoehe, { fit: 'fill' })
-    .extractChannel(3).raw().toBuffer();
-  let radA = -1, radB = -1;
-  const unten = new Int32Array(fBreite).fill(-1);
-  for (let x = 0; x < fBreite; x++) {
-    for (let y = fHoehe - 1; y >= 0; y--) {
-      if (skaliert[y * fBreite + x] > 8) { unten[x] = y; break; }
-    }
-    if (unten[x] < 0) continue;
-    if (x < fBreite / 2) { if (radA < 0 || unten[x] > unten[radA]) radA = x; }
-    else                 { if (radB < 0 || unten[x] > unten[radB]) radB = x; }
-  }
+    .png().toBuffer();
+
+  const kontakt = await radaufstand(skaliert, fBreite, fHoehe);
+  if (!kontakt) throw new Error('Keine Radaufstandspunkte gefunden');
+  const { unten, radA, radB } = kontakt;
   const ax = fahrzeugX + radA, ay = fahrzeugY + unten[radA];
   const bx = fahrzeugX + radB, by = fahrzeugY + unten[radB];
 
