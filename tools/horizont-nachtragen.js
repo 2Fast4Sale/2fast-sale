@@ -40,7 +40,15 @@ for (const datei of fs.readdirSync(ORDNER).filter((f) => f.endsWith('.json'))) {
   const weite = Math.hypot(a.ziel[0] - a.pos[0], a.ziel[1] - a.pos[1]);
   const neigung = grad(Math.atan2(a.pos[2] - a.ziel[2], weite));   // Blick nach unten
   const bildwinkel = grad(2 * Math.atan(SENSOR_HOCH / 2 / (j.brennweite || 55)));
-  const flucht = Number((0.5 + neigung / bildwinkel).toFixed(4));
+  /*
+   * MINUS, nicht plus. Schaut die Kamera nach unten, wandert die
+   * Fluchtlinie im Bild nach OBEN — der Boden laeuft ja nach oben auf sie
+   * zu. Mit plus lag sie im weissen Raum bei 0,744 und damit mitten in den
+   * Raedern, obwohl der Boden schon bei 0,496 an der Wand endet. Ein
+   * Bodenpunkt kann nie oberhalb der Fluchtlinie liegen; genau daran war
+   * der Fehler zu erkennen.
+   */
+  const flucht = Number((0.5 - neigung / bildwinkel).toFixed(4));
 
   if (j.wandlinie === undefined) j.wandlinie = j.horizont;
   const alt = j.horizont;
