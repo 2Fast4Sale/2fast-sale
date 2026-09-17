@@ -169,6 +169,12 @@ export interface Ergebnis {
     helligkeitFahrzeug: number;
     helligkeitHintergrund: number;
   };
+  /**
+   * Das eingesetzte Fahrzeug als eigene Ebene, genau so, wie es im Bild
+   * liegt. Damit laesst sich das Original nach einer KI-Bearbeitung
+   * pixelgenau wieder obenauf legen — siehe geminiSchatten.ts.
+   */
+  fahrzeugEbene: { bild: Buffer; left: number; top: number };
 }
 
 /**
@@ -887,5 +893,6 @@ export async function komponieren(
       helligkeitFahrzeug: Math.round(helligkeitFahrzeug),
       helligkeitHintergrund: Math.round(helligkeitHintergrund),
     },
+    fahrzeugEbene: { bild: fahrzeug, left: fahrzeugX, top: fahrzeugY },
   };
 }

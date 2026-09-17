@@ -3,6 +3,7 @@ import sharp from 'sharp';
 import { logApiCost, imageCostMicros, currentUserId } from '../../../../lib/apiCosts';
 import { budget, istSandbox, reservieren, freigeben } from '../../../../lib/photoroomBudget';
 import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../../lib/studio/kompositor';
+import { schattenMitGemini } from '../../../../lib/studio/geminiSchatten';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen } from '../../../../lib/studio/kennzeichen';
@@ -377,9 +378,28 @@ export async function POST(req: NextRequest) {
       hg = await studioHintergrund(gerechnet, zielBreite, zielHoehe);
     }
 
-    const ergebnis = await komponieren(freigestellt, hg, {
+    let ergebnis = await komponieren(freigestellt, hg, {
       ...STANDARD, ...ausRaum, ...(kompositor ?? {}),
     });
+
+    /*
+     * Schatten von Gemini, falls ein Schluessel gesetzt ist. Gemini bekommt
+     * das Bild ohne eigenen Schatten; das Originalfahrzeug wird danach
+     * wieder obenauf gelegt (geminiSchatten.ts). Geht es schief, bleibt
+     * das Ergebnis oben mit dem eigenen Schatten.
+     */
+    let geminiSchatten = false;
+    if (process.env.GEMINI_API_KEY && process.env.STUDIO_SCHATTEN !== 'eigen') {
+      const ohne = await komponieren(freigestellt, hg, {
+        ...STANDARD, ...ausRaum, ...(kompositor ?? {}),
+        schattenStaerke: 0, kontaktStaerke: 0, spiegelungStaerke: 0,
+      });
+      const ki = await schattenMitGemini(ohne.bild, ohne.fahrzeugEbene, ohne.breite, ohne.hoehe);
+      if (ki) {
+        ergebnis = { ...ergebnis, bild: ki };
+        geminiSchatten = true;
+      }
+    }
 
     /*
      * Im Sandbox-Betrieb ist oben nichts reserviert worden, deshalb hier
@@ -400,6 +420,7 @@ export async function POST(req: NextRequest) {
       result: `data:image/jpeg;base64,${ergebnis.bild.toString('base64')}`,
       kennzeichenErsetzt,
       eigenbau: true,
+      geminiSchatten,
       sandbox,
     });
   } catch (err) {
