@@ -614,15 +614,21 @@ async function bodenschattenProjiziert(
       const tiefRaus = Math.max(tNah - t, t - (tNah + tiefeKoerper));
       const abstandAussen = Math.max(seitlich, tiefRaus);
 
-      // Der Auslauf ist kurz — ein Schlagschatten hat eine Kante, keine
-      // Rampe. Gemessen ist PhotoRoom nach etwa zehn Pixeln fertig.
-      const SAUM = Math.max(0.02, uHalb * 0.10);
+      /*
+       * Zwei Anteile, wie in echten Haendlerfotos unter diffusem
+       * Hallenlicht: ein kurzer dunkler Saum direkt am Grundriss und ein
+       * breiter, weicher Hof, der ein Stueck ueber die Kontur hinaus
+       * auslaeuft. Nur der kurze Saum allein wirkte wie ausgeschnitten.
+       */
+      const SAUM = Math.max(0.02, uHalb * 0.08);
+      const HOF = Math.max(0.08, uHalb * 0.30);
       let form: number;
       if (abstandAussen <= 0) form = 1;
-      else if (abstandAussen >= SAUM) form = 0;
       else {
-        const a = (SAUM - abstandAussen) / SAUM;
-        form = a * a * (3 - 2 * a);
+        const a = Math.max(0, (SAUM - abstandAussen) / SAUM);
+        const kern = a * a * (3 - 2 * a);
+        const hof = Math.exp(-abstandAussen / HOF);
+        form = 0.45 * kern + 0.55 * hof;
       }
       let wert = e.schattenStaerke * form;
 
@@ -644,7 +650,7 @@ async function bodenschattenProjiziert(
     // 0,004 der Bildbreite waren bei 1920 Pixeln knapp acht Pixel und
     // haben die Kante am Reifen wieder verschmiert, die oben mit Muehe
     // erzeugt wurde. Halb so viel reicht gegen die Rasterstufen.
-    .blur(Math.max(0.8, zielBreite * 0.002))
+    .blur(Math.max(1.5, zielBreite * 0.005))
     .toColourspace('b-w')
     .raw()
     .toBuffer();
