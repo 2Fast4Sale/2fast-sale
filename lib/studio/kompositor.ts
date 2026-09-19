@@ -508,6 +508,37 @@ async function bodenschattenBild(
   const auslaufSeite = laenge * 0.030; // ueber die Enden hinaus
   const hofUnten = fHoehe * 0.030;     // weicher Hof nach vorn, kurz
 
+  /*
+   * Tiefster Karosseriepunkt zwischen einer Spalte und dem naechsten Rad.
+   *
+   * Ohne das zeichnete die Seite im Live-Test einen dunklen Block an die
+   * WAND links neben dem Golf: Die aeusserste Spalte der Freistellung
+   * enthielt nur noch die Ecke der Heckleuchte, deren Unterkante weit
+   * oben liegt — und genau dort landete der Schatten. Vom Rad nach aussen
+   * gelaufen und immer den tiefsten Punkt behalten, kann die Linie nur
+   * absinken oder gleich bleiben, nie nach oben springen.
+   */
+  /*
+   * Erst hinter dem Reifen anfangen. Der Reifen ist immer der tiefste
+   * Punkt; von ihm aus gezaehlt lag der Schatten unter der Stossstange auf
+   * Radhoehe statt knapp unter der Karosserie — beim Urus war vorn dann
+   * wieder kein Schatten zu sehen.
+   */
+  const reifen = Math.round(fBreite * 0.07);
+  const tiefsterNachAussen = new Int32Array(fBreite).fill(-1);
+  {
+    let tief = -1;
+    for (let c = Math.min(fBreite - 1, radA - reifen); c >= 0; c--) {
+      if (unten[c] > tief) tief = unten[c];
+      tiefsterNachAussen[c] = tief;
+    }
+    tief = -1;
+    for (let c = Math.max(0, radB + reifen); c < fBreite; c++) {
+      if (unten[c] > tief) tief = unten[c];
+      tiefsterNachAussen[c] = tief;
+    }
+  }
+
   const maske = Buffer.alloc(zielBreite * zielHoehe, 0);
   const glatt = (a: number) => a * a * (3 - 2 * a);
 
@@ -538,7 +569,9 @@ async function bodenschattenBild(
        * einzelne dunkle Flecken auf dem Boden.
        */
       const spalte = Math.max(xVon, Math.min(xBis, x - fahrzeugX));
-      if (unten[spalte] >= 0) s = Math.min(s, fahrzeugY + unten[spalte] + fHoehe * 0.035);
+      const tief = tiefsterNachAussen[spalte];
+      // Im Reifenbereich selbst (tief < 0) gilt die Standlinie.
+      if (tief >= 0) s = Math.min(s, fahrzeugY + tief + fHoehe * 0.035);
     }
     const yVon = Math.max(0, Math.floor(s - tiefeOben));
     const yBis = Math.min(zielHoehe - 1, Math.ceil(s + auslaufUnten + hofUnten * 3));
