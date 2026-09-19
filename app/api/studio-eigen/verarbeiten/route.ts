@@ -210,10 +210,18 @@ export async function POST(req: NextRequest) {
     let kennzeichenQuelle: 'modell' | 'farbregel' | null = null;
     try {
       if (roh.length > 0) {
-        const kasten = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
+        const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
+        const kasten = fund && fund !== 'keins' ? fund : null;
+        /*
+         * 'keins' heisst: Das Modell hat sauber gesucht und nichts gefunden.
+         * Dann NICHT die Farbregel — die klebte beim Urus einen Balken auf
+         * den Kotfluegel. Nur wenn das Modell gar nicht lief, bleibt sie.
+         */
         const kz = kasten
           ? await ersetzeKennzeichenImKasten(roh, kasten, firma ?? null)
-          : await ersetzeKennzeichen(roh, firma ?? null);
+          : fund === 'keins'
+            ? { bild: roh, ersetzt: false }
+            : await ersetzeKennzeichen(roh, firma ?? null);
         roh = kz.bild;
         kennzeichenErsetzt = kz.ersetzt;
         kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
@@ -320,10 +328,18 @@ export async function POST(req: NextRequest) {
          * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
          * Modell nicht.
          */
-        const kasten = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
+        const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
+        const kasten = fund && fund !== 'keins' ? fund : null;
+        /*
+         * 'keins' heisst: Das Modell hat sauber gesucht und nichts gefunden.
+         * Dann NICHT die Farbregel — die klebte beim Urus einen Balken auf
+         * den Kotfluegel. Nur wenn das Modell gar nicht lief, bleibt sie.
+         */
         const kz = kasten
           ? await ersetzeKennzeichenImKasten(vorab, kasten, firma ?? null)
-          : await ersetzeKennzeichen(vorab, firma ?? null);
+          : fund === 'keins'
+            ? { bild: vorab, ersetzt: false }
+            : await ersetzeKennzeichen(vorab, firma ?? null);
         freigestellt = kz.bild;
         kennzeichenErsetzt = kz.ersetzt;
         kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;

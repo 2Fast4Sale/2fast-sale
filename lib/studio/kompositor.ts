@@ -200,6 +200,37 @@ export interface Ergebnis {
  * rekursiv: Ein Fahrzeug auf einem 2000er Bild hat leicht eine Million
  * Pixel, und so viele verschachtelte Aufrufe sprengen den Aufrufstapel.
  */
+/**
+ * Entfernt Reste des alten Bodens, die die Freistellung stehen laesst.
+ *
+ * Das kostenlose Freistellen im Browser (ormbg) laesst unter dem Fahrzeug
+ * oft den Schatten des Originalbodens halb stehen: dunkelgraue,
+ * halbdurchsichtige Schlieren unter der Stossstange und zwischen den
+ * Raedern. Im Live-Test am Urus sah der Wagen dadurch aus, als stuende er
+ * auf einem schmutzigen Fleck. Ausserdem verfaelschen sie die
+ * Raderkennung, denn sie liegen tiefer als die Reifen.
+ *
+ * Erkennbar sind sie an drei Dingen zugleich: halbdurchsichtig, dunkel
+ * und farblos. Das echte Fahrzeug ist an solchen Stellen voll deckend —
+ * auch ein schwarzer Reifen. Nur seine Kante verliert ein, zwei Pixel
+ * Weichheit, und das sieht man nicht.
+ */
+async function bodenresteEntfernen(freigestellt: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(freigestellt).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let entfernt = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0 || a >= 235) continue;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const hell = 0.299 * r + 0.587 * g + 0.114 * b;
+    const saettigung = max ? (max - min) / max : 0;
+    if (hell < 110 && saettigung < 0.25) { data[i + 3] = 0; entfernt++; }
+  }
+  if (entfernt === 0) return freigestellt;
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+}
+
 async function nurGroesstesObjekt(freigestellt: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(freigestellt)
     .ensureAlpha()
@@ -760,7 +791,7 @@ export async function komponieren(
   const zielBreite = hgDaten.width ?? 2000;
   const zielHoehe  = hgDaten.height ?? 1333;
 
-  const bereinigt = await nurGroesstesObjekt(freigestellt);
+  const bereinigt = await nurGroesstesObjekt(await bodenresteEntfernen(freigestellt));
   const zugeschnitten = await aufFahrzeugZuschneiden(bereinigt);
   const zMeta = await sharp(zugeschnitten).metadata();
   const zBreite = zMeta.width ?? 1;

@@ -52,8 +52,19 @@ function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
 }
 
-/** Sucht das Kennzeichen. Liefert den Kasten relativ (0 bis 1) oder null. */
-export async function kennzeichenAufServerFinden(bild: Buffer): Promise<KennzeichenKasten | null> {
+/**
+ * Sucht das Kennzeichen.
+ *
+ *   Kasten   gefunden, relativ (0 bis 1)
+ *   'keins'  Modell lief, fand aber kein glaubwuerdiges Kennzeichen —
+ *            dann bleibt das Bild UNVERAENDERT
+ *   null     Modell nicht verfuegbar (Fehler, Zeitlimit)
+ *
+ * Die Unterscheidung ist wichtig: Beim Urus (Haendlerschild ohne EU-Feld)
+ * fand das Modell nichts, die Seite fiel auf die Farbregel zurueck — und
+ * die klebte einen schwarzen Balken mitten auf den Kotfluegel.
+ */
+export async function kennzeichenAufServerFinden(bild: Buffer): Promise<KennzeichenKasten | 'keins' | null> {
   const start = Date.now();
   try {
     const ergebnis = await mitZeitlimit((async () => {
@@ -72,7 +83,8 @@ export async function kennzeichenAufServerFinden(bild: Buffer): Promise<Kennzeic
     console.info('[kennzeichen] Server-Modell:',
       bester ? `Treffer ${Number(bester.score).toFixed(3)}` : (ergebnis === null ? 'Zeitlimit' : 'kein Treffer'),
       `${Date.now() - start} ms`);
-    if (!bester?.box) return null;
+    if (ergebnis === null) return null;          // Zeitlimit
+    if (!bester?.box) return 'keins';
 
     const { xmin, ymin, xmax, ymax } = bester.box;
     const b = xmax - xmin, h = ymax - ymin;
@@ -91,7 +103,13 @@ export async function kennzeichenAufServerFinden(bild: Buffer): Promise<Kennzeic
      * eine Fehlerkennung — lieber kein Ersatz als ein Schild quer ueber
      * den Kuehlergrill.
      */
-    if (b <= 0 || h <= 0 || pixelVerhaeltnis < 1.3 || b > 0.35 || h > 0.2) return null;
+    if (b <= 0 || h <= 0 || pixelVerhaeltnis < 1.3 || b > 0.35 || h > 0.2) return 'keins';
+    /*
+     * Mindestgroesse. Ein Kennzeichen ist im Inseratfoto mindestens
+     * etwa ein Zwanzigstel der Bildbreite breit (Golf: ein Achtel). Ein
+     * kleiner Streifen an einer Zierleiste ist keins.
+     */
+    if (b < 0.045) return 'keins';
     return { x0: xmin, y0: ymin, x1: xmax, y1: ymax };
   } catch (err) {
     console.error('[kennzeichen] Server-Modell fehlgeschlagen:', err);
