@@ -41,23 +41,35 @@ export async function POST(req: Request) {
             text: `Analysiere diese Fahrzeugfotos und erkenne sichtbare Ausstattungsmerkmale.
 Schaue genau auf: Innenraum, Sitze, Lenkrad, Armaturenbrett, Felgen, Dach, Scheinwerfer, Stoßstangen.
 
-Erkenne nur was wirklich sichtbar ist, z.B.:
-- Ledersitze, Stoff-Sitze, Sportsitze
-- Panoramadach, Schiebedach
-- Alufelgen, Sportfelgen
-- LED-Scheinwerfer, Xenon-Scheinwerfer
-- Navigationssystem, Touchscreen
-- Klimaanlage, Klimaautomatik
-- Sitzheizung (wenn Knöpfe sichtbar)
-- Rückfahrkamera
-- Sportauspuff
+Diese Liste landet in einem Verkaufsinserat. Jedes falsche Merkmal ist eine
+falsche Angabe zum Fahrzeug, für die der Händler haftet. Deshalb gilt:
+Nimm ein Merkmal NUR auf, wenn es auf einem der Fotos eindeutig zu sehen ist.
+Im Zweifel weglassen. Eine kurze Liste ist richtig, eine lange mit einem
+Fehler ist falsch.
+
+Erlaubt, wenn eindeutig sichtbar:
+- Ledersitze (Lederstruktur und Nähte klar erkennbar)
+- Panoramadach (durchgehende Glasfläche im Dach sichtbar)
+- Schiebedach
+- Alufelgen
 - Dachreling
-- Anhängerkupplung
+- Anhängerkupplung (Kugelkopf sichtbar)
+- Navigationssystem (Kartenansicht auf dem Bildschirm sichtbar)
+- Rückfahrkamera (Kamerabild auf dem Bildschirm sichtbar)
+- Sitzheizung (Taste mit Sitzheizungssymbol klar lesbar)
+
+NIE aufnehmen, auch wenn es so aussieht — das ist auf Fotos verwechselbar
+oder nicht sichtbar:
+- Xenon oder LED (Scheinwerfertechnik)
+- Klimaautomatik oder Klimaanlage
+- Sportsitze, Sportfelgen, Sportauspuff (Bewertung, keine Tatsache)
+- Assistenzsysteme, Motor, Getriebe, Pakete, Farbe, Ausstattungslinie
 
 Antworte NUR als pures JSON ohne Markdown:
 {"equipment": ["Merkmal 1", "Merkmal 2"]}
 
-Maximal 12 Merkmale. Nur wirklich sichtbare Dinge.`,
+Nur Namen aus der erlaubten Liste, genau so geschrieben. Wenn nichts
+eindeutig ist: {"equipment": []}`,
           },
           ...imageBlocks,
         ],
@@ -75,7 +87,21 @@ Maximal 12 Merkmale. Nur wirklich sichtbare Dinge.`,
     const text = (response.content[0] as Anthropic.TextBlock).text;
     const result = JSON.parse(extractJson(text));
 
-    return NextResponse.json({ equipment: result.equipment || [] });
+    /*
+     * Nur Merkmale aus der erlaubten Liste. Die Anweisung oben verbietet
+     * Raten, aber eine Anweisung ist keine Garantie — und ein falsches
+     * "LED-Scheinwerfer" im Inserat ist eine falsche Angabe, fuer die der
+     * Haendler haftet. Was nicht auf der Liste steht, kommt nie durch.
+     */
+    const erlaubt = new Set([
+      'Ledersitze', 'Panoramadach', 'Schiebedach', 'Alufelgen', 'Dachreling',
+      'Anhängerkupplung', 'Navigationssystem', 'Rückfahrkamera', 'Sitzheizung',
+    ]);
+    const equipment = (Array.isArray(result.equipment) ? result.equipment : [])
+      .filter((m: unknown): m is string => typeof m === 'string' && erlaubt.has(m.trim()))
+      .map((m: string) => m.trim());
+
+    return NextResponse.json({ equipment: [...new Set(equipment)] });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
