@@ -484,10 +484,22 @@ async function bodenschattenBild(
    * zu den Enden gezogen lag dort ein dunkles Band, und der Wagen schien
    * darueber zu schweben — am Golf und am Urus gleichermassen.
    */
-  const radstand = Math.abs(bx - ax);
-  const links = Math.max(fahrzeugX + xVon, Math.min(ax, bx) - radstand * 0.10);
-  const rechts = Math.min(fahrzeugX + xBis, Math.max(ax, bx) + radstand * 0.10);
+  const radLinks = Math.min(ax, bx), radRechts = Math.max(ax, bx);
+  const links = fahrzeugX + xVon, rechts = fahrzeugX + xBis;
   const laenge = rechts - links;
+  /*
+   * Unter den Ueberhaengen (vor dem Vorderrad, hinter dem Hinterrad) nur
+   * abgeschwaecht. Ganz weg war falsch — dann fehlte vorn jeder Schatten,
+   * und die Front schien zu schweben. Voll wie zwischen den Raedern war
+   * auch falsch: Das gab ein dunkles Band vor der Stossstange. Dazwischen:
+   * vom Rad zum Fahrzeugende von voll auf 55 Prozent.
+   */
+  const ueberhang = (x: number) => {
+    if (x >= radLinks && x <= radRechts) return 1;
+    const weg = x < radLinks ? (radLinks - x) / Math.max(1, radLinks - links)
+                             : (x - radRechts) / Math.max(1, rechts - radRechts);
+    return 1 - 0.45 * Math.min(1, weg);
+  };
 
   // Masse in Pixeln, alle aus der Fahrzeuggroesse — damit es bei jeder
   // Bildbreite gleich aussieht.
@@ -510,7 +522,24 @@ async function bodenschattenBild(
     if (seite <= 0) continue;
     seite = glatt(seite);
 
-    const s = standY(x);
+    /*
+     * Zwischen den Raedern: die Standlinie. Davor und dahinter NICHT deren
+     * Verlaengerung — die faellt beim Blick von schraeg vorn vor dem
+     * Vorderrad weiter ab und lag am Golf 190 Pixel unter der Stossstange,
+     * also als Balken vor dem Auto. Unter einem Ueberhang liegt der
+     * Schatten knapp unter der Karosserie.
+     */
+    let s = standY(x);
+    if (x < radLinks || x > radRechts) {
+      /*
+       * Im seitlichen Auslauf hinter dem Fahrzeugende gibt es keine
+       * Karosserie mehr — dort gilt die Hoehe der letzten Spalte. Ohne das
+       * griff wieder die verlaengerte Radlinie, und neben dem Auto lagen
+       * einzelne dunkle Flecken auf dem Boden.
+       */
+      const spalte = Math.max(xVon, Math.min(xBis, x - fahrzeugX));
+      if (unten[spalte] >= 0) s = Math.min(s, fahrzeugY + unten[spalte] + fHoehe * 0.035);
+    }
     const yVon = Math.max(0, Math.floor(s - tiefeOben));
     const yBis = Math.min(zielHoehe - 1, Math.ceil(s + auslaufUnten + hofUnten * 3));
 
@@ -527,7 +556,7 @@ async function bodenschattenBild(
         const hof = Math.exp(-d / hofUnten);
         wert = 0.65 * kante + 0.35 * hof;
       }
-      wert *= seite * e.schattenStaerke;
+      wert *= seite * ueberhang(x) * e.schattenStaerke;
 
       // Reifenkerne: eng und tief.
       for (const [rx, ry] of [[ax, ay], [bx, by]]) {
