@@ -34,7 +34,7 @@ env.allowLocalModels = false;
  */
 const MODELL = 'onnx-community/ormbg-ONNX';
 
-type Anfrage = { id: number; foto: string };
+type Anfrage = { id: number; foto: string; nurKennzeichen?: boolean };
 
 /*
  * Kennzeichen-Erkennung: OWL-ViT von Google, Apache-2.0.
@@ -65,6 +65,7 @@ async function kennzeichenFinden(foto: string): Promise<Kasten | null> {
   }
   const funde = await kzErkenner(foto, ['a license plate'], { threshold: KZ_SCHWELLE, top_k: 1, percentage: true });
   const bester = Array.isArray(funde) ? funde[0] : null;
+  console.info('[kennzeichen] Modell:', bester ? `Treffer ${bester.score?.toFixed(3)}` : 'kein Treffer');
   if (!bester?.box) return null;
   const { xmin, ymin, xmax, ymax } = bester.box;
   const k = { x0: xmin, y0: ymin, x1: xmax, y1: ymax };
@@ -132,7 +133,23 @@ async function rechnen(foto: string): Promise<Blob> {
 }
 
 self.onmessage = async (e: MessageEvent<Anfrage>) => {
-  const { id, foto } = e.data;
+  const { id, foto, nurKennzeichen } = e.data;
+  if (nurKennzeichen) {
+    /*
+     * Nur das Kennzeichen suchen. Gebraucht, wenn das Foto auf einem
+     * anderen Weg freigestellt wird (PhotoRoom, eigener Server) — sonst
+     * gaebe es dort keinen Kasten, und der Server fiele auf die Farbregel
+     * zurueck. Genau das ist im ersten Live-Test am Golf passiert.
+     */
+    try {
+      const kennzeichen = await kennzeichenFinden(foto);
+      postMessage({ art: 'fertig', id, blob: null, kennzeichen });
+    } catch (err) {
+      postMessage({ art: 'fertig', id, blob: null, kennzeichen: null });
+      console.warn('[kennzeichen] Erkennung fehlgeschlagen:', err);
+    }
+    return;
+  }
   try {
     await bereit();
     postMessage({ art: 'geraet', geraet });

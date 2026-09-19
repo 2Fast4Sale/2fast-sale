@@ -199,11 +199,17 @@ export async function POST(req: NextRequest) {
      * mit, ohne dass ihn ein Pfad vergessen kann.
      */
     let kennzeichenErsetzt = false;
+    // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
+    let kennzeichenQuelle: 'modell' | 'farbregel' | null = null;
     try {
       if (roh.length > 0) {
-        const kz = await ersetzeKennzeichen(roh, firma ?? null);
+        const kasten = gueltigerKasten(reqKennzeichen);
+        const kz = kasten
+          ? await ersetzeKennzeichenImKasten(roh, kasten, firma ?? null)
+          : await ersetzeKennzeichen(roh, firma ?? null);
         roh = kz.bild;
         kennzeichenErsetzt = kz.ersetzt;
+        kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
       }
     } catch (err) {
       /*
@@ -278,6 +284,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         result: `data:image/jpeg;base64,${fertig.toString('base64')}`,
         kennzeichenErsetzt,
+        kennzeichenQuelle,
         weg: 'plus',
         raum: halle.name,
         sandbox,
@@ -299,9 +306,18 @@ export async function POST(req: NextRequest) {
        * hier noch einmal am freigestellten Fahrzeug.
        */
       try {
-        const kz = await ersetzeKennzeichen(vorab, firma ?? null);
+        /*
+         * Mit Kasten aus dem Browser-Modell: das Schild dort, schraeg
+         * eingepasst. Ohne Kasten die Farbregel — die findet schraege
+         * Schilder aber nicht zuverlaessig.
+         */
+        const kasten = gueltigerKasten(reqKennzeichen);
+        const kz = kasten
+          ? await ersetzeKennzeichenImKasten(vorab, kasten, firma ?? null)
+          : await ersetzeKennzeichen(vorab, firma ?? null);
         freigestellt = kz.bild;
         kennzeichenErsetzt = kz.ersetzt;
+        kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
       } catch (err) {
         console.error('[verarbeiten] Kennzeichenersatz am Vorab-Bild fehlgeschlagen:', err);
         freigestellt = vorab;
@@ -421,6 +437,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       result: `data:image/jpeg;base64,${ergebnis.bild.toString('base64')}`,
       kennzeichenErsetzt,
+      kennzeichenQuelle,
       eigenbau: true,
       geminiSchatten,
       sandbox,

@@ -475,6 +475,17 @@ function Step2Inner() {
         kennzeichenKasten = frei.kennzeichen;
       }
 
+      /*
+       * Kennzeichen immer im Browser suchen — auch wenn anders als im
+       * Browser freigestellt wurde. Ohne Kasten nimmt der Server die
+       * Farbregel, und die setzt ein schraeges Schild versetzt.
+       */
+      if (!kennzeichenKasten) {
+        const { kennzeichenImBrowser } = await import('../../../../lib/studio/browserFreistellen');
+        kennzeichenKasten = await kennzeichenImBrowser(compressed);
+      }
+      console.info('[kennzeichen] Kasten an den Server:', kennzeichenKasten ?? 'keiner');
+
       const res = await fetch('/api/studio-eigen/verarbeiten', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -37,7 +37,7 @@ let worker: Worker | null = null;
 let naechsteId = 1;
 /** Kasten um das Kennzeichen, relativ zur Bildgroesse (0 bis 1). */
 export type KennzeichenKasten = { x0: number; y0: number; x1: number; y1: number };
-type Ergebnis = { blob: Blob; kennzeichen: KennzeichenKasten | null };
+type Ergebnis = { blob: Blob | null; kennzeichen: KennzeichenKasten | null };
 const offen = new Map<number, { fertig: (e: Ergebnis) => void; fehler: (e: Error) => void }>();
 
 function holeWorker(): Worker {
@@ -58,6 +58,25 @@ function holeWorker(): Worker {
     worker = null;
   };
   return worker;
+}
+
+/**
+ * Sucht nur das Kennzeichen, ohne freizustellen. Liefert nie einen
+ * Fehler: Scheitert die Erkennung, kommt null, und der Server nimmt die
+ * Farbregel.
+ */
+export async function kennzeichenImBrowser(foto: string): Promise<KennzeichenKasten | null> {
+  const id = naechsteId++;
+  try {
+    const { kennzeichen } = await new Promise<Ergebnis>((fertig, fehler) => {
+      offen.set(id, { fertig, fehler });
+      holeWorker().postMessage({ id, foto, nurKennzeichen: true });
+    });
+    return kennzeichen;
+  } catch (err) {
+    console.warn('[kennzeichen] Browser-Erkennung nicht moeglich:', err);
+    return null;
+  }
 }
 
 /** Startet den Worker schon vorab, z.B. sobald Schritt 2 geoeffnet wird. */
@@ -87,6 +106,7 @@ export async function freistellenMitKennzeichen(
     holeWorker().postMessage({ id, foto });
   });
 
+  if (!blob) throw new Error('Freistellen lieferte kein Bild');
   const bitmap = await createImageBitmap(blob);
   const faktor = Math.min(1, MAX_BREITE / bitmap.width);
   const b = Math.round(bitmap.width * faktor);

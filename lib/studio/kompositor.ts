@@ -430,7 +430,32 @@ export async function radaufstand(
   return { unten, xVon, xBis, radA, radB };
 }
 
-async function bodenschattenProjiziert(
+/**
+ * Bodenschatten im Bildraum, entlang der Standlinie.
+ *
+ * ── Warum nicht mehr ueber Bodenkoordinaten ────────────────────────
+ *
+ * Die Fassung davor rechnete die Unterkante der Silhouette auf den Boden
+ * um. Das stimmt nur dort, wo das Fahrzeug den Boden beruehrt — an den
+ * Raedern. Stossstangen und Schweller haengen aber frei in der Luft; auf
+ * den Boden projiziert landeten sie weit HINTER dem Auto. Am Golf ergab
+ * das zwei lange dunkle Streifen seitlich neben dem Wagen und fast
+ * nichts darunter. Im ersten Live-Test war genau das zu sehen.
+ *
+ * ── Wie es jetzt geht ──────────────────────────────────────────────
+ *
+ * Wie bei Haendlerfotos unter diffusem Hallenlicht (BMW, Hyundai als
+ * Vorlage): Dunkel ist es unter dem GANZEN Wagen, und der Schatten
+ * laeuft nur ein kurzes Stueck ueber das Fahrzeug hinaus aus.
+ *
+ * Grundlage ist die Standlinie — die Gerade durch die beiden
+ * Radaufstandspunkte. Je Spalte liegt der Schatten von dieser Linie ein
+ * Stueck nach oben (das ist der Boden unter dem Wagen, zum Teil hinter
+ * ihm versteckt) und laeuft nach unten kurz aus. Seitlich endet er kurz
+ * hinter den Enden des Fahrzeugs. Unter den Reifen kommt ein dunkler
+ * Kern dazu: Wo Gummi den Boden beruehrt, kommt kein Licht hin.
+ */
+async function bodenschattenBild(
   fahrzeug: Buffer,
   fBreite: number,
   fHoehe: number,
@@ -446,217 +471,79 @@ async function bodenschattenProjiziert(
   if (!kontakt) return null;
   const { unten, xVon, xBis, radA, radB } = kontakt;
 
-  // Alles ab hier in Bildkoordinaten des fertigen Bildes.
-  const hY = zielHoehe * e.horizont;
-  const radAx = fahrzeugX + radA, radAy = fahrzeugY + unten[radA];
-  const radBx = fahrzeugX + radB, radBy = fahrzeugY + unten[radB];
+  // Standlinie im fertigen Bild.
+  const ax = fahrzeugX + radA, ay = fahrzeugY + unten[radA];
+  const bx = fahrzeugX + radB, by = fahrzeugY + unten[radB];
+  const steigung = bx !== ax ? (by - ay) / (bx - ax) : 0;
+  const standY = (x: number) => ay + (x - ax) * steigung;
 
   /*
-   * Umrechnung Bild → Boden, in METERN.
-   *
-   * Der erste Anlauf hat hier zwei verschiedene Groessen in dieselbe
-   * Ellipse gesteckt: seitlich einen Winkel (x geteilt durch den
-   * Horizontabstand), in der Tiefe einen Kehrwert. Die sind nicht
-   * vergleichbar — der Ersatzwert fuer die Tiefe geriet dadurch
-   * zweihundertfach zu gross, und heraus kam ein schwarzer Kegel ueber
-   * den halben Boden.
-   *
-   * Mit einer Brennweite in Pixeln wird beides eine Laenge:
-   *
-   *     Tiefe Z = Kamerahoehe · f / (y - Horizont)
-   *     Seite X = (x - Bildmitte) · Kamerahoehe / (y - Horizont)
-   *
-   * Damit ist ein Auto 2,0 m breit und 5,1 m lang statt 1,31 "Einheiten",
-   * und man kann die Zahlen gegen die Wirklichkeit pruefen.
+   * Seitlich nur bis knapp hinter die Raeder, nicht bis zu den Enden des
+   * Fahrzeugs. Vor dem Vorderrad haengt die Stossstange in der Luft; der
+   * Boden darunter liegt VOR dem Auto und ist bei Licht von oben hell. Bis
+   * zu den Enden gezogen lag dort ein dunkles Band, und der Wagen schien
+   * darueber zu schweben — am Golf und am Urus gleichermassen.
    */
-  const kMin = Math.max(4, zielHoehe * 0.01);
-  const fPx = (e.brennweite / 36) * zielBreite;   // Kleinbild, 36 mm breit
-  const abstand = (y: number) => Math.max(kMin, y - hY);
-  const tiefeVon = (y: number) => e.kameraHoehe * fPx / abstand(y);
-  const seiteVon = (x: number, y: number) =>
-    (x - zielBreite / 2) * e.kameraHoehe / abstand(y);
+  const radstand = Math.abs(bx - ax);
+  const links = Math.max(fahrzeugX + xVon, Math.min(ax, bx) - radstand * 0.10);
+  const rechts = Math.min(fahrzeugX + xBis, Math.max(ax, bx) + radstand * 0.10);
+  const laenge = rechts - links;
 
-  /* ── 2. Die Schattenflaeche in Bodenkoordinaten ── */
-  const mitteY = (radAy + radBy) / 2;
-  /*
-   * Der Grundriss des Schattens kommt aus der Silhouette, nicht aus einer
-   * Ellipse.
-   *
-   * Eine Ellipse ist unter jedem Auto dieselbe Form: vorne und hinten
-   * gleich rund, seitlich gleich weit. Ein Auto ist das nicht — vorne
-   * schiebt sich die Schuerze weit vor, hinten zieht sich der Wagen
-   * zusammen, und zwischen den Raedern liegt der Schweller naeher am
-   * Boden als die Kotfluegel. Im Bild sah man genau das: einen Kreis,
-   * ueber den ein Auto gestellt wurde.
-   *
-   * Die Unterkante der Silhouette ist bereits der vordere Rand des
-   * Schattens — Spalte fuer Spalte, mit allen Ausbuchtungen. Umgerechnet
-   * in Bodenkoordinaten ergibt sie eine Kurve, und der Schatten ist die
-   * Flaeche zwischen dieser Kurve und derselben Kurve, um die
-   * Fahrzeugtiefe nach hinten versetzt.
-   */
-  const RASTER = 512;
-  let uMin = Infinity, uMax = -Infinity;
-  const spalten: Array<[number, number]> = [];   // [u, t] je Fahrzeugspalte
-  for (let x = xVon; x <= xBis; x++) {
-    if (unten[x] < 0) continue;
-    const yb = fahrzeugY + unten[x];
-    const u = seiteVon(fahrzeugX + x, yb);
-    spalten.push([u, tiefeVon(yb)]);
-    if (u < uMin) uMin = u;
-    if (u > uMax) uMax = u;
-  }
-  if (spalten.length < 2 || !(uMax > uMin)) return null;
+  // Masse in Pixeln, alle aus der Fahrzeuggroesse — damit es bei jeder
+  // Bildbreite gleich aussieht.
+  const tiefeOben = fHoehe * 0.14;     // Boden unter dem Wagen, nach hinten
+  const auslaufUnten = fHoehe * 0.020; // kurze Kante nach vorn
+  const auslaufSeite = laenge * 0.030; // ueber die Enden hinaus
+  const hofUnten = fHoehe * 0.030;     // weicher Hof nach vorn, kurz
 
-  /*
-   * Je Rasterfach der NAECHSTE Punkt — der Schatten beginnt dort, wo das
-   * Blech dem Boden am naechsten kommt.
-   */
-  const nahT = new Float64Array(RASTER).fill(Infinity);
-  for (const [u, t] of spalten) {
-    const i = Math.min(RASTER - 1, Math.floor((u - uMin) / (uMax - uMin) * RASTER));
-    if (t < nahT[i]) nahT[i] = t;
-  }
-  // Luecken (mehr Faecher als Spalten) linear schliessen.
-  let letzter = -1;
-  for (let i = 0; i < RASTER; i++) {
-    if (!isFinite(nahT[i])) continue;
-    if (letzter >= 0 && i - letzter > 1) {
-      for (let j = letzter + 1; j < i; j++) {
-        const a = (j - letzter) / (i - letzter);
-        nahT[j] = nahT[letzter] + (nahT[i] - nahT[letzter]) * a;
-      }
-    }
-    letzter = i;
-  }
-  for (let i = 0; i < RASTER; i++) if (!isFinite(nahT[i])) nahT[i] = nahT[Math.max(0, letzter)];
-
-  /*
-   * Halbe Breite: aus der Fahrzeugbreite an der Standlinie, aber etwas
-   * schmaler.
-   *
-   * Der Schatten darf seitlich kaum unter dem Fahrzeug hervorschauen.
-   * Auf die volle Breite gezogen entsteht ein dunkles Kissen, das links
-   * und rechts sichtbar uebersteht — im Vergleich mit PhotoRoom war das
-   * der auffaelligste Rest.
-   */
-  const uHalb = 0.92 * Math.abs(
-    seiteVon(fahrzeugX + xBis, mitteY) - seiteVon(fahrzeugX + xVon, mitteY),
-  ) / 2;
-
-  /*
-   * Halbe Tiefe: aus dem Abstand der beiden Radaufstandsflaechen. Beim
-   * 3/4-Winkel stehen sie unterschiedlich weit weg, das ergibt die
-   * Tiefe des Grundrisses. Steht der Wagen exakt seitlich, sind beide
-   * gleich weit weg und der Abstand ist null — dann greift der
-   * Ersatzwert: Ein Auto ist etwa 0,4 mal so tief wie lang.
-   */
-  const tRadA = tiefeVon(radAy), tRadB = tiefeVon(radBy);
-  // Beide Werte jetzt in Metern, also vergleichbar. Ein Auto ist etwa
-  // 0,38-mal so tief wie lang; das greift, wenn der Wagen genau seitlich
-  // steht und beide Raeder gleich weit weg sind.
-  // 1,05 statt 1,30: Der Schatten reichte sonst deutlich vor die
-  // Stossstange, und davor ist bei diffusem Hallenlicht heller Boden.
-  const tHalb = Math.max(Math.abs(tRadA - tRadB) / 2 * 1.05, uHalb * 0.22);
-
-  /*
-   * Wie tief der Grundriss nach hinten reicht.
-   *
-   * Die Silhouettenkante ist die zur Kamera zeigende Flanke; dahinter
-   * liegt noch der Rest des Wagens. Aus dem Tiefenunterschied der beiden
-   * Raeder (schraege Ansicht) oder ersatzweise aus der Breite.
-   */
-  const tiefeKoerper = Math.max(tHalb * 1.8, uHalb * 0.45);
-
-  /*
-   * Die Aufstandsflaechen der Reifen — eng und tief schwarz.
-   *
-   * Gemessen an einer Spalte durch das Vorderrad: Bei PhotoRoom geht es
-   * vom schwarzen Reifen in acht Zeilen auf Bodenhelligkeit, bei der
-   * Fassung davor brauchte es dreissig. Eine Luecke gab es nie — der
-   * Kontakt war nur eine Rampe statt einer Kante, und genau das liest
-   * das Auge als "schwebt auf einem Kissen".
-   *
-   * Wo Gummi den Beton beruehrt, kommt gar kein Licht mehr hin. Das ist
-   * eine harte Kante, kein Verlauf.
-   */
-  const uRadA = seiteVon(radAx, radAy), uRadB = seiteVon(radBx, radBy);
-  const uKern = uHalb * 0.085, tKern = tHalb * 0.10;
-
-  /* ── 3. Zeichnen ── */
   const maske = Buffer.alloc(zielBreite * zielHoehe, 0);
-  const yAb = Math.max(0, Math.floor(hY + kMin));
+  const glatt = (a: number) => a * a * (3 - 2 * a);
 
-  for (let y = yAb; y < zielHoehe; y++) {
-    const t = tiefeVon(y);
-    const k = abstand(y);
-    for (let x = 0; x < zielBreite; x++) {
-      const u = (x - zielBreite / 2) * e.kameraHoehe / k;
+  const xStart = Math.max(0, Math.floor(links - auslaufSeite * 3));
+  const xEnde = Math.min(zielBreite - 1, Math.ceil(rechts + auslaufSeite * 3));
 
-      /*
-       * Grundflaeche: eine Ellipse mit FLACHEM Kern und kurzer Kante.
-       *
-       * Vorher stand hier eine Glocke. Die hat kein Plateau — sie ist
-       * nur in der Mitte dunkel und wird nach aussen gleichmaessig
-       * heller. Gemessen ergab das einen Uebergang ueber vierzig Pixel,
-       * waehrend PhotoRoom in zehn fertig ist. Genau daran sah man den
-       * Unterschied: ihrer ist ein Schatten, meiner war ein Hauch.
-       *
-       * Ein echter Schlagschatten sieht anders aus: unter dem Fahrzeug
-       * ueberall gleich dunkel, weil dort ueberall dasselbe Licht fehlt,
-       * und am Rand ein kurzer Auslauf. Genau das ist es hier — voll bis
-       * `PLATEAU`, dann in einem schmalen Band auf null.
-       */
-      /*
-       * Abstand zum Grundriss, in Metern. Innerhalb negativ, ausserhalb
-       * positiv — seitlich ueber die Fahrzeugkante hinaus, in der Tiefe
-       * vor der Silhouettenkante oder hinter dem Heck.
-       */
-      const iRoh = (u - uMin) / (uMax - uMin) * RASTER;
-      const i = Math.max(0, Math.min(RASTER - 1, Math.floor(iRoh)));
-      const tNah = nahT[i];
+  for (let x = xStart; x <= xEnde; x++) {
+    // Seitlich: voll zwischen den Enden, danach weich auf null.
+    let seite = 1;
+    if (x < links) seite = Math.max(0, 1 - (links - x) / (auslaufSeite * 3));
+    else if (x > rechts) seite = Math.max(0, 1 - (x - rechts) / (auslaufSeite * 3));
+    if (seite <= 0) continue;
+    seite = glatt(seite);
 
-      const seitlich = Math.max(uMin - u, u - uMax);
-      const tiefRaus = Math.max(tNah - t, t - (tNah + tiefeKoerper));
-      const abstandAussen = Math.max(seitlich, tiefRaus);
+    const s = standY(x);
+    const yVon = Math.max(0, Math.floor(s - tiefeOben));
+    const yBis = Math.min(zielHoehe - 1, Math.ceil(s + auslaufUnten + hofUnten * 3));
 
-      /*
-       * Zwei Anteile, wie in echten Haendlerfotos unter diffusem
-       * Hallenlicht: ein kurzer dunkler Saum direkt am Grundriss und ein
-       * breiter, weicher Hof, der ein Stueck ueber die Kontur hinaus
-       * auslaeuft. Nur der kurze Saum allein wirkte wie ausgeschnitten.
-       */
-      const SAUM = Math.max(0.02, uHalb * 0.08);
-      const HOF = Math.max(0.08, uHalb * 0.30);
-      let form: number;
-      if (abstandAussen <= 0) form = 1;
-      else {
-        const a = Math.max(0, (SAUM - abstandAussen) / SAUM);
-        const kern = a * a * (3 - 2 * a);
-        const hof = Math.exp(-abstandAussen / HOF);
-        form = 0.45 * kern + 0.55 * hof;
+    for (let y = yVon; y <= yBis; y++) {
+      let wert: number;
+      if (y <= s) {
+        // Unter dem Wagen: gleichmaessig dunkel, nach hinten leicht heller.
+        const a = (s - y) / tiefeOben;
+        wert = 1 - 0.35 * glatt(Math.min(1, a));
+      } else {
+        // Vor der Standlinie: kurze Kante, dann weicher Hof.
+        const d = y - s;
+        const kante = d < auslaufUnten ? glatt(1 - d / auslaufUnten) : 0;
+        const hof = Math.exp(-d / hofUnten);
+        wert = 0.65 * kante + 0.35 * hof;
       }
-      let wert = e.schattenStaerke * form;
+      wert *= seite * e.schattenStaerke;
 
-      // Zwei dunkle Kerne an den Radaufstandsflaechen. Dort kommt gar
-      // kein Licht mehr hin; das erzeugt kein Weichzeichner.
-      for (const [ur, tr] of [[uRadA, tRadA], [uRadB, tRadB]]) {
-        const a = (u - ur) / uKern, b = (t - tr) / tKern;
-        wert += e.schattenStaerke * e.kernBoost * Math.exp(-(a * a + b * b) / 2);
+      // Reifenkerne: eng und tief.
+      for (const [rx, ry] of [[ax, ay], [bx, by]]) {
+        const u = (x - rx) / (fBreite * 0.045);
+        const v = (y - ry) / (fHoehe * 0.030);
+        wert += e.schattenStaerke * e.kernBoost * Math.exp(-(u * u + v * v) / 2);
       }
 
       if (wert <= 0.004) continue;
-      maske[y * zielBreite + x] = Math.min(255, Math.round(Math.min(1, wert) * 255));
+      const i = y * zielBreite + x;
+      maske[i] = Math.max(maske[i], Math.min(255, Math.round(Math.min(1, wert) * 255)));
     }
   }
 
   const weich = await sharp(maske, { raw: { width: zielBreite, height: zielHoehe, channels: 1 } })
-    // Klein halten: Die Form ist schon glatt, der Weichzeichner soll nur
-    // die Rasterstufen nehmen.
-    // 0,004 der Bildbreite waren bei 1920 Pixeln knapp acht Pixel und
-    // haben die Kante am Reifen wieder verschmiert, die oben mit Muehe
-    // erzeugt wurde. Halb so viel reicht gegen die Rasterstufen.
-    .blur(Math.max(1.5, zielBreite * 0.005))
+    .blur(Math.max(1.5, zielBreite * 0.004))
     .toColourspace('b-w')
     .raw()
     .toBuffer();
@@ -851,7 +738,7 @@ export async function komponieren(
    * den Boden laufen, und der Wagen schwebte.
    */
   {
-    const s = await bodenschattenProjiziert(
+    const s = await bodenschattenBild(
       fahrzeug, fBreite, fHoehe, fahrzeugX, fahrzeugY, zielBreite, zielHoehe, e,
     );
     if (s) ebenen.push({
