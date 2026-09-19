@@ -35,7 +35,10 @@ export function beiModellDownload(hoerer: LadeHoerer | null): void {
 
 let worker: Worker | null = null;
 let naechsteId = 1;
-const offen = new Map<number, { fertig: (b: Blob) => void; fehler: (e: Error) => void }>();
+/** Kasten um das Kennzeichen, relativ zur Bildgroesse (0 bis 1). */
+export type KennzeichenKasten = { x0: number; y0: number; x1: number; y1: number };
+type Ergebnis = { blob: Blob; kennzeichen: KennzeichenKasten | null };
+const offen = new Map<number, { fertig: (e: Ergebnis) => void; fehler: (e: Error) => void }>();
 
 function holeWorker(): Worker {
   if (worker) return worker;
@@ -44,7 +47,7 @@ function holeWorker(): Worker {
     const d = e.data;
     if (d.art === 'download') ladeHoerer?.(d.geladen, d.gesamt);
     else if (d.art === 'geraet') console.info('[freistellen] rechnet auf:', d.geraet);
-    else if (d.art === 'fertig') { offen.get(d.id)?.fertig(d.blob); offen.delete(d.id); }
+    else if (d.art === 'fertig') { offen.get(d.id)?.fertig({ blob: d.blob, kennzeichen: d.kennzeichen ?? null }); offen.delete(d.id); }
     else if (d.art === 'fehler') { offen.get(d.id)?.fehler(new Error(d.meldung)); offen.delete(d.id); }
   };
   worker.onerror = (e) => {
@@ -67,8 +70,19 @@ export function freistellerVorwaermen(): void {
  * Data-URL (WebP mit Transparenz, hoechstens 1600 px breit) zurueck.
  */
 export async function freistellenImBrowser(foto: string): Promise<string> {
+  return (await freistellenMitKennzeichen(foto)).bild;
+}
+
+/**
+ * Wie freistellenImBrowser, liefert zusaetzlich den Kasten um das
+ * Kennzeichen (oder null). Der Kasten ist relativ angegeben und gilt
+ * damit auch fuer das verkleinerte Ergebnis.
+ */
+export async function freistellenMitKennzeichen(
+  foto: string,
+): Promise<{ bild: string; kennzeichen: KennzeichenKasten | null }> {
   const id = naechsteId++;
-  const blob = await new Promise<Blob>((fertig, fehler) => {
+  const { blob, kennzeichen } = await new Promise<Ergebnis>((fertig, fehler) => {
     offen.set(id, { fertig, fehler });
     holeWorker().postMessage({ id, foto });
   });
@@ -86,5 +100,6 @@ export async function freistellenImBrowser(foto: string): Promise<string> {
   bitmap.close();
 
   const webp = leinwand.toDataURL('image/webp', 0.9);
-  return webp.startsWith('data:image/webp') ? webp : leinwand.toDataURL('image/png');
+  const bild = webp.startsWith('data:image/webp') ? webp : leinwand.toDataURL('image/png');
+  return { bild, kennzeichen };
 }

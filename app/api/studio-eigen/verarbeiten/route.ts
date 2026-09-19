@@ -6,7 +6,7 @@ import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../..
 import { schattenMitGemini } from '../../../../lib/studio/geminiSchatten';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 import { raum, raumBild } from '../../../../lib/studio/raeume';
-import { ersetzeKennzeichen } from '../../../../lib/studio/kennzeichen';
+import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +69,7 @@ function hintergrundErlaubt(adresse: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite } =
+    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite, kennzeichen: reqKennzeichen } =
       await req.json() as {
         /** Bodenlinie im eigenen Hallenfoto, Anteil der Bildhoehe von oben. */
         hallenHorizont?: number;
@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
         hintergrund?: Partial<StudioHintergrund>;
         hintergrundUrl?: string;
         breite?: number;
+        /** Kasten um das Kennzeichen vom Browser-Modell, relativ (0 bis 1). */
+        kennzeichen?: unknown;
       };
 
     if (!image && !reqFreigestellt) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
@@ -427,4 +429,20 @@ export async function POST(req: NextRequest) {
     console.error('[verarbeiten] Fehler:', err);
     return NextResponse.json({ error: 'Unerwarteter Fehler bei der Studio-Bearbeitung.' }, { status: 500 });
   }
+}
+
+/**
+ * Prueft den Kennzeichen-Kasten aus dem Browser. Er kommt vom Client und
+ * wird deshalb nicht blind uebernommen: nur Zahlen zwischen 0 und 1, in
+ * der richtigen Reihenfolge, und nicht groesser als ein Kennzeichen sein
+ * kann.
+ */
+function gueltigerKasten(k: unknown): KennzeichenKasten | null {
+  if (!k || typeof k !== 'object') return null;
+  const { x0, y0, x1, y1 } = k as Record<string, unknown>;
+  const zahlen = [x0, y0, x1, y1];
+  if (!zahlen.every((z) => typeof z === 'number' && Number.isFinite(z) && z >= 0 && z <= 1)) return null;
+  const [a, b, c, d] = zahlen as number[];
+  if (c <= a || d <= b || c - a > 0.35 || d - b > 0.2) return null;
+  return { x0: a, y0: b, x1: c, y1: d };
 }

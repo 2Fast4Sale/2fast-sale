@@ -36,6 +36,49 @@ const MODELL = 'onnx-community/ormbg-ONNX';
 
 type Anfrage = { id: number; foto: string };
 
+/*
+ * Kennzeichen-Erkennung: OWL-ViT von Google, Apache-2.0.
+ *
+ * Die Farbregel am Server (blaues EU-Feld) findet ein schraeg stehendes
+ * Schild nicht zuverlaessig — am Golf-Testfoto sass das Ersatzschild
+ * versetzt, und oben war noch "7122" zu lesen. OWL-ViT findet Objekte nach
+ * einer Beschreibung in Worten und traf das Schild auf wenige Pixel genau.
+ * Die fertigen YOLOv9-Kennzeichenmodelle waeren kleiner, ihre Gewichte
+ * tragen aber keine klare Lizenz; dieselbe Falle wie RMBG-2.0.
+ *
+ * Laeuft hier im Browser, weil das Modell 151 MB gross ist — auf dem
+ * Server kaeme es zu jedem Kaltstart neu. Ein Fehler hier kostet nie das
+ * Foto: Dann wird ohne Kasten geschickt, und der Server nimmt die
+ * Farbregel.
+ */
+const KZ_MODELL = 'Xenova/owlvit-base-patch32';
+const KZ_SCHWELLE = 0.12;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let kzErkenner: any = null;
+
+type Kasten = { x0: number; y0: number; x1: number; y1: number };
+
+async function kennzeichenFinden(foto: string): Promise<Kasten | null> {
+  if (!kzErkenner) {
+    kzErkenner = await pipeline('zero-shot-object-detection', KZ_MODELL,
+      { device: 'wasm', dtype: 'q8', progress_callback: fortschritt });
+  }
+  const funde = await kzErkenner(foto, ['a license plate'], { threshold: KZ_SCHWELLE, top_k: 1, percentage: true });
+  const bester = Array.isArray(funde) ? funde[0] : null;
+  if (!bester?.box) return null;
+  const { xmin, ymin, xmax, ymax } = bester.box;
+  const k = { x0: xmin, y0: ymin, x1: xmax, y1: ymax };
+  /*
+   * Plausibel? Ein Kennzeichen ist deutlich breiter als hoch und nimmt nur
+   * einen kleinen Teil des Bildes ein. Ein Kasten ueber die halbe Front
+   * ist eine Fehlerkennung — lieber keinen Ersatz als ein Schild quer
+   * ueber den Kuehlergrill.
+   */
+  const b = k.x1 - k.x0, h = k.y1 - k.y0;
+  if (b <= 0 || h <= 0 || b / h < 1.3 || b > 0.35 || h > 0.2) return null;
+  return k;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let verarbeiter: any = null;
 let geraet: 'webgpu' | 'wasm' | null = null;
@@ -94,7 +137,13 @@ self.onmessage = async (e: MessageEvent<Anfrage>) => {
     await bereit();
     postMessage({ art: 'geraet', geraet });
     const blob = await rechnen(foto);
-    postMessage({ art: 'fertig', id, blob });
+    let kennzeichen: Kasten | null = null;
+    try {
+      kennzeichen = await kennzeichenFinden(foto);
+    } catch (err) {
+      console.warn('[freistellen] Kennzeichen-Erkennung fehlgeschlagen:', err);
+    }
+    postMessage({ art: 'fertig', id, blob, kennzeichen });
   } catch (err) {
     postMessage({ art: 'fehler', id, meldung: String((err as Error)?.message ?? err) });
   }

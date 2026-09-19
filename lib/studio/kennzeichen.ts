@@ -212,3 +212,168 @@ export async function ersetzeKennzeichen(
 
   return { bild: fertig, ersetzt: true };
 }
+
+/* ────────────────────────────────────────────────────────────────────
+ * Ersatz mit Hilfe eines Erkennungsmodells
+ * ──────────────────────────────────────────────────────────────────── */
+
+/** Kasten um das Kennzeichen, relativ zur Bildgroesse (0 bis 1). */
+export interface KennzeichenKasten {
+  x0: number; y0: number; x1: number; y1: number;
+}
+
+/**
+ * Lage des schraegen Schildes im Kasten.
+ *
+ * Ein Erkennungsmodell liefert nur einen achsparallelen Kasten. Steht das
+ * Schild schraeg, enthaelt der Kasten in zwei Ecken Stossstange — ein
+ * Ersatzschild in Kastengroesse saehe falsch aus, ein waagerechtes in
+ * Schildgroesse liesse an den anderen Ecken Zeichen stehen. Am Golf-Foto
+ * ist beides passiert.
+ *
+ * Fuer ein um θ gedrehtes Rechteck (Breite W, Hoehe H) gilt:
+ *     Kastenbreite w = W·cos θ + H·sin θ
+ *     Kastenhoehe  h = W·sin θ + H·cos θ
+ * Mit bekannter Schildhoehe H (aus dem blauen EU-Feld) folgt daraus
+ *     h·cos θ − w·sin θ = H·cos 2θ
+ * und das laesst sich fuer θ zwischen 0 und 35 Grad eindeutig loesen.
+ *
+ * Am Golf ergibt das 9,7 Grad und 433 Pixel Breite — von Hand gemessen
+ * waren es etwa 10 Grad und 425 Pixel.
+ */
+export function schraegesSchild(w: number, h: number, H: number): { W: number; winkel: number } {
+  let besterFehler = Infinity, bestesTheta = 0;
+  for (let grad = 0; grad <= 35; grad += 0.1) {
+    const t = (grad * Math.PI) / 180;
+    const fehler = Math.abs(h * Math.cos(t) - w * Math.sin(t) - H * Math.cos(2 * t));
+    if (fehler < besterFehler) { besterFehler = fehler; bestesTheta = t; }
+  }
+  const W = (w - H * Math.sin(bestesTheta)) / Math.cos(bestesTheta);
+  return { W, winkel: (bestesTheta * 180) / Math.PI };
+}
+
+/** Das Haendlerschild als SVG-Gruppe, mit der Mitte im Ursprung. */
+function haendlerschildGruppe(sw: number, sh: number, name?: string | null): string {
+  const sicher = (name || '').trim().slice(0, 22)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Schriftgroesse aus Hoehe UND Breite — siehe ersetzeKennzeichen.
+  const nutzbar = sw * 0.86;
+  const schrift = Math.max(
+    6,
+    Math.round(Math.min(sh * 0.46, sicher.length ? nutzbar / (sicher.length * 0.60) : sh * 0.46)),
+  );
+  const laenge = Math.min(nutzbar, sicher.length * schrift * 0.62);
+  const x = -sw / 2, y = -sh / 2;
+  return `
+    <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${sw}" height="${sh}"
+          rx="${Math.round(sh * 0.12)}" fill="url(#g)"/>
+    <rect x="${(x + 1).toFixed(1)}" y="${(y + 1).toFixed(1)}" width="${sw - 2}" height="${sh - 2}"
+          rx="${Math.round(sh * 0.11)}" fill="none" stroke="#4c5057" stroke-width="1"/>
+    ${sicher ? `<text x="0" y="0" fill="#e8eaee"
+          font-family="Arial, Helvetica, sans-serif" font-size="${schrift}"
+          font-weight="600" textLength="${laenge.toFixed(1)}" lengthAdjust="spacingAndGlyphs"
+          text-anchor="middle" dominant-baseline="central">${sicher}</text>` : ''}`;
+}
+
+/**
+ * Ersetzt das Kennzeichen in einem vom Modell gefundenen Kasten.
+ *
+ * Schildhoehe und Neigungsrichtung kommen aus dem blauen EU-Feld im
+ * Kasten. Fehlt es (Wechselkennzeichen, Haendlerschild, Ausland), wird
+ * die Richtung aus der Lage der hellen Schildflaeche geschaetzt und die
+ * Hoehe mit dem Seitenverhaeltnis eines schraeg gesehenen Schildes.
+ */
+export async function ersetzeKennzeichenImKasten(
+  bild: Buffer,
+  kasten: KennzeichenKasten,
+  name?: string | null,
+): Promise<{ bild: Buffer; ersetzt: boolean; winkel?: number }> {
+  const { data, info } = await sharp(bild).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: B, height: Hb, channels: k } = info;
+
+  const x0 = Math.max(0, Math.floor(kasten.x0 * B)), x1 = Math.min(B - 1, Math.ceil(kasten.x1 * B));
+  const y0 = Math.max(0, Math.floor(kasten.y0 * Hb)), y1 = Math.min(Hb - 1, Math.ceil(kasten.y1 * Hb));
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  if (w < 8 || h < 4) return { bild, ersetzt: false };
+
+  // Blaues EU-Feld: nur im linken Drittel des Kastens suchen.
+  let blauN = 0, blauYmin = Infinity, blauYmax = -Infinity, blauYsumme = 0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x0 + Math.round(w / 3); x++) {
+      const p = (y * B + x) * k;
+      const r = data[p] / 255, g = data[p + 1] / 255, bl = data[p + 2] / 255;
+      const max = Math.max(r, g, bl), min = Math.min(r, g, bl);
+      if (max < 0.10 || max > 0.85 || max !== bl) continue;
+      if ((max - min) / max < 0.45) continue;
+      let ton = 60 * (4 + (r - g) / (max - min));
+      if (ton < 0) ton += 360;
+      if (ton < 205 || ton > 250) continue;
+      blauN++; blauYsumme += y;
+      if (y < blauYmin) blauYmin = y;
+      if (y > blauYmax) blauYmax = y;
+    }
+  }
+  const mitteKastenY = (y0 + y1) / 2;
+  const hatBlau = blauN > Math.max(20, h * 2);
+
+  /*
+   * Neigungsrichtung. Liegt die linke Schildkante tiefer als die Mitte des
+   * Kastens, steigt das Schild nach rechts an (SVG: negativer Winkel).
+   */
+  let linksTiefer: boolean;
+  if (hatBlau) {
+    linksTiefer = blauYsumme / blauN > mitteKastenY;
+  } else {
+    // Ersatz: helle Schildflaeche links gegen rechts vergleichen.
+    const hellY = (xa: number, xb: number) => {
+      let s = 0, n = 0;
+      for (let y = y0; y <= y1; y++) for (let x = xa; x <= xb; x++) {
+        const p = (y * B + x) * k;
+        if (0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2] > 170) { s += y; n++; }
+      }
+      return n ? s / n : mitteKastenY;
+    };
+    linksTiefer = hellY(x0, x0 + Math.round(w * 0.2)) > hellY(x1 - Math.round(w * 0.2), x1);
+  }
+
+  // Schildhoehe: das blaue Feld reicht fast ueber die ganze Hoehe.
+  const H = hatBlau
+    ? Math.min(h, (blauYmax - blauYmin + 1) * 0.95)
+    : Math.min(h, w / 3.6);   // schraeg gesehenes Schild, etwa 3,6 : 1
+
+  const { W, winkel } = schraegesSchild(w, h, H);
+  const drehung = linksTiefer ? -winkel : winkel;
+
+  // Etwas groesser, damit Rand und Schrauben verschwinden.
+  const rand = Math.max(2, Math.round(H * 0.10));
+  const sw = Math.round(W + rand * 2), sh = Math.round(H + rand * 2);
+  const pad = rand * 3;
+  const lw = w + pad * 2, lh = h + pad * 2;
+
+  const svg = Buffer.from(
+    `<svg width="${lw}" height="${lh}" xmlns="http://www.w3.org/2000/svg">
+       <defs>
+         <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+           <stop offset="0%" stop-color="#26282c"/>
+           <stop offset="100%" stop-color="#141619"/>
+         </linearGradient>
+       </defs>
+       <g transform="translate(${(lw / 2).toFixed(1)} ${(lh / 2).toFixed(1)}) rotate(${drehung.toFixed(2)})">
+         ${haendlerschildGruppe(sw, sh, name)}
+       </g>
+     </svg>`,
+  );
+
+  const links = Math.max(0, x0 - pad), oben = Math.max(0, y0 - pad);
+  let ebene = await sharp(svg).png().toBuffer();
+  // Am Bildrand abschneiden, sonst lehnt sharp die Ebene ab.
+  const passB = Math.min(lw, B - links), passH = Math.min(lh, Hb - oben);
+  if (passB < lw || passH < lh) {
+    ebene = await sharp(ebene).extract({ left: 0, top: 0, width: passB, height: passH }).png().toBuffer();
+  }
+
+  const fertig = await sharp(bild)
+    .composite([{ input: ebene, left: links, top: oben }])
+    .toBuffer();
+  return { bild: fertig, ersetzt: true, winkel: drehung };
+}

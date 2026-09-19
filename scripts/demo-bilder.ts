@@ -34,7 +34,7 @@ async function main() {
    * gebraucht, und der Ersatz muss auf dem Bild sitzen, das auch in den
    * Raum kommt.
    */
-  let auto = fs.readFileSync(freiPfad);
+  let auto: Buffer = fs.readFileSync(freiPfad);
   /*
    * "keine" ueberspringt den Kennzeichenersatz. Am Golf-Testfoto steht das
    * Schild stark schraeg; die Erkennung setzt das Haendlerschild dort

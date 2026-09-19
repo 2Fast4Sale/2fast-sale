@@ -446,6 +446,7 @@ function Step2Inner() {
        * /api/studio-eigen/verarbeiten fuer Raum, Schatten und Kennzeichen.
        */
       let vorab: string | undefined;
+      let kennzeichenKasten: { x0: number; y0: number; x1: number; y1: number } | null = null;
       const freistellerUrl = process.env.NEXT_PUBLIC_FREISTELLER_URL;
       if (freistellerUrl) {
         const foto = await (await fetch(compressed)).blob();
@@ -468,8 +469,10 @@ function Step2Inner() {
          * Mit NEXT_PUBLIC_FREISTELLEN=photoroom geht es wieder ueber
          * PhotoRoom, sobald dort ein Tarif aktiv ist.
          */
-        const { freistellenImBrowser } = await import('../../../../lib/studio/browserFreistellen');
-        vorab = await freistellenImBrowser(compressed);
+        const { freistellenMitKennzeichen } = await import('../../../../lib/studio/browserFreistellen');
+        const frei = await freistellenMitKennzeichen(compressed);
+        vorab = frei.bild;
+        kennzeichenKasten = frei.kennzeichen;
       }
 
       const res = await fetch('/api/studio-eigen/verarbeiten', {
@@ -480,6 +483,9 @@ function Step2Inner() {
           // Vercel. Mit freigestelltem Auto wird das Original nicht gebraucht.
           image: vorab ? undefined : compressed,
           freigestellt: vorab,
+          // Vom Modell im Browser gefunden; ohne Kasten nimmt der Server
+          // die Farbregel.
+          kennzeichen: kennzeichenKasten ?? undefined,
           draftId: entwurfId(),
           code: raumCode,
           raum: raumName,
