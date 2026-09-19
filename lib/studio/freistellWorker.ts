@@ -154,13 +154,12 @@ self.onmessage = async (e: MessageEvent<Anfrage>) => {
     await bereit();
     postMessage({ art: 'geraet', geraet });
     const blob = await rechnen(foto);
-    let kennzeichen: Kasten | null = null;
-    try {
-      kennzeichen = await kennzeichenFinden(foto);
-    } catch (err) {
-      console.warn('[freistellen] Kennzeichen-Erkennung fehlgeschlagen:', err);
-    }
-    postMessage({ art: 'fertig', id, blob, kennzeichen });
+    /*
+     * Kein Kennzeichen mehr im Browser: OWL-ViT scheitert im WASM-Rechenkern
+     * an jedem Bild ("Cast(13) node"), laedt vorher aber 150 MB. Die
+     * Erkennung laeuft jetzt auf dem Server, siehe kennzeichenModell.ts.
+     */
+    postMessage({ art: 'fertig', id, blob, kennzeichen: null });
   } catch (err) {
     postMessage({ art: 'fehler', id, meldung: String((err as Error)?.message ?? err) });
   }

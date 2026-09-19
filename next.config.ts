@@ -17,7 +17,38 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
-  serverExternalPackages: ['pdfkit'],
+  /*
+   * Die Kennzeichen-Erkennung (lib/studio/kennzeichenModell.ts) laeuft mit
+   * onnxruntime-node — ein natives Modul, das nicht gebuendelt werden kann.
+   */
+  serverExternalPackages: ['pdfkit', '@huggingface/transformers', 'onnxruntime-node'],
+  /*
+   * onnxruntime-node bringt Laufzeiten fuer alle Systeme mit, zusammen
+   * 283 MB. Vercel laeuft auf Linux x64 (44 MB); der Rest wuerde die Grenze
+   * von 250 MB je Funktion sprengen.
+   */
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/**/onnxruntime-node/bin/napi-v*/darwin/**',
+      'node_modules/**/onnxruntime-node/bin/napi-v*/win32/**',
+      'node_modules/**/onnxruntime-node/bin/napi-v*/linux/arm64/**',
+      // Lokaler Modell-Cache vom Testen — auf Vercel laedt die Funktion
+      // das Modell selbst nach /tmp.
+      'node_modules/@huggingface/transformers/.cache/**',
+    ],
+  },
+  /*
+   * Die native Laufzeit selbst wird NICHT von allein mitgenommen: Das
+   * Paket laedt sie ueber einen zusammengesetzten Pfad, den die
+   * Abhaengigkeitsanalyse nicht sieht. Ohne diese Zeile fehlte sie auf
+   * Vercel, und die Kennzeichen-Erkennung waere still ausgefallen.
+   * transformers.js bringt seine eigene Fassung (1.24) mit — die zaehlt.
+   */
+  outputFileTracingIncludes: {
+    '/api/studio-eigen/verarbeiten': [
+      'node_modules/@huggingface/transformers/node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**',
+    ],
+  },
   headers: async () => [
     {
       source: '/(.*)',

@@ -214,8 +214,6 @@ function Step2Inner() {
    * bei dreiundvierzig eine Zumutung.
    */
   const [zeigeOriginale, setZeigeOriginale] = useState(false);
-  /** Über welchem Bild die Maus gerade steht — zeigt dort das Original. */
-  const [ueberfahren, setUeberfahren] = useState<string | null>(null);
   const [bulkProcessing, setBulk]     = useState(false);
   /*
    * Anzeige waehrend der Studio-Bearbeitung: erst der einmalige
@@ -475,16 +473,8 @@ function Step2Inner() {
         kennzeichenKasten = frei.kennzeichen;
       }
 
-      /*
-       * Kennzeichen immer im Browser suchen — auch wenn anders als im
-       * Browser freigestellt wurde. Ohne Kasten nimmt der Server die
-       * Farbregel, und die setzt ein schraeges Schild versetzt.
-       */
-      if (!kennzeichenKasten) {
-        const { kennzeichenImBrowser } = await import('../../../../lib/studio/browserFreistellen');
-        kennzeichenKasten = await kennzeichenImBrowser(compressed);
-      }
-      console.info('[kennzeichen] Kasten an den Server:', kennzeichenKasten ?? 'keiner');
+      // Das Kennzeichen sucht der Server (kennzeichenModell.ts) — im
+      // Browser scheitert das Modell am WASM-Rechenkern.
 
       const res = await fetch('/api/studio-eigen/verarbeiten', {
         method: 'POST',
@@ -1026,22 +1016,22 @@ function Step2Inner() {
                   {/*
                     Ein Bild, kein Schieberegler.
 
-                    Gezeigt wird das Studiobild; das Original erscheint,
-                    solange die Maus darüber steht oder der Schalter
-                    oben auf "Originale" steht. Der Vergleich ist damit
-                    eine Bewegung statt einer Bedienhandlung — und
-                    funktioniert bei dreiundvierzig Fotos genauso wie
+                    Gezeigt wird das Studiobild; das Original erscheint
+                    nur, wenn der Schalter oben auf "Originale" steht.
+                    Das funktioniert bei dreiundvierzig Fotos genauso wie
                     bei zweien.
                   */}
                   <img
-                    src={p.processed && !zeigeOriginale && ueberfahren !== p.id ? p.processed : p.preview}
-                    onMouseEnter={() => p.processed && setUeberfahren(p.id)}
-                    onMouseLeave={() => setUeberfahren(null)}
+                    /* Kein Wechsel beim Ueberfahren mehr: Beim Zeigen auf ein
+                       Bild sprang es auf das Original, und man sah das fertige
+                       Ergebnis nicht. Vergleichen geht ueber den Schalter
+                       "Originale" oben. */
+                    src={p.processed && !zeigeOriginale ? p.processed : p.preview}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', filter: hasIssues && !p.processed ? 'brightness(0.75)' : 'none' }}
                     alt="" />
 
                   {/* Sagt, was man gerade sieht — sonst rät man beim Vergleichen. */}
-                  {p.processed && (zeigeOriginale || ueberfahren === p.id) && (
+                  {p.processed && zeigeOriginale && (
                     <div style={{
                       position: 'absolute', top: '8px', left: '8px',
                       background: 'rgba(0,0,0,0.72)', color: '#fff',

@@ -7,8 +7,15 @@ import { schattenMitGemini } from '../../../../lib/studio/geminiSchatten';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
+import { kennzeichenAufServerFinden } from '../../../../lib/studio/kennzeichenModell';
 
 export const dynamic = 'force-dynamic';
+/*
+ * Beim ersten Bild nach einem Kaltstart laedt die Kennzeichen-Erkennung
+ * ihr Modell (151 MB). Das braucht Zeit; ohne hoeheres Limit brach die
+ * Funktion vorher ab.
+ */
+export const maxDuration = 120;
 
 /**
  * Ein Fahrzeugfoto zum fertigen Studiobild — der Weg fuer Schritt 2.
@@ -203,7 +210,7 @@ export async function POST(req: NextRequest) {
     let kennzeichenQuelle: 'modell' | 'farbregel' | null = null;
     try {
       if (roh.length > 0) {
-        const kasten = gueltigerKasten(reqKennzeichen);
+        const kasten = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kz = kasten
           ? await ersetzeKennzeichenImKasten(roh, kasten, firma ?? null)
           : await ersetzeKennzeichen(roh, firma ?? null);
@@ -309,9 +316,11 @@ export async function POST(req: NextRequest) {
         /*
          * Mit Kasten aus dem Browser-Modell: das Schild dort, schraeg
          * eingepasst. Ohne Kasten die Farbregel — die findet schraege
-         * Schilder aber nicht zuverlaessig.
+         * Schilder aber nicht zuverlaessig. Ohne Kasten vom Browser sucht
+         * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
+         * Modell nicht.
          */
-        const kasten = gueltigerKasten(reqKennzeichen);
+        const kasten = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kz = kasten
           ? await ersetzeKennzeichenImKasten(vorab, kasten, firma ?? null)
           : await ersetzeKennzeichen(vorab, firma ?? null);
