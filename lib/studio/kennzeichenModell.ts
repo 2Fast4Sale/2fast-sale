@@ -53,6 +53,43 @@ function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
 }
 
 /**
+ * Sucht das FAHRZEUG und liefert seinen Kasten, relativ (0 bis 1).
+ *
+ * Gebraucht, um misslungene Freistellungen zu retten: Bleibt ein Stueck
+ * Pflaster oder Hauswand stehen, liegt es ausserhalb dieses Kastens und
+ * laesst sich wegschneiden. Es ist dieselbe geladene Sitzung wie fuer das
+ * Kennzeichen, kostet also nur die Rechenzeit einer weiteren Abfrage.
+ *
+ * null heisst: nichts gefunden oder Modell nicht verfuegbar — dann bleibt
+ * das Bild unveraendert.
+ */
+export async function fahrzeugKastenFinden(bild: Buffer): Promise<KennzeichenKasten | null> {
+  try {
+    const ergebnis = await mitZeitlimit((async () => {
+      const { RawImage } = await import('@huggingface/transformers');
+      const jpg = await sharp(bild).flatten({ background: '#808080' })
+        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 88 }).toBuffer();
+      const roh = await RawImage.fromBlob(new Blob([new Uint8Array(jpg)], { type: 'image/jpeg' }));
+      const e = await erkenner();
+      return e(roh, ['a car'], { threshold: 0.08, top_k: 1, percentage: true });
+    })(), ZEITLIMIT_MS);
+
+    const bester = Array.isArray(ergebnis) ? ergebnis[0] : null;
+    if (!bester?.box) return null;
+    const { xmin, ymin, xmax, ymax } = bester.box;
+    if (xmax - xmin < 0.1 || ymax - ymin < 0.05) return null;
+    console.info('[freistellen] Fahrzeugkasten',
+      Number(bester.score).toFixed(2),
+      [xmin, ymin, xmax, ymax].map((n: number) => n.toFixed(2)).join(' '));
+    return { x0: xmin, y0: ymin, x1: xmax, y1: ymax };
+  } catch (err) {
+    console.error('[freistellen] Fahrzeugsuche fehlgeschlagen:', err);
+    return null;
+  }
+}
+
+/**
  * Sucht das Kennzeichen.
  *
  *   Kasten   gefunden, relativ (0 bis 1)

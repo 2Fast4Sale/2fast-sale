@@ -8,6 +8,7 @@ import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../..
 import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden } from '../../../../lib/studio/kennzeichenModell';
+import { freistellGuete } from '../../../../lib/studio/freistellGuete';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -315,6 +316,28 @@ export async function POST(req: NextRequest) {
 
     let freigestellt: Buffer;
     if (vorab) {
+      /*
+       * Erst pruefen, ob die Freistellung ueberhaupt etwas taugt.
+       *
+       * Das kostenlose Freistellen im Browser scheitert an manchen Fotos,
+       * besonders an dunklen Autos auf dunklem Pflaster: Dann bleibt ein
+       * Rechteck Originalfoto stehen, und aus dessen Unterkante wird ein
+       * schwarzer Schattenbalken quer durchs Bild. Im Live-Test an einem
+       * schwarzen Golf genau so passiert.
+       *
+       * Ein Haendler zahlt fuer dieses Bild. Eine ehrliche Meldung ist
+       * besser als ein sichtbar falsches Ergebnis.
+       */
+      const guete = await freistellGuete(vorab);
+      if (!guete.brauchbar) {
+        console.warn('[verarbeiten] Freistellung unbrauchbar:',
+          guete.grund, JSON.stringify(guete));
+        return NextResponse.json({
+          error: `${guete.grund} Bitte ein anderes Foto nehmen — am besten mit hellem, ruhigem Untergrund und etwas Abstand zum Fahrzeug.`,
+          freistellenGescheitert: true,
+        }, { status: 422 });
+      }
+
       /*
        * Das Kennzeichen wurde oben am Originalfoto ersetzt — der
        * Freistell-Server hat aber das unveraenderte Foto bekommen. Deshalb
