@@ -6,9 +6,18 @@ import {
   rechnungPdf, rechnungEmail, rechnungText, ausstellerAusUmgebung,
   summen, betrag, type Rechnung,
 } from '../../../../lib/rechnung';
+import { PREIS_PRO_INSERAT_CENT, STEUERSATZ_PROZENT } from '../../../../lib/preismodell';
 
-/** Bruttopreis eines Inserat-Credits in Cent. */
-const PREIS_CREDIT_BRUTTO_CENT = 499;
+/*
+ * Preis und Steuersatz kommen aus dem Preismodell, nicht mehr von hier.
+ *
+ * Hier stand fest verdrahtet 499 (4,99 EUR) bei 19 % Umsatzsteuer,
+ * waehrend Startseite und lib/preismodell.ts 3,50 EUR ohne Umsatzsteuer
+ * nannten. Der Haendler haette also eine Rechnung bekommen, die von der
+ * beworbenen Seite abweicht — und als Kleinunternehmer haetten wir eine
+ * Steuer ausgewiesen, die wir nicht ausweisen duerfen (§ 14c UStG).
+ */
+const PREIS_CREDIT_BRUTTO_CENT = PREIS_PRO_INSERAT_CENT;
 
 export const dynamic = 'force-dynamic';
 
@@ -121,12 +130,18 @@ export async function POST(req: NextRequest) {
         ustId: buyerVat || undefined,
       },
       positionen: [{
-        bezeichnung: 'Inserat-Credit',
-        beschreibung: 'KI-Fahrzeugbeschreibung, Studio-Fotos, Plattform-Export',
+        bezeichnung: 'Inserat',
+        /*
+         * "Plattform-Export" stand hier, obwohl es ihn nicht gibt: Die
+         * Uebertragung zu mobile.de und AutoScout24 ist Vorbereitung,
+         * nicht Leistung. Eine Rechnungsposition darf nichts aufzaehlen,
+         * was der Kunde nicht bekommt.
+         */
+        beschreibung: 'Fahrzeugdaten aus dem Fahrzeugschein, Studio-Fotos, Beschreibung und Titel',
         menge: quantity,
         einzelpreisBruttoCent: PREIS_CREDIT_BRUTTO_CENT,
       }],
-      steuersatz: 19,
+      steuersatz: STEUERSATZ_PROZENT,
       bezahlt: true,
       stripePdfUrl: invoicePdfUrl,
     };
@@ -137,7 +152,7 @@ export async function POST(req: NextRequest) {
     await getResend().emails.send({
       from: fromEmail,
       to: toEmail,
-      subject: `Rechnung ${invoiceNumber} über ${betrag(summen(rechnung.positionen, 19).bruttoCent)} €`,
+      subject: `Rechnung ${invoiceNumber} über ${betrag(summen(rechnung.positionen, STEUERSATZ_PROZENT).bruttoCent)} €`,
       html: rechnungEmail(rechnung, aussteller),
       // Textfassung mitschicken: verbessert die Zustellung und deckt
       // Postfächer ab, die HTML nicht anzeigen.

@@ -34,7 +34,7 @@ const SCHRITTE = [
   {
     icon: <ScanLine size={22} />,
     titel: 'Fahrzeugschein abfotografieren',
-    text: 'Marke, Modell, Erstzulassung, Hubraum, Leistung, Farbe und die Schlüsselnummern aus Feld 22 werden ausgelesen und eingetragen.',
+    text: 'Marke, Modell, Erstzulassung, Hubraum, Leistung, Kraftstoff, Farbe, Sitzplätze und Leermasse werden ausgelesen und eingetragen. Was nicht lesbar ist, bleibt leer.',
   },
   {
     icon: <Camera size={22} />,
@@ -55,7 +55,7 @@ const SCHRITTE = [
 
 const FUNKTIONEN = [
   { icon: <ScanLine size={20} />,   titel: 'Fahrzeugschein-Scan',   text: 'Erkennt die Felder der Zulassungsbescheinigung Teil I und die Schlüsselnummern. Unplausible Werte werden verworfen statt übernommen.' },
-  { icon: <Gauge size={20} />,      titel: 'Ausstattungserkennung',  text: 'Erkennt Navi, Sitzheizung, Felgen und Assistenzsysteme auf deinen Fotos — an dem, was tatsächlich zu sehen ist, nicht an der Fahrgestellnummer geraten.' },
+  { icon: <Gauge size={20} />,      titel: 'Ausstattungserkennung',  text: 'Übernimmt aus deinen Fotos nur, was eindeutig zu sehen ist: Ledersitze, Panoramadach, Alufelgen, Dachreling, Anhängerkupplung, Navi, Rückfahrkamera, Sitzheizung. Verwechselbares wie Xenon oder LED bleibt draußen.' },
   { icon: <Camera size={20} />,     titel: 'Geführte Aufnahme',     text: 'Zwölf Winkel mit Silhouette zum Ausrichten. Die Aussenaufnahmen liegen in Rundum-Reihenfolge, dadurch entsteht die 360°-Ansicht von selbst.' },
   { icon: <Layers size={20} />,     titel: 'Studio-Hintergründe',   text: 'Neunzehn selbst gerenderte Räume von hellem Studio bis Werkstatt. Alle Fotos eines Fahrzeugs bekommen denselben Hintergrund.' },
   { icon: <Sparkles size={20} />,   titel: 'Beschreibung und Titel', text: 'Entstehen aus den erfassten Daten. Du kannst einen eigenen Beispieltitel hinterlegen, an dem sich die Formulierung orientiert.' },
@@ -91,16 +91,26 @@ const PLAENE = [
      * Nutzerkonten" — das habe ich aus der alten Preisseite uebernommen,
      * ohne es zu pruefen. Es existiert nicht: keine Tabelle, kein Code.
      */
+    /*
+     * Die Zahlen stammen aus lib/studioQuota.ts (8 ohne Paket, 10 bei S,
+     * je 12 bei M und L). Hier standen 15, 20 und 30 — erfunden, und
+     * ausgerechnet bei einer Angabe, die spaeter auf der Rechnung steht.
+     * Auch "Statistiken zu deinen Inseraten" ist gestrichen: Es gibt sie
+     * nicht.
+     */
     merkmale: i === 0
-      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', '15 Studio-Bilder je Inserat']
+      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', '10 Studio-Bilder je Inserat']
       : i === 1
-        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', '20 Studio-Bilder je Inserat']
-        : ['Alles aus Paket M', 'Statistiken zu deinen Inseraten', '30 Studio-Bilder je Inserat'],
+        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', '12 Studio-Bilder je Inserat']
+        : ['Alles aus Paket M', '12 Studio-Bilder je Inserat', 'Für grosse Bestände'],
     cta: `${p.name} wählen`,
     ziel: '/dashboard/pricing',
-    // Das mittlere Paket hervorheben: Es deckt die Menge ab, die ein
-    // Händler mit durchschnittlichem Bestand tatsächlich einstellt.
-    beliebt: i === 1,
+    /*
+     * Kein "Meist gewaehlt"-Abzeichen: Es gibt noch keine Kunden, die
+     * etwas gewaehlt haben koennten. Derselbe Grund, aus dem oben in
+     * dieser Datei Kundenstimmen und Nutzungszahlen fehlen.
+     */
+    beliebt: false,
   })),
 ];
 
@@ -111,11 +121,11 @@ const FRAGEN = [
   },
   {
     f: 'Stellt ihr direkt auf mobile.de ein?',
-    a: 'Noch nicht. Du lädst Fotopaket und Text herunter und stellst damit selbst ein. Die direkte Übertragung ist in Vorbereitung; ehrlicher wäre es, sie erst zu bewerben, wenn sie läuft.',
+    a: 'Noch nicht. Du lädst Fotopaket und Text herunter und stellst damit selbst ein. Die direkte Übertragung ist in Vorbereitung und steht hier erst, wenn sie läuft.',
   },
   {
     f: 'Was passiert mit meinen Fotos?',
-    a: 'Das Freistellen läuft direkt in deinem Browser — dafür verlässt kein Foto dein Gerät. Die fertigen Studiobilder liegen in deinem Konto. Weitergegeben werden sie nicht.',
+    a: 'Das Freistellen läuft in deinem Browser, dafür verlässt kein Foto dein Gerät. Für Studio-Hintergrund, Schatten und Kennzeichenersatz geht das freigestellte Bild an unseren Server; für die Ausstattungserkennung gehen bis zu drei Fotos an den KI-Anbieter. Welche Anbieter das sind, steht in der Datenschutzerklärung. Verkauft oder weitergegeben wird nichts.',
   },
   {
     f: 'Kann ich monatlich kündigen?',
@@ -290,8 +300,10 @@ export default function Startseite() {
             <div className="feature-card">
               <h3>Kennzeichen wird ersetzt</h3>
               <p>
-                Das Kennzeichen ist ein personenbezogenes Datum. Es wird automatisch durch
-                ein Schild mit Ihrem Firmennamen überdeckt, bevor das Bild irgendwo landet.
+                Das Kennzeichen ist ein personenbezogenes Datum. Erkennt die Seite eines,
+                wird es durch ein Schild mit Ihrem Firmennamen überdeckt. Erkennt sie keines
+                sicher, bleibt das Bild unverändert — und Sie sehen im Vorschaubild, ob noch
+                eines zu lesen ist.
               </p>
             </div>
             <div className="feature-card">

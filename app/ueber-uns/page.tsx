@@ -52,7 +52,7 @@ export default function UeberUnsPage() {
             { icon: <Target size={24} />, color: '#6366f1', title: 'Unsere Mission', text: 'Jedem Autohändler — ob Einzelkämpfer oder großes Autohaus — die gleichen professionellen Werkzeuge zur Verfügung stellen, die bisher nur großen Ketten mit eigenem Fotostudio vorbehalten waren.' },
             { icon: <Zap size={24} />,    color: '#8b5cf6', title: 'Unsere Vision',  text: 'Die Zukunft des Autohandels ist digital, schnell und datengetrieben. 2fast4sale wird die Plattform sein, auf der jeder Händler in Deutschland sein Business aufbaut.' },
             { icon: <Heart size={24} />,  color: '#ef4444', title: 'Unsere Werte',   text: 'Einfachheit vor Komplexität. Qualität vor Quantität. Ehrlichkeit in allem was wir tun. Wir bauen Tools, die wir selbst benutzen würden.' },
-            { icon: <Shield size={24} />, color: '#059669', title: 'Datenschutz',    text: 'DSGVO ist kein Buzzword für uns — es ist ein Versprechen. Alle Daten bleiben in der EU. Kein Tracking, keine Weitergabe, keine Kompromisse.' },
+            { icon: <Shield size={24} />, color: '#059669', title: 'Datenschutz',    text: 'Deine Fotos und Fahrzeugdaten werden nicht verkauft und nicht für Werbung genutzt. Für einzelne Schritte arbeiten wir mit Dienstleistern; welche das sind und was sie bekommen, steht vollständig in der Datenschutzerklärung.' },
           ].map((card, i) => (
             <div key={i} style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid #f8fafc', borderRadius: '16px', padding: '32px' }}>
               <div style={{ width: '48px', height: '48px', background: `${card.color}15`, border: `1px solid ${card.color}25`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color, marginBottom: '18px' }}>
@@ -110,7 +110,7 @@ export default function UeberUnsPage() {
         <div style={{ background: 'linear-gradient(135deg, rgba(29,78,216,0.15), rgba(109,40,217,0.1))', border: '1px solid rgba(99,102,241,0.22)', borderRadius: '20px', padding: '48px', textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', marginBottom: '12px', letterSpacing: '-0.8px' }}>Wir freuen uns von dir zu hören</h2>
           <p style={{ color: '#475569', fontSize: '14px', marginBottom: '28px', lineHeight: 1.7 }}>
-            Feedback, Fragen, Partnerschaftsanfragen oder einfach Hallo sagen — wir antworten innerhalb von 24 Stunden.
+            Feedback, Fragen oder einfach Hallo sagen — wir melden uns zurück.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/kontakt" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#4f46e5', color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: '600', borderRadius: '8px', boxShadow: '0 4px 16px rgba(79,70,229,0.35)' }}>

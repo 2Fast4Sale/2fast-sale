@@ -85,14 +85,34 @@ export default function DatenschutzPage() {
           verarbeitet — wir speichern keine vollständigen Zahlungsdaten. Datenschutz:{' '}
           <a href="https://stripe.com/de/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>stripe.com/de/privacy</a></p>
 
-          <p style={body}><strong style={{ color: '#0f172a' }}>OpenAI (KI-Funktionen)</strong><br />
-          OpenAI, L.L.C., San Francisco, USA. Fahrzeugdaten können zur KI-Verarbeitung übermittelt werden.
+          {/*
+            Hier standen OpenAI und fal.ai. Beide werden im Code nirgends
+            aufgerufen — eine Datenschutzerklaerung, die die falschen
+            Empfaenger nennt, ist schlimmer als keine: Sie behauptet eine
+            Uebermittlung, die es nicht gibt, und verschweigt die, die es
+            gibt. Massgeblich ist, was in app/api tatsaechlich angefragt wird.
+          */}
+          <p style={body}><strong style={{ color: '#0f172a' }}>Anthropic (Textverarbeitung)</strong><br />
+          Anthropic PBC, San Francisco, USA. Für das Auslesen des Fahrzeugscheins, die
+          Ausstattungserkennung aus Fotos sowie Titel und Beschreibung werden das Foto des
+          Fahrzeugscheins, bis zu drei Fahrzeugfotos und die erfassten Fahrzeugdaten übermittelt.
           Datenschutz:{' '}
-          <a href="https://openai.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" style={lnk}>openai.com/policies/privacy-policy</a></p>
+          <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>anthropic.com/legal/privacy</a></p>
 
-          <p style={body}><strong style={{ color: '#0f172a' }}>fal.ai (Bildverarbeitung)</strong><br />
-          Zur KI-gestützten Hintergrundentfernung werden Fahrzeugfotos an fal.ai übermittelt. Es werden keine
-          personenbezogenen Daten weitergegeben.</p>
+          <p style={body}><strong style={{ color: '#0f172a' }}>PhotoRoom (Freistellen von Fahrzeugfotos)</strong><br />
+          PhotoRoom SAS, Paris, Frankreich. Wird nur verwendet, wenn das Freistellen nicht im Browser
+          des Nutzers läuft. Übermittelt wird das Fahrzeugfoto. Datenschutz:{' '}
+          <a href="https://www.photoroom.com/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>photoroom.com/privacy</a></p>
+
+          <p style={body}><strong style={{ color: '#0f172a' }}>Google (Bildbearbeitung, optional)</strong><br />
+          Google Ireland Ltd. / Google LLC, USA. Wird nur verwendet, wenn die Studiobilder über die
+          Gemini-Schnittstelle erzeugt werden. Übermittelt wird das Fahrzeugfoto. Datenschutz:{' '}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>policies.google.com/privacy</a></p>
+
+          <p style={body}><strong style={{ color: '#0f172a' }}>Vercel (Betrieb der Website und Reichweitenmessung)</strong><br />
+          Vercel Inc., San Francisco, USA. Die Website läuft auf Vercel; Vercel Analytics zählt Seitenaufrufe
+          ohne Cookies und ohne geräteübergreifende Wiedererkennung. Datenschutz:{' '}
+          <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer" style={lnk}>vercel.com/legal/privacy-policy</a></p>
         </div>
 
         <div style={sec}>

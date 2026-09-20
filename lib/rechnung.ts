@@ -244,8 +244,18 @@ export function rechnungPdf(r: Rechnung, a: Aussteller): Promise<Buffer> {
       sumY += fett ? 22 : 16;
     };
 
-    summenZeile('Nettobetrag', `${betrag(s.nettoCent)} €`);
-    summenZeile(`darin Umsatzsteuer ${r.steuersatz} %`, `${betrag(s.steuerCent)} €`);
+    /*
+     * Ohne Umsatzsteuer keine Steuerzeile.
+     *
+     * Bei Steuersatz 0 waere "darin Umsatzsteuer 0 %: 0,00 €" nicht nur
+     * unnoetig, sondern irrefuehrend — eine Kleinunternehmer-Rechnung
+     * weist gar keine Steuer aus, sondern nennt den Grund (§ 19 UStG).
+     * Der Hinweis dazu steht weiter unten bei den Zahlungsangaben.
+     */
+    if (r.steuersatz > 0) {
+      summenZeile('Nettobetrag', `${betrag(s.nettoCent)} €`);
+      summenZeile(`darin Umsatzsteuer ${r.steuersatz} %`, `${betrag(s.steuerCent)} €`);
+    }
 
     sumY += 4;
     doc.moveTo(sumX, sumY).lineTo(RAND + SATZ, sumY)
@@ -319,8 +329,10 @@ export function rechnungText(r: Rechnung, a: Aussteller): string {
     ...r.positionen.map(p =>
       `${p.menge} x ${p.bezeichnung} zu ${betrag(p.einzelpreisBruttoCent)} EUR = ${betrag(p.einzelpreisBruttoCent * p.menge)} EUR`),
     '',
-    `Nettobetrag:           ${betrag(s.nettoCent)} EUR`,
-    `darin Umsatzsteuer ${r.steuersatz} %:  ${betrag(s.steuerCent)} EUR`,
+    ...(r.steuersatz > 0
+      ? [`Nettobetrag:           ${betrag(s.nettoCent)} EUR`,
+         `darin Umsatzsteuer ${r.steuersatz} %:  ${betrag(s.steuerCent)} EUR`]
+      : ['Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).']),
     `Gesamtbetrag:          ${betrag(s.bruttoCent)} EUR`,
     '',
     r.bezahlt

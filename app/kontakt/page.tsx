@@ -8,13 +8,31 @@ export default function KontaktPage() {
   const [form, setForm] = useState({ name: '', email: '', company: '', subject: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
 
+  /*
+   * Hier stand nur ein Wartebefehl ueber 1,2 Sekunden und danach
+   * "Nachricht gesendet". Verschickt wurde nie etwas — wer geschrieben
+   * hat, wartete auf eine Antwort, die nie kommen konnte.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setSent(true);
+    setFehler(null);
+    try {
+      const res = await fetch('/api/kontakt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const daten = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(daten.error || 'Die Nachricht konnte nicht zugestellt werden.');
+      setSent(true);
+    } catch (err) {
+      setFehler(err instanceof Error ? err.message : 'Die Nachricht konnte nicht zugestellt werden.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputStyle: React.CSSProperties = {
@@ -43,7 +61,7 @@ export default function KontaktPage() {
         <div style={{ textAlign: 'center', marginBottom: '64px' }}>
           <h1 style={{ fontSize: '40px', fontWeight: '900', margin: '0 0 16px 0', letterSpacing: '-1px', color: '#0f172a' }}>Kontakt</h1>
           <p style={{ color: '#475569', fontSize: '18px', maxWidth: '540px', margin: '0 auto', lineHeight: 1.7 }}>
-            Fragen zum Produkt, Preisen oder einer Enterprise-Lösung? Wir antworten innerhalb von 24 Stunden.
+            Fragen zum Produkt oder zu den Preisen? Schreib uns, wir melden uns zurück.
           </p>
         </div>
 
@@ -92,7 +110,7 @@ export default function KontaktPage() {
                   <CheckCircle2 size={30} style={{ color: '#059669' }} />
                 </div>
                 <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 10px 0' }}>Nachricht gesendet…</h3>
-                <p style={{ color: '#475569', fontSize: '14px', margin: '0 0 24px 0' }}>Wir melden uns innerhalb von 24 Stunden bei dir.</p>
+                <p style={{ color: '#475569', fontSize: '14px', margin: '0 0 24px 0' }}>Wir melden uns zurück, sobald wir es schaffen.</p>
                 <button onClick={() => { setSent(false); setForm({ name: '', email: '', company: '', subject: '', message: '' }); }}
                   style={{ fontSize: '13px', color: '#6366f1', fontWeight: '700', background: 'none', border: 'none', cursor: 'pointer' }}>
                   Weitere Nachricht senden
@@ -122,7 +140,6 @@ export default function KontaktPage() {
                   <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}>
                     <option value="">Bitte wählen…</option>
                     <option>Allgemeine Anfrage</option>
-                    <option>Enterprise / Großkunde</option>
                     <option>Technischer Support</option>
                     <option>Partnerschaft</option>
                     <option>Sonstiges</option>
@@ -134,6 +151,11 @@ export default function KontaktPage() {
                     onFocus={e => (e.target.style.borderColor = 'rgba(99,102,241,0.5)')}
                     onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
                 </div>
+                {fehler && (
+                  <p style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '12px 14px', borderRadius: '12px', fontSize: '13.5px', margin: 0 }}>
+                    {fehler}
+                  </p>
+                )}
                 <button type="submit" disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', padding: '15px', borderRadius: '14px', fontWeight: '800', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '15px', boxShadow: '0 8px 24px rgba(79,70,229,0.35)', transition: 'all 0.2s' }}>
                   {loading ? <><Loader2 size={17} style={{ animation: 'spin 1s linear infinite' }} /> Wird gesendet…</> : <><Send size={17} /> Nachricht senden</>}
                 </button>

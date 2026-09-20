@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { PREIS_PRO_INSERAT_CENT, STEUERSATZ_PROZENT } from '../../../lib/preismodell';
 import {
   rechnungPdf, rechnungEmail, rechnungText, ausstellerAusUmgebung,
   type Rechnung,
@@ -35,13 +36,15 @@ export async function GET(req: Request) {
       land: 'Deutschland',
       ustId: 'DE987654321',
     },
+    // Dieselben Werte wie im Betrieb — sonst prueft die Vorschau etwas
+    // anderes, als der Kunde bekommt.
     positionen: [{
-      bezeichnung: 'Inserat-Credit',
-      beschreibung: 'KI-Fahrzeugbeschreibung, Studio-Fotos, Plattform-Export',
+      bezeichnung: 'Inserat',
+      beschreibung: 'Fahrzeugdaten aus dem Fahrzeugschein, Studio-Fotos, Beschreibung und Titel',
       menge: 25,
-      einzelpreisBruttoCent: 499,
+      einzelpreisBruttoCent: PREIS_PRO_INSERAT_CENT,
     }],
-    steuersatz: 19,
+    steuersatz: STEUERSATZ_PROZENT,
     bezahlt: true,
     stripePdfUrl: null,
   };

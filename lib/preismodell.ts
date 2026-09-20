@@ -26,6 +26,26 @@
 /** Preis je Inserat ohne Paket, in Cent. */
 export const PREIS_PRO_INSERAT_CENT = 350;
 
+/**
+ * Umsatzsteuersatz auf unseren Rechnungen, in Prozent.
+ *
+ * NULL, und das ist kein Versehen: Das Impressum nennt die
+ * Kleinunternehmerregelung nach § 19 UStG. Wer darunter faellt, darf
+ * keine Umsatzsteuer ausweisen — tut er es doch, schuldet er sie dem
+ * Finanzamt trotzdem (§ 14c Abs. 2 UStG), obwohl er sie nie eingenommen
+ * hat.
+ *
+ * Die erzeugten Rechnungen wiesen bis hierher 19 % aus, waehrend die
+ * Website "keine Umsatzsteuer" sagte. Eine der beiden Angaben war immer
+ * falsch. Ab der Regelbesteuerung hier auf 19 stellen — und dann auch
+ * den Hinweis auf der Preisseite aendern.
+ */
+export const STEUERSATZ_PROZENT = 0;
+
+/** Pflichthinweis auf jeder Rechnung, solange § 19 UStG gilt. */
+export const STEUER_HINWEIS =
+  'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmerregelung).';
+
 /** Monatliche Grundgebühr ohne Paket, in Cent. Pakete enthalten sie bereits. */
 export const GRUNDGEBUEHR_CENT = 5000;
 
