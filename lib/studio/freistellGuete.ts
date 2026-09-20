@@ -45,7 +45,7 @@ import { fahrzeugKastenFinden } from './kennzeichenModell';
  */
 export async function aufFahrzeugBeschneiden(freigestellt: Buffer): Promise<Buffer> {
   const kasten = await fahrzeugKastenFinden(freigestellt);
-  if (!kasten) return freigestellt;
+  if (!kasten || kasten === 'keins') return freigestellt;
 
   const { width: B = 0, height: H = 0 } = await sharp(freigestellt).metadata();
   if (!B || !H) return freigestellt;

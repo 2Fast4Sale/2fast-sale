@@ -7,7 +7,7 @@ import { schattenMitGemini } from '../../../../lib/studio/geminiSchatten';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
-import { kennzeichenAufServerFinden } from '../../../../lib/studio/kennzeichenModell';
+import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
 import { studioBildMitGemini } from '../../../../lib/studio/geminiStudio';
 
@@ -329,6 +329,24 @@ export async function POST(req: NextRequest) {
        * Ein Haendler zahlt fuer dieses Bild. Eine ehrliche Meldung ist
        * besser als ein sichtbar falsches Ergebnis.
        */
+      /*
+       * Ist ueberhaupt ein Fahrzeug auf dem Foto?
+       *
+       * Im Stapel ueber 64 Fotos lief ein Portraitfoto eines Mannes
+       * klaglos durch die ganze Kette: freigestellt, in die Halle
+       * gesetzt, Schatten darunter. So etwas darf ein Haendler nie
+       * geliefert bekommen — und im Alltag passiert es, wenn jemand
+       * versehentlich das falsche Bild hochlaedt.
+       */
+      const fahrzeug = await fahrzeugKastenFinden(vorab);
+      if (fahrzeug === 'keins') {
+        console.warn('[verarbeiten] Kein Fahrzeug auf dem Foto erkannt');
+        return NextResponse.json({
+          error: 'Auf diesem Foto ist kein Fahrzeug zu erkennen. Bitte ein Foto des Autos hochladen.',
+          keinFahrzeug: true,
+        }, { status: 422 });
+      }
+
       const guete = await freistellGuete(vorab);
       if (!guete.brauchbar) {
         console.warn('[verarbeiten] Freistellung unbrauchbar:',

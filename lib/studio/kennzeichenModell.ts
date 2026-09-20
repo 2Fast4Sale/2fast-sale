@@ -63,7 +63,7 @@ function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
  * null heisst: nichts gefunden oder Modell nicht verfuegbar — dann bleibt
  * das Bild unveraendert.
  */
-export async function fahrzeugKastenFinden(bild: Buffer): Promise<KennzeichenKasten | null> {
+export async function fahrzeugKastenFinden(bild: Buffer): Promise<KennzeichenKasten | 'keins' | null> {
   try {
     const ergebnis = await mitZeitlimit((async () => {
       const { RawImage } = await import('@huggingface/transformers');
@@ -75,10 +75,12 @@ export async function fahrzeugKastenFinden(bild: Buffer): Promise<KennzeichenKas
       return e(roh, ['a car'], { threshold: 0.08, top_k: 1, percentage: true });
     })(), ZEITLIMIT_MS);
 
+    if (ergebnis === null) return null;                 // Zeitlimit
     const bester = Array.isArray(ergebnis) ? ergebnis[0] : null;
-    if (!bester?.box) return null;
+    if (!bester?.box) return 'keins';
     const { xmin, ymin, xmax, ymax } = bester.box;
-    if (xmax - xmin < 0.1 || ymax - ymin < 0.05) return null;
+    // Zu klein fuer ein Fahrzeug im Inseratfoto.
+    if (xmax - xmin < 0.1 || ymax - ymin < 0.05) return 'keins';
     console.info('[freistellen] Fahrzeugkasten',
       Number(bester.score).toFixed(2),
       [xmin, ymin, xmax, ymax].map((n: number) => n.toFixed(2)).join(' '));
