@@ -150,6 +150,7 @@ export default function Startseite() {
           <div className="nav-links">
             <a href="#funktionen">Funktionen</a>
             <a href="#ablauf">Ablauf</a>
+            <a href="#vertrauen">Verlässlichkeit</a>
             <a href="#preise">Preise</a>
             <Link href="/kontakt">Kontakt</Link>
           </div>
@@ -172,6 +173,7 @@ export default function Startseite() {
           <div className="nav-mobile-menu">
             <a href="#funktionen" onClick={() => setMenuOffen(false)}>Funktionen</a>
             <a href="#ablauf"     onClick={() => setMenuOffen(false)}>Ablauf</a>
+            <a href="#vertrauen"  onClick={() => setMenuOffen(false)}>Verlässlichkeit</a>
             <a href="#preise"     onClick={() => setMenuOffen(false)}>Preise</a>
             <Link href="/kontakt" onClick={() => setMenuOffen(false)}>Kontakt</Link>
             <Link href="/auth/login"    className="mob-dash-link" onClick={() => setMenuOffen(false)}>Anmelden</Link>
@@ -183,7 +185,7 @@ export default function Startseite() {
       {/* ══ EINSTIEG ══ */}
       <section className="hero-section">
         <div className="hero-container">
-          <span className="hero-badge">Für Autohäuser und Gebrauchtwagenhändler</span>
+          <span className="hero-badge">Für Händler mit 10 bis 100 Fahrzeugen</span>
 
           <h1 className="hero-title">
             Vom Fahrzeugschein zum<br />
@@ -191,9 +193,10 @@ export default function Startseite() {
           </h1>
 
           <p className="hero-subtitle">
-            Schein abfotografieren, Fotos machen, fertig. Die Daten werden ausgelesen,
-            die Bilder ins Studio gesetzt, Titel und Beschreibung geschrieben.
-            Du lädst alles herunter und stellst ein.
+            Fahrzeugschein abfotografieren, Fotos vom Hof hochladen — den Rest macht
+            die Seite: Daten auslesen, Fahrzeug freistellen und in den Showroom
+            setzen, Kennzeichen durch Ihr Händlerschild ersetzen, Titel und
+            Beschreibung schreiben. Sie laden alles herunter und stellen ein.
           </p>
 
           <div className="hero-buttons">
@@ -251,6 +254,68 @@ export default function Startseite() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* ══ VERTRAUEN ══ */}
+      {/*
+        Ein Haendler haftet fuer jede Angabe im Inserat. Deshalb steht hier,
+        woher die Daten kommen und was das Werkzeug bewusst NICHT tut. Das
+        ist der Punkt, an dem sich 2Fast4Sale von Anbietern unterscheidet,
+        die nur Bilder schoener machen.
+      */}
+      <section className="features-section" id="vertrauen">
+        <div className="section-inner">
+          <h2 className="section-title">Wofür Sie geradestehen, raten wir nicht</h2>
+          <p className="section-subtitle">
+            Jede Angabe im Inserat ist eine Zusicherung an den Käufer. Deshalb gilt hier:
+            ablesen statt schätzen.
+          </p>
+
+          <div className="features-grid">
+            <div className="feature-card">
+              <h3>Nur was auf dem Schein steht</h3>
+              <p>
+                Leistung, Hubraum, Erstzulassung und FIN werden abgelesen. Was nicht
+                lesbar ist, bleibt leer — es wird nichts aus dem Fahrzeugmodell ergänzt.
+              </p>
+            </div>
+            <div className="feature-card">
+              <h3>Ausstattung nur, wenn belegt</h3>
+              <p>
+                Aus Fotos wird nur übernommen, was eindeutig zu sehen ist. Verwechselbares
+                wie Xenon oder LED bleibt draußen, bis es aus den Fahrzeugdaten kommt.
+              </p>
+            </div>
+            <div className="feature-card">
+              <h3>Kennzeichen wird ersetzt</h3>
+              <p>
+                Das Kennzeichen ist ein personenbezogenes Datum. Es wird automatisch durch
+                ein Schild mit Ihrem Firmennamen überdeckt, bevor das Bild irgendwo landet.
+              </p>
+            </div>
+            <div className="feature-card">
+              <h3>Eigene Showrooms</h3>
+              <p>
+                Die Hintergründe sind selbst gerendert, nicht eingekauft oder gefunden.
+                Keine fremden Bildrechte in Ihrem Inserat.
+              </p>
+            </div>
+            <div className="feature-card">
+              <h3>Schlechte Fotos werden gemeldet</h3>
+              <p>
+                Erkennt die Seite, dass ein Foto nicht sauber freigestellt werden konnte,
+                sagt sie das — statt ein Bild auszuliefern, das im Inserat auffällt.
+              </p>
+            </div>
+            <div className="feature-card">
+              <h3>Sie prüfen, bevor es rausgeht</h3>
+              <p>
+                Vor dem Veröffentlichen sehen Sie jedes Feld und jedes Bild und können
+                alles ändern. Nichts wird ungefragt eingestellt.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

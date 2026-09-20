@@ -404,6 +404,8 @@
     0 30px 70px rgba(79, 70, 229, 0.10);
 }
 .visual-svg { display: block; width: 100%; height: auto; }
+/* Echte Beispielfotos: gleiche Kachelform wie die Zeichnung. */
+.visual-foto { display: block; width: 100%; height: auto; object-fit: cover; }
 .visual-caption {
   display: flex; align-items: center; gap: 10px;
   padding: 13px 16px;

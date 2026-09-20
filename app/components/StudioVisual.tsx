@@ -3,6 +3,17 @@
 /**
  * Vorher/Nachher-Darstellung für die Startseite.
  *
+ * ── Echte Fotos schlagen jede Zeichnung ────────────────────────────
+ *
+ * Liegen public/beispiel/vorher.jpg und public/beispiel/nachher.jpg, wird
+ * dieses Paar gezeigt. Sonst bleibt die Zeichnung. So steht auf der
+ * Startseite nie ein Platzhalter mit fehlendem Bild, und sobald eigene
+ * Aufnahmen da sind, sieht ein Haendler sofort das echte Ergebnis.
+ *
+ * WICHTIG: Nur eigene Fotos dort ablegen. Fahrzeugbilder aus dem Netz
+ * gehoeren jemand anderem; eine oeffentliche Startseite ist genau der
+ * Ort, an dem so etwas auffaellt und teuer wird.
+ *
  * Bewusst als Zeichnung und nicht als Foto: Die vorherige Fassung lud zwei
  * fremde Fahrzeugbilder von fremden Servern, eines davon vom Bild-CDN von
  * mobile.de. Eine erkennbare Illustration behauptet nichts, was nicht stimmt,
@@ -12,7 +23,33 @@
  * ein echtes Fahrzeug wirkt stärker als jede Zeichnung.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+
+/**
+ * Sind eigene Beispielfotos hinterlegt?
+ *
+ * Geprueft wird im Browser, nicht beim Bauen: Diese Komponente laeuft im
+ * Browser ('use client'), dort gibt es keinen Dateizugriff. Beide Bilder
+ * werden still geladen; erst wenn beide da sind, wird umgeschaltet.
+ * Fehlen sie, bleibt es bei der Zeichnung — kein leerer Rahmen, kein
+ * kaputtes Bild auf der Startseite.
+ */
+function useEigeneBeispielbilder(): boolean {
+  const [da, setDa] = useState(false);
+  useEffect(() => {
+    let abgebrochen = false;
+    const laden = (pfad: string) => new Promise<boolean>((fertig) => {
+      const bild = new Image();
+      bild.onload = () => fertig(true);
+      bild.onerror = () => fertig(false);
+      bild.src = pfad;
+    });
+    Promise.all([laden('/beispiel/vorher.jpg'), laden('/beispiel/nachher.jpg')])
+      .then(([a, b]) => { if (!abgebrochen) setDa(a && b); });
+    return () => { abgebrochen = true; };
+  }, []);
+  return da;
+}
 
 /** Fahrzeugsilhouette, halbwegs proportional zu einem Kompaktwagen. */
 function Fahrzeug({ farbe, schatten }: { farbe: string; schatten: string }) {
@@ -34,6 +71,40 @@ function Fahrzeug({ farbe, schatten }: { farbe: string; schatten: string }) {
 }
 
 export default function StudioVisual() {
+  const eigeneFotos = useEigeneBeispielbilder();
+
+  if (eigeneFotos) {
+    return (
+      <div className="visual-wrap">
+        <figure className="visual-card">
+          {/* Kein next/image: Die Bilder liegen fest im Projekt und sollen
+              ohne Umweg ueber den Bildserver ausgeliefert werden. */}
+          <img src="/beispiel/vorher.jpg" alt="Fahrzeugfoto vor der Bearbeitung"
+               className="visual-foto" width={1200} height={800} />
+          <figcaption className="visual-caption">
+            <span className="visual-tag visual-tag-vorher">Vorher</span>
+            Handyfoto auf dem Hof
+          </figcaption>
+        </figure>
+
+        <div className="visual-arrow" aria-hidden="true">
+          <span className="visual-arrow-line" />
+          <span className="visual-arrow-badge">Studio</span>
+          <span className="visual-arrow-line" />
+        </div>
+
+        <figure className="visual-card visual-card-studio">
+          <img src="/beispiel/nachher.jpg" alt="Dasselbe Fahrzeug freigestellt im Studio"
+               className="visual-foto" width={1200} height={800} />
+          <figcaption className="visual-caption">
+            <span className="visual-tag visual-tag-nachher">Nachher</span>
+            Freigestellt, mit Schatten im Studio
+          </figcaption>
+        </figure>
+      </div>
+    );
+  }
+
   return (
     <div className="visual-wrap">
       {/* ── Vorher: Parkplatz ── */}
