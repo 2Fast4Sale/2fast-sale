@@ -87,7 +87,7 @@ export async function studioBildMitGemini(
 
   const start = Date.now();
   try {
-    const antwort = await mitZeitlimit((async () => {
+    const anfrageSenden = async () => {
       const auto = await sharp(foto).resize(1536, 1536, { fit: 'inside' }).jpeg({ quality: 90 }).toBuffer();
       const halle = await sharp(raumBild).resize(1536, 1536, { fit: 'inside' }).jpeg({ quality: 85 }).toBuffer();
 
@@ -105,10 +105,30 @@ export async function studioBildMitGemini(
           generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '3:2' } },
         }),
       });
-    })(), ZEITLIMIT_MS);
+    };
+
+    let antwort = await mitZeitlimit(anfrageSenden(), ZEITLIMIT_MS);
 
     if (!antwort) { console.error('[gemini-studio] Zeitlimit'); return null; }
-    if (!antwort.ok) {
+
+    /*
+     * 429 heisst bei Google nicht "kaputt", sondern "zu schnell": In Tier 1
+     * gilt eine Ausgabenbremse von 10 $ je 10 Minuten, dazu Grenzen je
+     * Minute. Ein kurzer Ausschlag ist nach ein paar Sekunden vorbei,
+     * deshalb ein zweiter Versuch, bevor der eigene Weg genommen wird.
+     * 503 ist dasselbe Spiel auf Googles Seite.
+     */
+    if (antwort.status === 429 || antwort.status === 503) {
+      console.warn('[gemini-studio] HTTP', antwort.status, '— zweiter Versuch in 4 s');
+      await new Promise((ok) => setTimeout(ok, 4000));
+      const zweite = await mitZeitlimit(anfrageSenden(), ZEITLIMIT_MS);
+      if (zweite && zweite.ok) {
+        antwort = zweite;
+      } else {
+        console.error('[gemini-studio] auch der zweite Versuch scheiterte');
+        return null;
+      }
+    } else if (!antwort.ok) {
       console.error('[gemini-studio] HTTP', antwort.status, (await antwort.text()).slice(0, 300));
       return null;
     }
