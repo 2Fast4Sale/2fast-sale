@@ -33,7 +33,7 @@ export default function DatenschutzPage() {
             Fabian Barjamasi<br />
             2Fast4Sale<br />
             [Straße, PLZ, Stadt]<br />
-            E-Mail: <a href="mailto:info@2fast4sale.de" style={lnk}>info@2fast4sale.de</a>
+            E-Mail: <a href="mailto:info@2fast4sale.com" style={lnk}>info@2fast4sale.com</a>
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export default function DatenschutzPage() {
           </ul>
           <p style={{ ...body, marginTop: '12px' }}>
             Zur Ausübung Ihrer Rechte wenden Sie sich an:{' '}
-            <a href="mailto:info@2fast4sale.de" style={lnk}>info@2fast4sale.de</a>
+            <a href="mailto:info@2fast4sale.com" style={lnk}>info@2fast4sale.com</a>
           </p>
         </div>
 

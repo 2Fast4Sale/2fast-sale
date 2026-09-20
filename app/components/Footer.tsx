@@ -14,7 +14,7 @@ export default function Footer() {
           <h5>Produkt</h5>
           <ul>
             <li><Link href="/#features">Features</Link></li>
-            <li><Link href="/#pricing">Preise</Link></li>
+            <li><Link href="/#preise">Preise</Link></li>
             <li><Link href="/#faq">FAQ</Link></li>
           </ul>
         </div>

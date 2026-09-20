@@ -21,7 +21,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro } from '../lib/preismodell';
+import { PAKETE, PROBE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro } from '../lib/preismodell';
 import {
   ArrowRight, ScanLine, Camera, Sparkles, FileDown, Check, Menu, X,
   ShieldCheck, Clock, Layers, Gauge, ChevronDown,
@@ -57,7 +57,7 @@ const FUNKTIONEN = [
   { icon: <ScanLine size={20} />,   titel: 'Fahrzeugschein-Scan',   text: 'Erkennt die Felder der Zulassungsbescheinigung Teil I und die Schlüsselnummern. Unplausible Werte werden verworfen statt übernommen.' },
   { icon: <Gauge size={20} />,      titel: 'Ausstattungserkennung',  text: 'Erkennt Navi, Sitzheizung, Felgen und Assistenzsysteme auf deinen Fotos — an dem, was tatsächlich zu sehen ist, nicht an der Fahrgestellnummer geraten.' },
   { icon: <Camera size={20} />,     titel: 'Geführte Aufnahme',     text: 'Zwölf Winkel mit Silhouette zum Ausrichten. Die Aussenaufnahmen liegen in Rundum-Reihenfolge, dadurch entsteht die 360°-Ansicht von selbst.' },
-  { icon: <Layers size={20} />,     titel: 'Studio-Hintergründe',   text: 'Zehn Räume von hellem Studio bis Industrieloft. Alle Fotos eines Fahrzeugs bekommen denselben Hintergrund.' },
+  { icon: <Layers size={20} />,     titel: 'Studio-Hintergründe',   text: 'Neunzehn selbst gerenderte Räume von hellem Studio bis Werkstatt. Alle Fotos eines Fahrzeugs bekommen denselben Hintergrund.' },
   { icon: <Sparkles size={20} />,   titel: 'Beschreibung und Titel', text: 'Entstehen aus den erfassten Daten. Du kannst einen eigenen Beispieltitel hinterlegen, an dem sich die Formulierung orientiert.' },
   { icon: <ShieldCheck size={20} />,titel: 'EnVKV-Pflichtangaben',  text: 'Bei Neuwagen, Tageszulassungen und Vorführwagen sind Verbrauch, CO₂-Wert und CO₂-Klasse vorgeschrieben. Die Klasse wird berechnet, der Pflichttext erzeugt.' },
   { icon: <FileDown size={20} />,   titel: 'PDF und Fotopaket',     text: 'Datenblatt zum Aushängen und alle Bilder nummeriert als ZIP — die Reihenfolge bestimmt beim Hochladen das Titelbild.' },
@@ -115,7 +115,7 @@ const FRAGEN = [
   },
   {
     f: 'Was passiert mit meinen Fotos?',
-    a: 'Sie liegen in deinem Konto und werden für die Bearbeitung an unseren Dienstleister für Bildfreistellung übertragen. Weitergegeben werden sie nicht.',
+    a: 'Das Freistellen läuft direkt in deinem Browser — dafür verlässt kein Foto dein Gerät. Die fertigen Studiobilder liegen in deinem Konto. Weitergegeben werden sie nicht.',
   },
   {
     f: 'Kann ich monatlich kündigen?',
@@ -213,7 +213,7 @@ export default function Startseite() {
             erste Eindruck, den ein Händler behält.
           */}
           <p className="hero-note">
-            Konto kostenlos anlegen · Keine Zahlungsdaten nötig · Monatlich kündbar
+            Konto kostenlos anlegen · Probelauf {euro(PROBE.preisCent)} € für {PROBE.inserate} Inserate · Monatlich kündbar
           </p>
         </div>
 
@@ -346,7 +346,14 @@ export default function Startseite() {
       <section className="pricing-section" id="preise">
         <div className="section-inner">
           <h2 className="section-title">Preise</h2>
-          <p className="section-subtitle">Monatlich kündbar. Preise zzgl. gesetzlicher Umsatzsteuer.</p>
+          {/*
+            Vorher stand hier "zzgl. gesetzlicher Umsatzsteuer" — das
+            widerspricht dem Impressum, das die Kleinunternehmerregelung
+            nennt. Zwei Angaben zum selben Preis, und eine davon ist falsch.
+          */}
+          <p className="section-subtitle">
+            Monatlich kündbar. Keine Umsatzsteuer nach § 19 UStG (Kleinunternehmerregelung).
+          </p>
 
           <div className="pricing-grid">
             {PLAENE.map(p => (
@@ -404,8 +411,15 @@ export default function Startseite() {
       <section className="cta-section">
         <div className="section-inner section-narrow">
           <h2 className="cta-title">Probier es an einem Fahrzeug aus</h2>
+          {/*
+            Hier stand "Drei Inserate sind kostenlos" — das gibt es nicht.
+            lib/preismodell.ts kennt nur den Probelauf: 5 EUR fuer zwei
+            Inserate. Ein Versprechen auf der Startseite, das die Kasse
+            nicht einloest, ist der erste Eindruck, den ein Haendler behaelt.
+          */}
           <p className="cta-text">
-            Drei Inserate sind kostenlos. Danach entscheidest du, ob es dir die Zeit wert ist.
+            Konto anlegen kostet nichts. Der Probelauf mit zwei Inseraten kostet
+            {' '}{euro(PROBE.preisCent)} € — danach entscheidest du, ob es dir die Zeit wert ist.
           </p>
           <Link href="/auth/register" className="btn-hero-primary">
             Kostenlos testen <ArrowRight size={17} />

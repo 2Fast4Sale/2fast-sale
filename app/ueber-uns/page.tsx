@@ -15,7 +15,7 @@ export default function UeberUnsPage() {
             2Fast<span style={{ color: '#6366f1' }}>4</span>Sale
           </Link>
           <div style={{ flex: 1, display: 'flex', gap: '24px' }}>
-            {[['/', 'Home'], ['/features', 'Features'], ['/#pricing', 'Preise'], ['/ueber-uns', 'Über uns']].map(([href, label]) => (
+            {[['/', 'Home'], ['/features', 'Features'], ['/#preise', 'Preise'], ['/ueber-uns', 'Über uns']].map(([href, label]) => (
               <Link key={href} href={href} style={{ color: href === '/ueber-uns' ? '#6366f1' : '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '500' }}>{label}</Link>
             ))}
           </div>
@@ -116,8 +116,8 @@ export default function UeberUnsPage() {
             <Link href="/kontakt" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#4f46e5', color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: '600', borderRadius: '8px', boxShadow: '0 4px 16px rgba(79,70,229,0.35)' }}>
               <Mail size={15} /> Kontakt aufnehmen
             </Link>
-            <a href="mailto:info@2fast4sale.de" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#f8fafc', color: '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '600', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              info@2fast4sale.de
+            <a href="mailto:info@2fast4sale.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#f8fafc', color: '#64748b', textDecoration: 'none', fontSize: '14px', fontWeight: '600', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              info@2fast4sale.com
             </a>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function UeberUnsPage() {
       {/* Footer mini */}
       <footer style={{ background: '#f0f2f5', borderTop: '1px solid #f8fafc', padding: '32px 48px', textAlign: 'center', color: '#1e2d40', fontSize: '12.5px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          {[['/', 'Home'], ['/features', 'Features'], ['/#pricing', 'Preise'], ['/kontakt', 'Kontakt'], ['/datenschutz', 'Datenschutz'], ['/impressum', 'Impressum']].map(([href, label]) => (
+          {[['/', 'Home'], ['/features', 'Features'], ['/#preise', 'Preise'], ['/kontakt', 'Kontakt'], ['/datenschutz', 'Datenschutz'], ['/impressum', 'Impressum']].map(([href, label]) => (
             <Link key={href} href={href} style={{ color: '#1e2d40', textDecoration: 'none', fontSize: '13px' }}>{label}</Link>
           ))}
         </div>

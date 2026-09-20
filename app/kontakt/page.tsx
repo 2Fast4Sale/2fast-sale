@@ -52,8 +52,8 @@ export default function KontaktPage() {
           {/* Kontaktinfo */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {[
-              { icon: <Mail size={20} />, label: 'E-Mail', value: 'info@2fast4sale.de', href: 'mailto:info@2fast4sale.de', color: '#6366f1' },
-              { icon: <Phone size={20} />, label: 'Telefon', value: '+49 (0) 30 123456789', href: 'tel:+4930123456789', color: '#059669' },
+              { icon: <Mail size={20} />, label: 'E-Mail', value: 'info@2fast4sale.com', href: 'mailto:info@2fast4sale.com', color: '#6366f1' },
+              { icon: <Phone size={20} />, label: 'Telefon', value: '+49 176 37670637', href: 'tel:+4917637670637', color: '#059669' },
               { icon: <MapPin size={20} />, label: 'Adresse', value: 'Musterstraße 1\n10115 Berlin', href: null, color: '#8b5cf6' },
               { icon: <Clock size={20} />, label: 'Antwortzeit', value: 'Werktags < 24 Stunden\nEnterprise: < 4 Stunden', href: null, color: '#d97706' },
             ].map(item => (
@@ -78,8 +78,8 @@ export default function KontaktPage() {
               <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.7, margin: '0 0 16px 0' }}>
                 Individuelle Inseratsmenge, White-Label, API-Zugang und dedizierter Support für Autohausgruppen.
               </p>
-              <a href="mailto:enterprise@2fast4sale.de" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#d97706', textDecoration: 'none' }}>
-                enterprise@2fast4sale.de →
+              <a href="mailto:info@2fast4sale.com" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#d97706', textDecoration: 'none' }}>
+                info@2fast4sale.com →
               </a>
             </div>
           </div>

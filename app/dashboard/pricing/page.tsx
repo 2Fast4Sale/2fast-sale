@@ -278,7 +278,7 @@ function PlanCard({
               <CheckCircle2 size={15} /> Aktueller Plan
             </div>
           ) : plan.contact ? (
-            <a href="mailto:sales@2fast4sale.de" style={{
+            <a href="mailto:info@2fast4sale.com" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               padding: '13px', borderRadius: '12px', fontWeight: '700', fontSize: '14px',
               background: plan.bg, color: plan.color,
@@ -699,7 +699,7 @@ function PricingContent() {
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', margin: '0 0 24px', lineHeight: 1.6 }}>
               Unser Team hilft dir bei der Wahl — kostenlos und unverbindlich.
             </p>
-            <a href="mailto:support@2fast4sale.de" style={{
+            <a href="mailto:info@2fast4sale.com" style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               background: '#4f46e5', color: '#fff', padding: '13px 28px',
               borderRadius: '10px', fontWeight: '700', textDecoration: 'none',

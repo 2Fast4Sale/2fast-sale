@@ -89,7 +89,7 @@ export default function AGBPage() {
           </p>
           <p style={body}>
             Die Kündigung erfolgt über die Einstellungen im Dashboard unter „Mein Abo" oder per E-Mail an
-            <a href="mailto:info@2fast4sale.de" style={{ ...lnk, marginLeft: '4px' }}>info@2fast4sale.de</a>.
+            <a href="mailto:info@2fast4sale.com" style={{ ...lnk, marginLeft: '4px' }}>info@2fast4sale.com</a>.
           </p>
           <p style={body}>
             Der Anbieter behält sich das Recht vor, Nutzerkonten bei Verstößen gegen diese AGB oder bei

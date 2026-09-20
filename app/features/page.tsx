@@ -16,131 +16,104 @@ const TH  = '#0f172a';
 const TS  = '#94a3b8';
 const TD  = '#94a3b8';
 
+/*
+ * Diese Liste stand voller Dinge, die es nicht gibt: Team-Konten mit
+ * Rollen, SSO und Active Directory, Verkaufsanalysen mit Aufrufen und
+ * Kontaktraten, Direktexport zu mobile.de, "Server in Deutschland
+ * (Frankfurt)", "DSGVO-zertifiziert", "Genauigkeit > 97 % in Tests",
+ * "GPT-4o Vision", "PhotoRoom v2 Enterprise", "Fallback via fal.ai".
+ *
+ * Nichts davon ist gebaut oder gemessen. Das ist irrefuehrende Werbung
+ * (§ 5 UWG) und widerspricht der obersten Regel des Projekts: Was hier
+ * steht, muss im Code wirklich passieren. Ein Haendler, der wegen einer
+ * dieser Zeilen kommt und sie nicht vorfindet, kommt nicht wieder.
+ *
+ * Diese Fassung beschreibt nur, was heute laeuft. Geplantes ist als
+ * geplant gekennzeichnet.
+ */
 const FEATURES = [
   {
-    id: 'ocr', icon: <FileText size={32} />, color: '#6366f1', tag: 'Core',
-    title: 'OCR Dokumentenscan',
-    headline: 'Fahrzeugschein in 30 Sekunden ausgelesen',
-    desc: 'Kein manuelles Tippen mehr. Fotografiere einfach den Fahrzeugschein &mdash; unsere KI (powered by GPT-4o Vision) liest alle relevanten Daten automatisch aus: Marke, Modell, FIN/VIN, Hubraum, Leistung, Erstzulassung, Farbe, Sitzplätze und mehr.',
+    id: 'ocr', icon: <FileText size={32} />, color: '#6366f1', tag: 'Kern',
+    title: 'Fahrzeugschein auslesen',
+    headline: 'Abfotografieren statt abtippen',
+    desc: 'Du fotografierst die Zulassungsbescheinigung Teil I, die Felder im Formular füllen sich. Gelesen wird nur, was dort steht — Unlesbares bleibt leer, statt aus dem Fahrzeugmodell ergänzt zu werden.',
     bullets: [
-      'Marke, Modell, Baujahr automatisch erkannt',
-      'FIN/VIN für VIN-Decoder Abfrage',
-      'PS, kW, Hubraum, Kraftstoffart',
-      'Sitzanzahl, Leergewicht, Farbe',
-      'Unterstützt deutsche &amp; europäische Fahrzeugscheine',
-      'Genauigkeit &gt; 97% in Tests',
+      'Marke, Handelsbezeichnung, Erstzulassung',
+      'FIN, Hubraum, Leistung, Kraftstoff',
+      'Farbe, Sitzplätze, Leermasse, Türen',
+      'Schadstoffklasse und Anhängelasten',
+      'Unplausible Leistungswerte werden verworfen',
+      'Jedes Feld vor dem Veröffentlichen änderbar',
     ],
   },
   {
-    id: 'studio', icon: <Image size={32} />, color: '#8b5cf6', tag: 'Pro',
-    title: 'KI Studio-Rendering',
-    headline: 'Professionelle Fotos ohne Profi-Kamera',
-    desc: 'Jedes Handy-Foto wird in ein Studio-Bild verwandelt. PhotoRoom v2 Enterprise entfernt den Hintergrund mit KI-Präzision und platziert das Fahrzeug auf dem gewählten Hintergrund &mdash; mit realistischem AI-Schatten und perfekter Positionierung.',
+    id: 'studio', icon: <Image size={32} />, color: '#8b5cf6', tag: 'Kern',
+    title: 'Studio-Bilder aus Handyfotos',
+    headline: 'Freigestellt, in den Showroom gesetzt, mit Schatten',
+    desc: 'Das Fahrzeug wird freigestellt und in einen selbst gerenderten Showroom gesetzt, mit Schatten entlang der Standlinie. Erkennt die Seite, dass ein Foto nicht sauber freigestellt werden konnte, sagt sie das — statt ein auffälliges Bild auszuliefern.',
     bullets: [
-      'Hintergrundentfernung in Sekunden',
-      'Wähle aus 8+ Studio-Hintergrunden',
-      'AI-Schatten fur realistische Tiefe',
-      'Eigenes Showroom-Foto hochladbar (Premium)',
-      'Ausgabe in 1600&times;1067 px (druckfahig)',
-      'Fallback via fal.ai rembg',
+      '19 eigene Räume: helles Studio bis Werkstatt',
+      'Alle Fotos eines Fahrzeugs im selben Raum',
+      'Eigenes Hallenfoto als Hintergrund möglich',
+      'Freistellen läuft im Browser — kostenlos',
+      'Misslungene Freistellungen werden gemeldet',
+      'Kein Fahrzeug auf dem Foto: keine Bearbeitung',
     ],
   },
   {
-    id: 'description', icon: <AlignLeft size={32} />, color: '#059669', tag: 'Core',
-    title: 'KI Inseratsbeschreibung',
-    headline: 'Kaufmotivierende Texte in 60 Sekunden',
-    desc: 'GPT-4o analysiert alle Fahrzeugdaten und generiert automatisch professionelle, verkaufsorientierte Beschreibungen. Der Text ist SEO-optimiert für mobile.de und AutoScout24 und berücksichtigt deine Händler-Notizen.',
+    id: 'kennzeichen', icon: <Shield size={32} />, color: '#0891b2', tag: 'Kern',
+    title: 'Kennzeichen ersetzen',
+    headline: 'Das Kennzeichen ist ein personenbezogenes Datum',
+    desc: 'Ein Erkennungsmodell sucht das Kennzeichen im Foto; an seine Stelle kommt ein Schild mit deinem Firmennamen, passend zur Schräglage des Originals. Wird keines sicher erkannt, bleibt das Bild unverändert — lieber kein Ersatz als ein Schild an der falschen Stelle.',
     bullets: [
-      'Vollautomatische Texterstellung',
-      'SEO-Keywords fur Suchplattformen',
-      'Berücksichtigt Ausstattung &amp; Notizen',
-      'Tonalität: professionell &amp; vertrauenswürdig',
-      'mobile.de &amp; AutoScout24 Format',
-      'Manuell bearbeitbar in Schritt 4',
+      'Erkennung per Bildmodell, nicht per Farbregel',
+      'Schild wird in die Schräglage eingepasst',
+      'Firmenname aus deinen Einstellungen',
+      'Auch fremde Händlerschilder werden ersetzt',
+      'Im Zweifel bleibt das Foto unverändert',
+      'Läuft auf dem Server, nichts einzurichten',
     ],
   },
   {
-    id: 'equipment', icon: <Cpu size={32} />, color: '#d97706', tag: 'Pro',
-    title: 'Ausstattungserkennung',
-    headline: 'KI sieht was andere übersehen',
-    desc: 'Neben dem OCR-Scan des Fahrzeugscheins analysiert unsere KI auch hochgeladene Fotos und erkennt sichtbare Ausstattungsmerkmale: Sitzheizung, Navi, Sportpaket, Panoramadach und vieles mehr.',
+    id: 'description', icon: <AlignLeft size={32} />, color: '#059669', tag: 'Kern',
+    title: 'Titel und Beschreibung',
+    headline: 'Text aus den erfassten Daten',
+    desc: 'Aus den Fahrzeugdaten entstehen Titel und Beschreibung. Du kannst einen eigenen Beispieltitel hinterlegen, an dem sich die Formulierung orientiert, und jeden Text vor dem Veröffentlichen ändern.',
     bullets: [
-      'Erkennung aus Fotos und Fahrzeugschein',
-      'VIN-Decoder fur Serienausstattung',
-      'Manuell erweiterbar mit Tag-System',
-      'Fliesst in KI-Beschreibung ein',
-      'Wird mit Inserat gespeichert',
-      'Händler-Notizen als Kontext-Boost',
+      'Entsteht aus den erfassten Fahrzeugdaten',
+      'Eigener Beispieltitel als Vorlage',
+      'Händler-Notizen fließen ein',
+      'Vollständig bearbeitbar',
+      'Keine erfundenen Ausstattungen im Text',
+      'Pflichtangaben nach EnVKV werden ergänzt',
     ],
   },
   {
-    id: 'export', icon: <ExternalLink size={32} />, color: '#ef4444', tag: 'Core',
-    title: 'Multi-Plattform Export',
-    headline: 'Ein Klick für alle Plattformen',
-    desc: 'Direktexport zu mobile.de &amp; AutoScout24 mit einem Klick. Oder als druckfähiges PDF mit QR-Code und allen Fahrzeugdaten. ZIP-Export fur eigene Archivierung ebenfalls verfügbar.',
+    id: 'equipment', icon: <Cpu size={32} />, color: '#d97706', tag: 'Kern',
+    title: 'Ausstattung',
+    headline: 'Nur was belegt ist',
+    desc: 'Aus den Fotos wird ausschließlich übernommen, was eindeutig zu sehen ist. Verwechselbares — etwa Xenon gegenüber LED oder Klimaanlage gegenüber Klimaautomatik — bleibt draußen, weil ein falsches Merkmal im Inserat eine falsche Zusicherung wäre.',
     bullets: [
-      'mobile.de Direktpublizierung',
-      'AutoScout24 Direktpublizierung',
-      'PDF-Export mit QR-Code',
-      'ZIP-Paket mit allen Fotos &amp; Daten',
-      'Druckfähige Datenblatter',
-      'Eigenes CMS via API (Business)',
+      'Erkennung aus deinen Fotos',
+      'Feste Liste erlaubter Merkmale',
+      'Verwechselbares wird weggelassen',
+      'Codes aus Feld 22 des Fahrzeugscheins',
+      'Jederzeit von Hand ergänzbar',
+      'Werksausstattung per FIN ist in Vorbereitung',
     ],
   },
   {
-    id: 'dsgvo', icon: <Shield size={32} />, color: '#0891b2', tag: 'Alle',
-    title: 'DSGVO &amp; Sicherheit',
-    headline: 'Deine Daten in deutschen Handen',
-    desc: 'Alle Daten werden ausschließlich auf deutschen Servern gespeichert. SSL-verschlüsselt, DSGVO-zertifiziert, keine Weitergabe an Dritte. Vollständige Datenkontrolle fur dein Unternehmen.',
+    id: 'export', icon: <Download size={32} />, color: '#ef4444', tag: 'Kern',
+    title: 'Übernehmen',
+    headline: 'Fotopaket und Datenblatt',
+    desc: 'Du lädst die Studiobilder als nummeriertes ZIP und ein PDF-Datenblatt herunter und stellst damit dort ein, wo du verkaufst. Die direkte Übertragung zu mobile.de und AutoScout24 ist in Vorbereitung und wird hier erst stehen, wenn sie läuft.',
     bullets: [
-      'Server in Deutschland (Frankfurt)',
-      'SSL-Verschlüsselung end-to-end',
-      'DSGVO-konforme Datenhaltung',
-      'Keine Weitergabe an Dritte',
-      'Löschrecht auf Anfrage',
-      'Subprozessor-Verzeichnis verfügbar',
-    ],
-  },
-  {
-    id: 'watermark', icon: <Camera size={32} />, color: '#7c3aed', tag: 'Premium',
-    title: 'Firmen-Wasserzeichen',
-    headline: 'Professioneller Auftritt auf jeder Plattform',
-    desc: 'Ab dem Premium-Plan wird dein Firmenname und Logo automatisch in jedes generierte Foto eingeblendet &mdash; dezent positioniert, professionell und unverwechselbar.',
-    bullets: [
-      'Automatisches Wasserzeichen auf allen Fotos',
-      'Position &amp; Deckkraft anpassbar',
-      'Eigenes Logo hochladbar',
-      'Firmenname als Text-Wasserzeichen',
-      'Wird beim Export beibehalten',
-      'Schutzt vor unbefugter Nutzung',
-    ],
-  },
-  {
-    id: 'analytics', icon: <TrendingUp size={32} />, color: '#059669', tag: 'Pro',
-    title: 'Verkaufsanalysen',
-    headline: 'Datengetriebene Verkaufsentscheidungen',
-    desc: 'Dashboard mit Live-Statistiken für alle deine Inserate: Aufrufe, Anfragen, Click-Through-Rates und Verkaufszeiten. Erkenne welche Fahrzeuge gut laufen und optimiere deine Strategie.',
-    bullets: [
-      'Live Aufrufe pro Inserat',
-      'Anfragen &amp; Kontaktrate',
-      'Plattform-Performance Vergleich',
-      'Durchschnittliche Verkaufszeit',
-      'Preis-Performance Analyse',
-      'Export als CSV-Report',
-    ],
-  },
-  {
-    id: 'team', icon: <Users size={32} />, color: '#ea580c', tag: 'Business',
-    title: 'Team-Accounts',
-    headline: 'Zusammenarbeit ohne Grenzen',
-    desc: 'Mehrere Mitarbeiter können gleichzeitig Inserate bearbeiten. Rollenbasierte Zugriffsrechte (Admin, Ersteller, Beobachter) und Vollständige Aktivitätsprotokollierung fur dein Autohaus.',
-    bullets: [
-      'Bis 5 Nutzer (Business) / unbegrenzt (Enterprise)',
-      'Rollen: Admin, Ersteller, Beobachter',
-      'Zentrale Fahrzeugverwaltung',
-      'Aktivitätsprotokoll fur alle Aktionen',
-      'Abteilungsweise Trennung moglich',
-      'SSO / Active Directory (Enterprise)',
+      'Alle Bilder nummeriert als ZIP',
+      'Reihenfolge bestimmt das Titelbild',
+      'PDF-Datenblatt zum Aushängen',
+      'Daten jederzeit im Konto abrufbar',
+      'Direktexport mobile.de: in Vorbereitung',
+      'Direktexport AutoScout24: in Vorbereitung',
     ],
   },
 ];
@@ -248,7 +221,7 @@ export default function FeaturesPage() {
             <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: `linear-gradient(135deg, ${feat.color}, ${feat.color}cc)`, color: '#fff', textDecoration: 'none', padding: '13px 24px', borderRadius: '10px', fontSize: '15px', fontWeight: '700', boxShadow: `0 8px 24px ${feat.color}30` }}>
               Jetzt testen <ArrowRight size={15} />
             </Link>
-            <Link href="/#pricing" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', textDecoration: 'none', padding: '13px 20px', borderRadius: '10px', fontSize: '15px', fontWeight: '600' }}>
+            <Link href="/#preise" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', textDecoration: 'none', padding: '13px 20px', borderRadius: '10px', fontSize: '15px', fontWeight: '600' }}>
               Preise ansehen
             </Link>
           </div>
@@ -260,7 +233,7 @@ export default function FeaturesPage() {
         <h2 style={{ fontSize: 'clamp(28px,3vw,44px)', fontWeight: '800', color: TH, letterSpacing: '-1px', margin: '0 0 14px' }}>
           Alle Features. Ein Plan.
         </h2>
-        <p style={{ fontSize: '17px', color: TS, margin: '0 0 32px' }}>3 Inserate kostenlos testen &mdash; keine Kreditkarte benötigt.</p>
+        <p style={{ fontSize: '17px', color: TS, margin: '0 0 32px' }}>Konto anlegen kostet nichts. Der Probelauf mit zwei Inseraten kostet 5 €.</p>
         <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '14px 28px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', boxShadow: '0 8px 32px rgba(79,70,229,0.4)' }}>
           Kostenlos starten <ArrowRight size={16} />
         </Link>
