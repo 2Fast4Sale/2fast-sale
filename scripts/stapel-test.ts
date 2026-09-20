@@ -72,9 +72,73 @@ interface Zeile {
   ok: boolean;
   anteilBreite: number;
   radAbstand: number;
+  /** Anteil deckender Pixel am ganzen Foto. */
+  deckung: number;
+  /** Wie rechteckig die freigestellte Flaeche ist, 0 bis 1. */
+  rechteckig: number;
+  /** Anteil deckender Pixel auf der Randlinie des Rechtecks. */
+  randVoll: number;
   kennzeichen: string;
   sekunden: number;
   hinweis: string;
+}
+
+/**
+ * Beurteilt die Freistellung, ohne sie anzusehen.
+ *
+ * Im ersten Stapel ueber 51 Fotos blieb bei etwa jedem dritten Bild ein
+ * rechteckiges Stueck Originalhintergrund stehen — Himmel, Hauswand,
+ * Nachbarauto. Im fertigen Bild sieht man das sofort, die alten
+ * Pruefungen meldeten aber nichts. Zwei Zahlen verraten es:
+ *
+ *   deckung     Anteil deckender Pixel am ganzen Foto. Ein freigestelltes
+ *               Auto liegt bei 0,2 bis 0,5. Ueber 0,7 ist halbes Foto drin.
+ *   rechteckig  Wie gut die Flaeche ihr umschliessendes Rechteck ausfuellt.
+ *               Ein Auto hat Luft an den Ecken (0,5 bis 0,75). Ab 0,9 ist
+ *               es ein Rechteck, also stehengebliebener Hintergrund.
+ */
+async function freistellungPruefen(frei: Buffer) {
+  const { data, info } = await sharp(frei).ensureAlpha().extractChannel(3)
+    .resize(400, 400, { fit: 'inside' }).raw().toBuffer({ resolveWithObject: true });
+  let deckend = 0, xMin = info.width, xMax = -1, yMin = info.height, yMax = -1;
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      if (data[y * info.width + x] < 128) continue;
+      deckend++;
+      if (x < xMin) xMin = x; if (x > xMax) xMax = x;
+      if (y < yMin) yMin = y; if (y > yMax) yMax = y;
+    }
+  }
+  const flaeche = info.width * info.height;
+  const kasten = Math.max(1, (xMax - xMin + 1) * (yMax - yMin + 1));
+
+  /*
+   * Die aussagekraeftigste Zahl: Wie viel vom RAND des umschliessenden
+   * Rechtecks ist deckend?
+   *
+   * Ein Auto beruehrt sein Rechteck nur an wenigen Stellen — Dach, Reifen,
+   * Stossstangen —, der Rest der Randlinie ist leer. Bleibt dagegen ein
+   * Stueck Originalfoto stehen, ist der Rand rundherum deckend. Deckung
+   * und Rechteckigkeit allein trennten das nicht: Ein sauber
+   * freigestellter Golf kam auf dieselben Werte wie ein Bild mit halber
+   * Hauswand drin.
+   */
+  let rand = 0, randDeckend = 0;
+  if (xMax >= xMin && yMax >= yMin) {
+    const test = (x: number, y: number) => {
+      rand++;
+      if (data[y * info.width + x] >= 128) randDeckend++;
+    };
+    for (let x = xMin; x <= xMax; x++) { test(x, yMin); test(x, yMax); }
+    for (let y = yMin; y <= yMax; y++) { test(xMin, y); test(xMax, y); }
+  }
+
+  return {
+    deckung: deckend / flaeche,
+    rechteckig: deckend / kasten,
+    randVoll: rand ? randDeckend / rand : 0,
+    randKontakt: xMin <= 1 && xMax >= info.width - 2,
+  };
 }
 
 async function main() {
@@ -83,7 +147,9 @@ async function main() {
   fs.mkdirSync(ziel, { recursive: true });
 
   const fotos = fs.readdirSync(ordner)
-    .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+    // avif und bmp gehoeren dazu: Fotos aus dem Netz kommen oft so, und
+    // sharp liest sie ohnehin.
+    .filter((f) => /\.(jpe?g|png|webp|avif|bmp|tiff?)$/i.test(f))
     .sort();
   console.log(`${fotos.length} Fotos, Raum ${halle.titel}\n`);
 
@@ -92,9 +158,16 @@ async function main() {
 
   for (const [i, datei] of fotos.entries()) {
     const start = Date.now();
-    const z: Zeile = { datei, ok: false, anteilBreite: 0, radAbstand: 0, kennzeichen: '—', sekunden: 0, hinweis: '' };
+    const z: Zeile = {
+      datei, ok: false, anteilBreite: 0, radAbstand: 0,
+      deckung: 0, rechteckig: 0, randVoll: 0, kennzeichen: '—', sekunden: 0, hinweis: '',
+    };
     try {
       const frei = await freistellen(path.join(ordner, datei));
+      const guete = await freistellungPruefen(frei);
+      z.deckung = guete.deckung;
+      z.rechteckig = guete.rechteckig;
+      z.randVoll = guete.randVoll;
 
       /*
        * Kennzeichen wie im Betrieb: erst suchen, dann ersetzen. Findet
@@ -123,6 +196,10 @@ async function main() {
 
       // Auffaellig? Diese Grenzen kommen aus den bisher gefundenen Fehlern.
       const hinweise: string[] = [];
+      if (z.randVoll > 0.55) hinweise.push('Freistellung: Hintergrund steht noch drin');
+      if (z.rechteckig < 0.45) hinweise.push('Freistellung: nur Bruchstuecke erkannt');
+      if (z.deckung < 0.10) hinweise.push('Freistellung: fast nichts uebrig');
+      if (guete.randKontakt) hinweise.push('beruehrt linken und rechten Rand');
       if (z.radAbstand < 0.25) hinweise.push('Raeder zu dicht beieinander');
       if (e.messwerte.fahrzeugHoehe > e.hoehe * 0.85) hinweise.push('Fahrzeug fuellt das Bild');
       if (e.messwerte.helligkeitFahrzeug < 25) hinweise.push('Fahrzeug fast schwarz');
@@ -142,10 +219,11 @@ async function main() {
   }
 
   /* ── Bericht ── */
-  const csv = ['datei;ok;anteil_breite;rad_abstand;kennzeichen;sekunden;hinweis']
+  const csv = ['datei;ok;anteil_breite;rad_abstand;deckung;rechteckig;rand_voll;kennzeichen;sekunden;hinweis']
     .concat(zeilen.map((z) => [
       z.datei, z.ok ? 'ja' : 'nein', z.anteilBreite.toFixed(3),
-      z.radAbstand.toFixed(3), z.kennzeichen, z.sekunden, z.hinweis,
+      z.radAbstand.toFixed(3), z.deckung.toFixed(3), z.rechteckig.toFixed(3),
+      z.randVoll.toFixed(3), z.kennzeichen, z.sekunden, z.hinweis,
     ].join(';')));
   fs.writeFileSync(path.join(ziel, 'bericht.csv'), csv.join('\n'), 'utf8');
 

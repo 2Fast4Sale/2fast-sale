@@ -798,8 +798,29 @@ export async function komponieren(
   const zHoehe  = zMeta.height ?? 1;
 
   // Fahrzeug auf Zielbreite bringen, Seitenverhaeltnis behalten.
-  const fBreite = Math.max(1, Math.round(zielBreite * e.breitenanteil));
-  const fHoehe  = Math.max(1, Math.round((fBreite / zBreite) * zHoehe));
+  /*
+   * Die Breite gibt `breitenanteil` vor — aber nur, solange das Fahrzeug
+   * damit ins Bild passt.
+   *
+   * Bei einem HOCHFORMAT-Foto (Haendler fotografiert hochkant) ist das
+   * freigestellte Fahrzeug hoeher als breit. Auf 60 % der Bildbreite
+   * gezogen wurde es hoeher als das ganze Zielbild, und das Einsetzen
+   * brach ab: "Image to composite must have same dimensions or smaller".
+   * Im Stapeltest ueber 51 Fotos sind daran drei Bilder gescheitert —
+   * im Betrieb haette der Haendler unter dem Foto "Fehler" gelesen.
+   *
+   * Mehr als bis zur Standlinie darf das Fahrzeug nie reichen; darueber
+   * liegt der Raum. 0,95 laesst einen Rest Luft nach oben.
+   */
+  const bodenLinie = zielHoehe * (1 - e.bodenabstand);
+  const maxHoehe = Math.max(1, bodenLinie * 0.95);
+  let fBreite = Math.max(1, Math.round(zielBreite * e.breitenanteil));
+  let fHoehe  = Math.max(1, Math.round((fBreite / zBreite) * zHoehe));
+  if (fHoehe > maxHoehe) {
+    const faktor = maxHoehe / fHoehe;
+    fBreite = Math.max(1, Math.round(fBreite * faktor));
+    fHoehe  = Math.max(1, Math.round(fHoehe * faktor));
+  }
 
   const fahrzeugRoh = await sharp(zugeschnitten)
     .resize(fBreite, fHoehe, { fit: 'fill' })
