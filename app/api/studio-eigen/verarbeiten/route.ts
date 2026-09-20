@@ -9,6 +9,7 @@ import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
+import { studioBildMitGemini } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -442,6 +443,41 @@ export async function POST(req: NextRequest) {
         .toBuffer();
     } else {
       hg = await studioHintergrund(gerechnet, zielBreite, zielHoehe);
+    }
+
+    /*
+     * ── Weg 3: Gemini macht das ganze Bild ─────────────────────────
+     *
+     * Nur mit STUDIO_WEG=gemini und gesetztem Schluessel. Gedacht fuer
+     * Fotos, an denen das kostenlose Freistellen scheitert (dunkles Auto
+     * auf dunklem Pflaster). Kostet rund 3 Cent je Bild.
+     *
+     * Die Pruefung steckt in geminiStudio.ts: Weicht das Fahrzeug zu
+     * stark vom Original ab, kommt null zurueck, und es geht unten ganz
+     * normal weiter. Ein geschoentes Auto darf nie in ein Inserat.
+     */
+    if (process.env.STUDIO_WEG === 'gemini' && process.env.GEMINI_API_KEY) {
+      const quelle = roh.length > 0 ? roh : freigestellt;
+      const ki = await studioBildMitGemini(quelle, hg, zielBreite, zielHoehe);
+      if (ki) {
+        await logApiCost({
+          userId: await currentUserId(),
+          draftId: draftId ?? null,
+          service: 'gemini_bild',
+          operation: 'studio-komplett',
+          unitsIn: 1,
+          costMicros: imageCostMicros('gemini_bild'),
+        });
+        return NextResponse.json({
+          result: `data:image/jpeg;base64,${ki.bild.toString('base64')}`,
+          kennzeichenErsetzt,
+          kennzeichenQuelle,
+          gemini: true,
+          aehnlichkeit: Number(ki.aehnlich.toFixed(3)),
+          sandbox,
+        });
+      }
+      console.warn('[verarbeiten] Gemini-Studio nicht verwendbar, nehme den eigenen Weg');
     }
 
     let ergebnis = await komponieren(freigestellt, hg, {

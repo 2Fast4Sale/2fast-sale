@@ -42,6 +42,12 @@ const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
   // Octopus Piranha soll die obigen Dienste spaeter ersetzen.
   // Preis eintragen, sobald der Vertrag steht.
   piranha:   0.00,
+  /*
+   * Gemini 3.1 Flash Lite Image ("Nano Banana 2 Lite"), Stand 20.09.2026:
+   * 0,034 USD je Bild in 1K-Aufloesung. Damit malt die KI das ganze
+   * Studiobild, nicht nur den Schatten.
+   */
+  gemini_bild: 0.034,
 };
 
 /**
@@ -100,7 +106,7 @@ const VIN_PRICES_EUR_PER_CALL: Record<string, number> = {
 
 export type CostService =
   | 'anthropic' | 'removebg' | 'photoroom' | 'photoroom_basic' | 'fal' | 'pixelcut' | 'piranha'
-  | 'dat';
+  | 'gemini_bild' | 'dat';
 
 /**
  * Kosten einer VIN-Abfrage in Mikro-Euro.
