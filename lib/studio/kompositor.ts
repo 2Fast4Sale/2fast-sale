@@ -431,9 +431,28 @@ export async function radaufstand(
    * weit genug auseinander liegen.
    */
   const umgebung = Math.max(6, Math.round(fBreite * 0.06));
-  const abstandMin = Math.round((xBis - xVon) * 0.30);
+  const breiteFahrzeug = xBis - xVon;
+  const abstandMin = Math.round(breiteFahrzeug * 0.30);
+
+  /*
+   * Die aeussersten Spalten scheiden aus.
+   *
+   * Steht das Fahrzeug bis an den Bildrand oder laesst die Freistellung
+   * dort einen Rest stehen, ist die unterste Zeile genau am Rand — und
+   * die Radsuche nimmt x = 0 fuer ein Rad. Gemessen an einer Heckansicht
+   * aus dem Stapel: "Raeder" bei 0 und 772, also fast die ganze
+   * Fahrzeugbreite, und daraus eine schiefe Standlinie quer durch das
+   * Bild. Im Studiobild lag darunter ein dunkler Kasten und der Wagen
+   * schwebte.
+   *
+   * Ein echtes Rad liegt nie ganz aussen: Davor sitzt immer noch
+   * Stossstange oder Kotfluegel.
+   */
+  const rand = Math.max(2, Math.round(breiteFahrzeug * 0.05));
+  const vonInnen = xVon + rand, bisInnen = xBis - rand;
+
   const kandidaten: number[] = [];
-  for (let x = xVon; x <= xBis; x++) {
+  for (let x = vonInnen; x <= bisInnen; x++) {
     if (unten[x] < 0) continue;
     let tiefster = true;
     for (let i = Math.max(xVon, x - umgebung); i <= Math.min(xBis, x + umgebung); i++) {
@@ -445,8 +464,14 @@ export async function radaufstand(
 
   let radA = kandidaten[0] ?? -1;
   let radB = -1;
+  /*
+   * Der Radstand ist im Bild nie breiter als das Fahrzeug selbst. Mehr
+   * als 85 Prozent heisst: einer der beiden Punkte ist kein Rad.
+   */
+  const abstandMax = Math.round(breiteFahrzeug * 0.85);
   for (const x of kandidaten) {
-    if (Math.abs(x - radA) >= abstandMin) { radB = x; break; }
+    const d = Math.abs(x - radA);
+    if (d >= abstandMin && d <= abstandMax) { radB = x; break; }
   }
   if (radA < 0) return null;
   /*
@@ -455,8 +480,35 @@ export async function radaufstand(
    * bekommt man, indem der zweite Punkt auf derselben Hoehe am anderen
    * Ende angenommen wird.
    */
-  if (radB < 0) { radB = radA === xVon ? xBis : xVon; unten[radB] = unten[radA]; }
+  if (radB < 0) {
+    /*
+     * Nur ein Tiefpunkt gefunden: Das Fahrzeug steht quer zur Kamera
+     * (Front- oder Heckansicht), beide Raeder liegen fast gleich hoch.
+     *
+     * Der Ersatzpunkt darf NICHT an den Bildrand: Dort landete sonst der
+     * dunkle Reifenkern des Schattens, sichtbar neben dem Auto. Er
+     * kommt deshalb um denselben Abstand nach innen, den auch die
+     * Kandidatensuche einhaelt.
+     */
+    radB = radA < (xVon + xBis) / 2 ? bisInnen : vonInnen;
+    unten[radB] = unten[radA];
+  }
   if (radA > radB) { const h = radA; radA = radB; radB = h; }
+
+  /*
+   * Letzte Sicherung: eine zu steile Standlinie gibt es nicht.
+   *
+   * Zwischen zwei Radaufstandspunkten liegen im Foto selten mehr als
+   * 20 Grad. Ist die Linie steiler, stimmt einer der Punkte nicht —
+   * dann lieber waagerecht durch den tieferen der beiden, das sieht
+   * schlimmstenfalls langweilig aus statt falsch.
+   */
+  const steigung = Math.abs(unten[radB] - unten[radA]) / Math.max(1, Math.abs(radB - radA));
+  if (steigung > 0.36) {
+    const tiefer = unten[radA] >= unten[radB] ? unten[radA] : unten[radB];
+    unten[radA] = tiefer;
+    unten[radB] = tiefer;
+  }
 
   return { unten, xVon, xBis, radA, radB };
 }
