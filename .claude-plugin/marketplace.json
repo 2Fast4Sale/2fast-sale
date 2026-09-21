@@ -1,0 +1,15 @@
+{
+  "name": "2fast4sale-werkzeuge",
+  "owner": { "name": "Fabian Barjamasi" },
+  "metadata": {
+    "description": "Prüfwerkzeuge für 2Fast4Sale: Fotostapel, Fahrzeugscheine, Kennzeichen, Freistellvergleich",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "2fast4sale",
+      "source": "./plugins/2fast4sale",
+      "description": "Slash-Befehle für die Prüfskripte des Projekts"
+    }
+  ]
+}

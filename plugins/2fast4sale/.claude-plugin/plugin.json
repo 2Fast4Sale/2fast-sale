@@ -1,0 +1,6 @@
+{
+  "name": "2fast4sale",
+  "description": "Prüfwerkzeuge für 2Fast4Sale: Fotostapel prüfen, Fahrzeugscheine messen, Kennzeichenerkennung testen, Freistellverfahren vergleichen",
+  "version": "1.0.0",
+  "author": { "name": "Fabian Barjamasi" }
+}
