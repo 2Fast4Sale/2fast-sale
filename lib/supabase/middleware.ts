@@ -28,6 +28,22 @@ export async function updateSession(request: NextRequest) {
   // Session auffrischen — wichtig für Auth-Token-Refresh
   const { data: { user } } = await supabase.auth.getUser();
 
+  /*
+   * Schnittstellen, die Rechenzeit oder Geld kosten (Freistellen,
+   * Bildmodelle, Texterzeugung, Export), nur fuer Angemeldete. Ohne
+   * diese Sperre konnte jeder Fremde sie direkt aufrufen, sogar am
+   * Bauzaun vorbei.
+   */
+  const p = request.nextUrl.pathname;
+  const kostetGeld = [
+    "/api/studio-eigen/", "/api/studio/", "/api/nanobanana", "/api/remove-bg",
+    "/api/image/", "/api/ocr/", "/api/listings/generate",
+    "/api/autoscout24-publish", "/api/mobilede-publish",
+  ].some((praefix) => p.startsWith(praefix));
+  if (!user && kostetGeld) {
+    return NextResponse.json({ error: "Bitte anmelden." }, { status: 401 });
+  }
+
   // Nicht eingeloggte Nutzer vom Dashboard + Onboarding fernhalten
   if (!user && (
     request.nextUrl.pathname.startsWith('/dashboard') ||
