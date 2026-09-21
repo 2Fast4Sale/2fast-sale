@@ -39,7 +39,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Camera, Loader2, CheckCircle2, X, AlertCircle, ArrowRight,
-  ChevronDown, Search, Plus, RotateCcw, Pencil,
+  ChevronDown, Search, Plus, RotateCcw, Pencil, FileText,
 } from 'lucide-react';
 import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
@@ -277,6 +277,62 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
   const [markeOffen, setMarkeOffen]   = useState(false);
   const [modellOffen, setModellOffen] = useState(false);
   const [ausstattungOffen, setAusstattungOffen] = useState(false);
+  /*
+   * Ausstattung aus einem Dokument lesen.
+   *
+   * Der Weg ueber die Fahrgestellnummer ist zu: DAT verkauft
+   * Softwareanbietern keine Schnittstelle, weil sie darin Konkurrenz
+   * sehen. Gebraucht wird die Ausstattung trotzdem — und der Haendler
+   * hat sie fast immer auf Papier: Bestellbestaetigung, Herstellerbrief,
+   * Uebergabeprotokoll, Ausdruck aus dem eigenen System, altes Inserat.
+   *
+   * Die Route dafuer gab es laengst (app/api/scan-equipment-doc), sie war
+   * nur in der Oberflaeche nirgends erreichbar — eine fertige Funktion,
+   * die niemand benutzen konnte.
+   */
+  const [dokumentLaeuft, setDokumentLaeuft] = useState(false);
+  const [dokumentMeldung, setDokumentMeldung] = useState<string | null>(null);
+  const dokumentFeld = useRef<HTMLInputElement>(null);
+
+  const dokumentLesen = async (datei: File) => {
+    setDokumentLaeuft(true);
+    setDokumentMeldung(null);
+    try {
+      const bild = await new Promise<string>((fertig, fehler) => {
+        const leser = new FileReader();
+        leser.onload = () => fertig(String(leser.result));
+        leser.onerror = () => fehler(leser.error);
+        leser.readAsDataURL(datei);
+      });
+
+      const res = await fetch('/api/scan-equipment-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: bild, draftId: entwurfId() }),
+      });
+      const ergebnis = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(ergebnis.error || `Server ${res.status}`);
+
+      const gefunden: string[] = Array.isArray(ergebnis.equipment) ? ergebnis.equipment : [];
+      const neu = gefunden.filter(e => typeof e === 'string' && e.trim() && !data.equipment.includes(e));
+      if (neu.length === 0) {
+        setDokumentMeldung('Auf dem Dokument wurde keine neue Ausstattung gefunden.');
+      } else {
+        setzen('equipment', [...data.equipment, ...neu]);
+        /*
+         * Die Zahl nennen und zum Nachsehen auffordern: Was hier
+         * hereinkommt, steht spaeter als Zusicherung im Inserat. Der
+         * Haendler soll es einmal anschauen, nicht blind uebernehmen.
+         */
+        setDokumentMeldung(`${neu.length} Merkmale übernommen — bitte kurz prüfen und Falsches entfernen.`);
+      }
+    } catch (err) {
+      setDokumentMeldung(err instanceof Error ? err.message : 'Das Dokument konnte nicht gelesen werden.');
+    } finally {
+      setDokumentLaeuft(false);
+      if (dokumentFeld.current) dokumentFeld.current.value = '';
+    }
+  };
   const [envkvOffen, setEnvkvOffen]             = useState(false);
   const [ausstattungSuche, setAusstattungSuche] = useState('');
   const [kategorieOffen, setKategorieOffen]     = useState<string | null>(null);
@@ -1018,10 +1074,51 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                       denkt der Händler, er müsse hier durch — und macht
                       Arbeit, die Schritt 2 ihm gleich abnimmt.
                     */}
-                    Beim Hochladen der Fotos wird erkannt, was zu sehen ist — Navi, Sitzheizung,
-                    Felgen, Assistenzsysteme. Hier lohnt sich nur, was man <em>nicht</em> sieht:
-                    Scheckheft, Vorbesitzer, Standheizung.
+                    Beim Hochladen der Fotos wird übernommen, was eindeutig zu sehen ist.
+                    Alles andere steht meist auf Papier — und das liest die Seite für dich:
                   </p>
+
+                  {/*
+                    Ausstattung aus einem Dokument.
+                    Der schnellste Weg zu einer vollständigen Liste, ohne
+                    Abtippen und ohne Datenlizenz: Der Händler hat die
+                    Unterlagen ohnehin im Fahrzeugordner.
+                  */}
+                  <div style={{ marginBottom: 12 }}>
+                    <input
+                      ref={dokumentFeld}
+                      type="file"
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) dokumentLesen(f); }} />
+                    <button
+                      type="button"
+                      disabled={dokumentLaeuft}
+                      onClick={() => dokumentFeld.current?.click()}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        padding: '9px 13px', borderRadius: 8,
+                        border: `1px solid ${T.linie}`, background: T.blatt,
+                        cursor: dokumentLaeuft ? 'wait' : 'pointer',
+                        fontFamily: T.schrift, fontSize: 12.5, color: T.gedämpft, fontWeight: 600,
+                      }}>
+                      {dokumentLaeuft
+                        ? <><Loader2 size={14} className="dreht" /> Dokument wird gelesen…</>
+                        : <><FileText size={14} /> Ausstattung aus Dokument übernehmen</>}
+                    </button>
+                    <p style={{ margin: '6px 0 0', fontSize: 11.5, color: T.leise, lineHeight: 1.55 }}>
+                      Bestellbestätigung, Herstellerbrief, Übergabeprotokoll, Ausdruck aus dem
+                      eigenen System oder ein altes Inserat — abfotografieren genügt.
+                    </p>
+                    {dokumentMeldung && (
+                      <p style={{
+                        margin: '8px 0 0', fontSize: 12, lineHeight: 1.55,
+                        color: dokumentMeldung.includes('übernommen') ? '#047857' : T.gedämpft,
+                      }}>
+                        {dokumentMeldung}
+                      </p>
+                    )}
+                  </div>
 
                   <div style={{ position: 'relative', marginBottom: ausstattungOffen ? 10 : 0 }}>
                     <Plus size={14} color={T.leise} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
