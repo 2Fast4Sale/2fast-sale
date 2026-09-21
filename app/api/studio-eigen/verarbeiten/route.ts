@@ -415,6 +415,7 @@ export async function POST(req: NextRequest) {
 
     let ausRaum: Partial<KompositorEinstellungen> = halle ? {
       horizont:          halle.horizont,
+      wandlinie:         halle.wandlinie,
       kameraHoehe:       halle.kameraHoehe,
       brennweite:        halle.brennweite,
       spiegelungStaerke: halle.bodenglanz,

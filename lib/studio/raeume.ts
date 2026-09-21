@@ -28,6 +28,8 @@ export interface Raum {
   pfad: string;
   /** Lage des Horizonts als Anteil der Bildhoehe. */
   horizont: number;
+  /** Kante zwischen Boden und Wand als Anteil der Bildhoehe, falls bekannt. */
+  wandlinie?: number;
   kameraHoehe: number;
   /** Brennweite in Millimetern, Kleinbild. */
   brennweite: number;
@@ -102,6 +104,7 @@ export function raeume(): Raum[] {
         titel: titelAus(name),
         pfad: `/backgrounds/raum/${datei}`,
         horizont:    typeof m.horizont    === 'number' ? m.horizont    : 0.45,
+        wandlinie:   typeof m.wandlinie   === 'number' ? m.wandlinie   : undefined,
         kameraHoehe: typeof m.kameraHoehe === 'number' ? m.kameraHoehe : 1.55,
         brennweite:  typeof m.brennweite  === 'number' ? m.brennweite  : 55,
         bodenglanz:  typeof m.bodenglanz  === 'number' ? m.bodenglanz  : 0.08,

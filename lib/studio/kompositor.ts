@@ -86,6 +86,12 @@ export interface KompositorEinstellungen {
    * tools/raum_render.py schreibt den Wert neben jedes Hallenbild.
    */
   horizont: number;
+  /**
+   * Kante zwischen Boden und Wand als Anteil der Bildhoehe. Kein
+   * Aufstandspunkt des Fahrzeugs darf darueber liegen, sonst steht ein
+   * Rad in der Wand.
+   */
+  wandlinie?: number;
   /** Kamerahoehe in Metern. Steht in der .json des Raums. */
   kameraHoehe: number;
   /** Brennweite in Millimetern, Kleinbild. Steht ebenfalls dort. */
@@ -491,7 +497,14 @@ export async function radaufstand(
      * Kandidatensuche einhaelt.
      */
     radB = radA < (xVon + xBis) / 2 ? bisInnen : vonInnen;
-    unten[radB] = unten[radA];
+    /*
+     * Hoehe am Ersatzpunkt: die echte Unterkante dort, nicht die Hoehe
+     * des gefundenen Rades. Bei schraeg hinten sitzt das verdeckte Rad
+     * hinter dem Stossstangenende; eine waagerechte Linie in Radhoehe lag
+     * dort weit unter dem Auto. Am schwarzen Golf ergab das einen
+     * dunklen Balken links neben dem Wagen.
+     */
+    if (unten[radB] < 0) unten[radB] = unten[radA];
   }
   if (radA > radB) { const h = radA; radA = radB; radB = h; }
 
@@ -864,9 +877,51 @@ export async function komponieren(
    * Mehr als bis zur Standlinie darf das Fahrzeug nie reichen; darueber
    * liegt der Raum. 0,95 laesst einen Rest Luft nach oben.
    */
-  const bodenLinie = zielHoehe * (1 - e.bodenabstand);
+  /*
+   * Kein Rad in der Wand.
+   *
+   * Von schraeg oben fotografiert steht das hintere Rad im Bild viel
+   * hoeher als das vordere. Am schwarzen Golf lag das Vorderrad ueber
+   * der Kante zwischen Boden und Wand — der Wagen stand schief im Raum
+   * und schien zu schweben.
+   *
+   * Massgeblich ist der hoechste Punkt der Unterkante (ohne die
+   * aeussersten Spalten). Er muss unter der Wandlinie bleiben: erst wird
+   * der Wagen nach unten geschoben, bis hoechstens 10 Prozent Rand, dann
+   * wenn noetig verkleinert — nie unter 70 Prozent, sonst wirkt er
+   * verloren.
+   */
+  let bodenabstand = e.bodenabstand;
+  let wandFaktor = 1;
+  if (typeof e.wandlinie === 'number') {
+    const aZ = await sharp(zugeschnitten).ensureAlpha().extractChannel(3).raw().toBuffer();
+    const rand = Math.round(zBreite * 0.08);
+    let hoechster = zHoehe;
+    for (let x = rand; x < zBreite - rand; x++) {
+      for (let y = zHoehe - 1; y >= 0; y--) {
+        if (aZ[y * zBreite + x] > 8) { if (y < hoechster) hoechster = y; break; }
+      }
+    }
+    const anteilUnter = 1 - hoechster / zHoehe;
+    if (anteilUnter > 0.02) {
+      const wandY = zielHoehe * (e.wandlinie + 0.03);
+      const hoeheGeplant = Math.min(
+        zielHoehe * (1 - bodenabstand) * 0.95,
+        (zielBreite * e.breitenanteil / zBreite) * zHoehe,
+      );
+      const noetig = (zielHoehe * (1 - bodenabstand) - hoeheGeplant * anteilUnter) < wandY;
+      if (noetig) {
+        bodenabstand = Math.max(0.10, Math.min(bodenabstand,
+          1 - (wandY + hoeheGeplant * anteilUnter) / zielHoehe));
+        const platz = zielHoehe * (1 - bodenabstand) - wandY;
+        wandFaktor = Math.max(0.7, Math.min(1, platz / (hoeheGeplant * anteilUnter)));
+      }
+    }
+  }
+
+  const bodenLinie = zielHoehe * (1 - bodenabstand);
   const maxHoehe = Math.max(1, bodenLinie * 0.95);
-  let fBreite = Math.max(1, Math.round(zielBreite * e.breitenanteil));
+  let fBreite = Math.max(1, Math.round(zielBreite * e.breitenanteil * wandFaktor));
   let fHoehe  = Math.max(1, Math.round((fBreite / zBreite) * zHoehe));
   if (fHoehe > maxHoehe) {
     const faktor = maxHoehe / fHoehe;
@@ -885,7 +940,7 @@ export async function komponieren(
   const fahrzeug = await angleichen(fahrzeugRoh, helligkeitFahrzeug, helligkeitHintergrund, e, hintergrund);
 
   // Standlinie: Unterkante des Fahrzeugs im Zielbild.
-  const bodenY = Math.round(zielHoehe * (1 - e.bodenabstand));
+  const bodenY = Math.round(zielHoehe * (1 - bodenabstand));
   const fahrzeugY = Math.max(0, bodenY - fHoehe);
   const fahrzeugX = Math.max(0, Math.round((zielBreite - fBreite) * e.ausrichtung));
 
