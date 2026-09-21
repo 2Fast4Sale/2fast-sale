@@ -461,16 +461,39 @@ function Step2Inner() {
           leser.onerror = () => fehler(leser.error);
           leser.readAsDataURL(ergebnis);
         });
-      } else if (process.env.NEXT_PUBLIC_FREISTELLEN !== 'photoroom') {
+      } else {
         /*
-         * Kein Server eingerichtet: im Browser freistellen, kostenlos.
-         * Mit NEXT_PUBLIC_FREISTELLEN=photoroom geht es wieder ueber
-         * PhotoRoom, sobald dort ein Tarif aktiv ist.
+         * Freistellen auf unserem Server mit U-2-Net (Apache-2.0),
+         * kostenlos.
+         *
+         * Bis hierher lief das im Browser mit ormbg — einem Modell fuer
+         * MENSCHEN. Im Stapeltest ueber 64 echte Fahrzeugfotos war
+         * deshalb rund ein Drittel unbrauchbar: stehengebliebener
+         * Untergrund oder nur Bruchstuecke des Autos. Mit U-2-Net
+         * bestanden dieselben Fotos die Guetepruefung.
+         *
+         * Der Browser bleibt als Rettungsanker: Faellt der Server aus,
+         * bekommt der Haendler lieber ein mittelmaessiges Bild als gar
+         * keines.
          */
-        const { freistellenMitKennzeichen } = await import('../../../../lib/studio/browserFreistellen');
-        const frei = await freistellenMitKennzeichen(compressed);
-        vorab = frei.bild;
-        kennzeichenKasten = frei.kennzeichen;
+        try {
+          const antwort = await fetch('/api/studio-eigen/freistellen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressed, draftId: entwurfId() }),
+          });
+          const daten = await antwort.json().catch(() => ({}));
+          if (!antwort.ok || !daten.freigestellt) {
+            throw new Error(daten.error || `Server ${antwort.status}`);
+          }
+          vorab = daten.freigestellt;
+        } catch (err) {
+          console.warn('[freistellen] Server nicht verfuegbar, weiche in den Browser aus:', err);
+          const { freistellenMitKennzeichen } = await import('../../../../lib/studio/browserFreistellen');
+          const frei = await freistellenMitKennzeichen(compressed);
+          vorab = frei.bild;
+          kennzeichenKasten = frei.kennzeichen;
+        }
       }
 
       // Das Kennzeichen sucht der Server (kennzeichenModell.ts) — im

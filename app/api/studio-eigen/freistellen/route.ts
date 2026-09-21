@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logApiCost, imageCostMicros, currentUserId } from '../../../../lib/apiCosts';
 import { budget, istSandbox, reservieren, freigeben } from '../../../../lib/photoroomBudget';
+import { freistellenU2Net } from '../../../../lib/studio/freistellenU2Net';
 
 export const dynamic = 'force-dynamic';
+/*
+ * Das Modell wird beim Kaltstart geladen (176 MB) und rechnet dann rund
+ * sechs Sekunden je Foto. Ohne hoeheres Limit bricht der erste Aufruf ab.
+ */
+export const maxDuration = 120;
 
 /**
  * Freistellen — und NUR Freistellen.
@@ -28,6 +34,44 @@ export async function POST(req: NextRequest) {
   try {
     const { image, draftId } = await req.json();
     if (!image) return NextResponse.json({ error: 'Kein Bild geliefert' }, { status: 400 });
+
+    const roh0 = Buffer.from(String(image).replace(/^data:image\/\w+;base64,/, ''), 'base64');
+
+    /*
+     * ── Standardweg: eigenes Modell, kostenlos ─────────────────────
+     *
+     * U-2-Net (Apache-2.0) laeuft hier auf dem Server. Gemessen an 64
+     * echten Fahrzeugfotos ist es dem bisherigen Browser-Modell ormbg
+     * deutlich ueberlegen, weil ormbg fuer Menschen trainiert ist.
+     *
+     * PhotoRoom bleibt als Weg bestehen, wird aber nur noch genommen,
+     * wenn FREISTELLEN=photoroom gesetzt ist — sonst zahlt man fuer
+     * etwas, das der eigene Server umsonst kann.
+     */
+    if (process.env.FREISTELLEN !== 'photoroom') {
+      const start = Date.now();
+      try {
+        const png = await freistellenU2Net(roh0);
+        console.info('[studio-eigen] freigestellt mit U-2-Net in', Date.now() - start, 'ms');
+        return NextResponse.json({
+          freigestellt: `data:image/png;base64,${png.toString('base64')}`,
+          verfahren: 'u2net',
+        });
+      } catch (err) {
+        /*
+         * Faellt das Modell aus, ist PhotoRoom der Rettungsanker — aber
+         * nur, wenn ein Schluessel hinterlegt ist. Sonst bekommt der
+         * Haendler eine ehrliche Meldung statt eines kaputten Bildes.
+         */
+        console.error('[studio-eigen] U-2-Net fehlgeschlagen:', err);
+        if (!process.env.PHOTOROOM_API_KEY) {
+          return NextResponse.json(
+            { error: 'Freistellen gerade nicht möglich. Bitte in einer Minute noch einmal versuchen.' },
+            { status: 503 },
+          );
+        }
+      }
+    }
 
     const roherKey = process.env.PHOTOROOM_API_KEY;
     const apiKey = roherKey && process.env.PHOTOROOM_SANDBOX === 'true'
@@ -100,6 +144,7 @@ export async function POST(req: NextRequest) {
     const png = Buffer.from(await antwort.arrayBuffer());
     return NextResponse.json({
       freigestellt: `data:image/png;base64,${png.toString('base64')}`,
+      verfahren: 'photoroom',
       sandbox,
     });
   } catch (err) {

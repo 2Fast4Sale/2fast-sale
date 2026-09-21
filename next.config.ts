@@ -35,6 +35,9 @@ const nextConfig: NextConfig = {
       // Lokaler Modell-Cache vom Testen — auf Vercel laedt die Funktion
       // das Modell selbst nach /tmp.
       'node_modules/@huggingface/transformers/.cache/**',
+      // Dasselbe fuer die Freistellmodelle: zusammen ueber 500 MB, sie
+      // werden zur Laufzeit nach /tmp geladen.
+      'tools/modelle/**',
     ],
   },
   /*
@@ -47,6 +50,15 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/studio-eigen/verarbeiten': [
       'node_modules/@huggingface/transformers/node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**',
+    ],
+    /*
+     * Das Freistellen laeuft ueber onnxruntime-node direkt (U-2-Net),
+     * nicht ueber transformers.js — deshalb hier die obere Fassung des
+     * Pakets. Ohne diese Zeile fehlt die native Laufzeit auf Vercel und
+     * jedes Foto fiele still auf den Browser zurueck.
+     */
+    '/api/studio-eigen/freistellen': [
+      'node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**',
     ],
   },
   headers: async () => [
