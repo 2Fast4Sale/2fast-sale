@@ -82,6 +82,44 @@ async function aehnlichkeit(a: Buffer, b: Buffer): Promise<number> {
   return 1 - summe / (ga.length * 255);
 }
 
+/*
+ * Aehnlichkeit NUR des Fahrzeugs, unabhaengig davon, wo es im Bild steht.
+ *
+ * Seit Gemini das Auto verschieben darf, taugt der Vergleich ganzer Bilder
+ * nicht mehr: Ein gutes Ergebnis, bei dem nur die Lage anders ist, kam auf
+ * 0,735 und waere abgelehnt worden. Deshalb wird in beiden Bildern das
+ * Fahrzeug gesucht, ausgeschnitten und auf dieselbe Groesse gebracht.
+ * Verglichen wird dann Blech mit Blech.
+ *
+ * Findet das Modell in einem der beiden Bilder kein Fahrzeug, gibt es
+ * null zurueck — dann prueft der Aufrufer wie bisher das ganze Bild.
+ * Lieber streng ablehnen als blind durchwinken.
+ */
+async function fahrzeugAusschnitt(bild: Buffer): Promise<Buffer | null> {
+  const { fahrzeugKastenFinden } = await import('./kennzeichenModell');
+  const kasten = await fahrzeugKastenFinden(bild);
+  if (!kasten || kasten === 'keins') return null;
+
+  const meta = await sharp(bild).metadata();
+  const b = meta.width ?? 0, h = meta.height ?? 0;
+  if (!b || !h) return null;
+
+  const links = Math.max(0, Math.round(kasten.x0 * b));
+  const oben  = Math.max(0, Math.round(kasten.y0 * h));
+  const breit = Math.min(b - links, Math.round((kasten.x1 - kasten.x0) * b));
+  const hoch  = Math.min(h - oben,  Math.round((kasten.y1 - kasten.y0) * h));
+  if (breit < 32 || hoch < 32) return null;
+
+  return sharp(bild).extract({ left: links, top: oben, width: breit, height: hoch })
+    .jpeg({ quality: 92 }).toBuffer();
+}
+
+async function fahrzeugAehnlichkeit(a: Buffer, b: Buffer): Promise<number | null> {
+  const [ca, cb] = await Promise.all([fahrzeugAusschnitt(a), fahrzeugAusschnitt(b)]);
+  if (!ca || !cb) return null;
+  return aehnlichkeit(ca, cb);
+}
+
 export interface StudioErgebnis {
   bild: Buffer;
   aehnlich: number;
@@ -165,7 +203,14 @@ export async function studioBildMitGemini(
      * streng genug, um ein neu erfundenes Fahrzeug zu bemerken, und grob
      * genug, um einen anderen Hintergrund zu verzeihen.
      */
-    const aehnlich = await aehnlichkeit(foto, bild);
+    /*
+     * Erst Blech gegen Blech. Nur wenn das Fahrzeugmodell nicht laeuft,
+     * wird ersatzweise das ganze Bild verglichen.
+     */
+    const nurAuto = await fahrzeugAehnlichkeit(foto, bild);
+    const aehnlich = nurAuto ?? await aehnlichkeit(foto, bild);
+    console.info('[gemini-studio] Vergleich',
+      nurAuto === null ? 'ganzes Bild (Fahrzeugmodell lieferte nichts)' : 'nur Fahrzeug');
     console.info('[gemini-studio] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3));
     if (aehnlich < AEHNLICH_MIN) {
       console.warn('[gemini-studio] verworfen: Fahrzeug weicht zu stark ab');
