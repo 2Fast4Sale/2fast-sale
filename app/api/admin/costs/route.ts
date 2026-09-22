@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
   const { data: rows, error } = await admin
     .from('api_costs')
-    .select('service, operation, cost_micros, units_in, units_out, user_id, vehicle_id, created_at')
+    .select('service, operation, cost_micros, units_in, units_out, user_id, vehicle_id, draft_id, created_at')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(5000);
@@ -64,6 +64,28 @@ export async function GET(req: Request) {
     if (!r.vehicle_id) continue;
     byVehicle[r.vehicle_id] = (byVehicle[r.vehicle_id] || 0) + Number(r.cost_micros);
   }
+  /*
+   * Kosten je Entwurf — die Zahl, die ueber den Verkaufspreis entscheidet.
+   *
+   * Beim Testen gibt es noch kein Fahrzeug in der Datenbank, wohl aber
+   * einen Entwurf. Der Durchschnitt allein taeuscht: Ein abgebrochener
+   * Versuch mit einem Foto zieht ihn nach unten. Deshalb stehen Mittelwert,
+   * Median und teuerster Entwurf nebeneinander.
+   */
+  const byDraft: Record<string, number> = {};
+  for (const r of list) {
+    if (!r.draft_id) continue;
+    byDraft[r.draft_id] = (byDraft[r.draft_id] || 0) + Number(r.cost_micros);
+  }
+  const draftCosts = Object.values(byDraft).sort((a, b) => a - b);
+  const avgPerDraft = draftCosts.length
+    ? draftCosts.reduce((a, b) => a + b, 0) / draftCosts.length
+    : 0;
+  const medianPerDraft = draftCosts.length
+    ? draftCosts[Math.floor(draftCosts.length / 2)]
+    : 0;
+  const maxPerDraft = draftCosts.length ? draftCosts[draftCosts.length - 1] : 0;
+
   const vehicleCosts = Object.values(byVehicle);
   const avgPerVehicle = vehicleCosts.length
     ? vehicleCosts.reduce((a, b) => a + b, 0) / vehicleCosts.length
@@ -96,6 +118,10 @@ export async function GET(req: Request) {
     days,
     totalMicros: sum(list),
     calls: list.length,
+    avgPerDraftMicros:    Math.round(avgPerDraft),
+    medianPerDraftMicros: Math.round(medianPerDraft),
+    maxPerDraftMicros:    Math.round(maxPerDraft),
+    draftsTracked:        draftCosts.length,
     avgPerVehicleMicros: Math.round(avgPerVehicle),
     vehiclesTracked: vehicleCosts.length,
     byService,

@@ -19,6 +19,10 @@ interface Data {
   days: number;
   totalMicros: number;
   calls: number;
+  avgPerDraftMicros: number;
+  medianPerDraftMicros: number;
+  maxPerDraftMicros: number;
+  draftsTracked: number;
   avgPerVehicleMicros: number;
   vehiclesTracked: number;
   byService:   Record<string, { micros: number; calls: number }>;
@@ -124,7 +128,8 @@ export default function AdminCostsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px', marginBottom: '20px' }}>
         {[
           { label: `Gesamt (${data.days} Tage)`, value: eur(data.totalMicros), icon: <TrendingDown size={15} />, color: '#ef4444' },
-          { label: 'Ø pro Fahrzeug', value: eur(data.avgPerVehicleMicros, 3), icon: <Car size={15} />, color: '#6366f1', sub: `${data.vehiclesTracked} Fahrzeuge erfasst` },
+          { label: 'Median je Inserat', value: eur(data.medianPerDraftMicros, 3), icon: <Car size={15} />, color: '#6366f1', sub: `${data.draftsTracked} Entwuerfe, teuerster ${eur(data.maxPerDraftMicros, 3)}` },
+          { label: 'Ø je Inserat', value: eur(data.avgPerDraftMicros, 3), icon: <Car size={15} />, color: '#0ea5e9', sub: `Ø pro Fahrzeug ${eur(data.avgPerVehicleMicros, 3)}` },
           { label: 'API-Aufrufe', value: data.calls.toLocaleString('de-DE'), icon: <Server size={15} />, color: '#8b5cf6' },
           { label: 'Aktive Nutzer', value: String(data.topUsers.length), icon: <Users size={15} />, color: '#10b981' },
         ].map(k => (
