@@ -41,15 +41,30 @@ const ZEITLIMIT_MS = 60_000;
  */
 const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.82');
 
+/*
+ * Der Text, den Gemini mitbekommt. Fuenfzehn Saetze, in dieser Reihenfolge:
+ * erst die Aufgabe, dann was erlaubt ist (verschieben, drehen, groesser
+ * und kleiner machen, damit alle Raeder den Boden beruehren), dann was
+ * verboten ist. Das Fahrzeug selbst bleibt tabu: kein Kratzer weg, kein
+ * Zeichen am Kennzeichen anders. Haelt es sich nicht daran, faengt die
+ * Aehnlichkeitspruefung weiter unten das Bild ab.
+ */
 const ANWEISUNG =
-  'You are preparing a photo for a car dealership listing. '
-  + 'Image 1 is the original photo of the car. Image 2 is the showroom it should be placed in. '
-  + 'Place the car from image 1 into the showroom from image 2, standing on the floor, '
-  + 'with a realistic soft ground shadow under the car and lighting that matches the showroom. '
-  + 'CRITICAL: the car itself must stay EXACTLY as photographed. '
-  + 'Do not change its shape, colour, wheels, badges, trim, mirrors, or number plate. '
-  + 'Do not remove or hide scratches, dents, dirt, or damage. Do not add parts. '
-  + 'Do not add people, text, watermarks or other objects. Keep the same camera angle on the car.';
+  'You are preparing a photograph for a professional car dealership listing. '
+  + 'Image 1 is the original photograph of the car, and image 2 is the empty showroom it must be placed into. '
+  + 'Your task is to place the car from image 1 into the showroom from image 2 so that it looks like the car was really photographed in that room. '
+  + 'You ARE allowed to move the car within the room, to shift it left, right, up or down, to scale it larger or smaller, and to rotate it very slightly, so that it is positioned perfectly on the floor. '
+  + 'Every wheel that is visible must rest exactly on the floor surface, with the tyre contact patch touching the ground, so the car neither floats above the floor nor sinks into it. '
+  + 'The whole car must stand on the floor area of the room and must never cross or overlap the edge where the floor meets the back wall. '
+  + 'Choose a size for the car that fits the room naturally, leaving clear floor space in front of it and around it. '
+  + 'Keep the camera angle and the perspective of the car itself exactly as in image 1; you may only translate, scale and very slightly rotate it, never re-photograph it from a different side. '
+  + 'Align the car so that its ground plane matches the floor plane of the room, so the perspective of the car and the perspective of the room agree. '
+  + 'Add a realistic soft ambient-occlusion shadow on the floor beneath the car, darkest directly under the tyres and the underbody and fading out softly a short distance beyond the outline of the car. '
+  + 'The shadow must lie only on the floor and must never be cast onto the walls or the ceiling. '
+  + 'Match the brightness, contrast and white balance of the car to the lighting of the showroom, without repainting the car. '
+  + 'CRITICAL: the car itself must remain exactly as photographed, so do not change its shape, its colour, its wheels, its badges, its trim, its mirrors, its windows or the characters on its number plate. '
+  + 'Do not remove, hide, smooth or repair any scratch, dent, rust, dirt, sticker or damage, and do not add any part that is not on the original car. '
+  + 'Do not add people, other vehicles, plants, text, logos, watermarks or reflections, and return exactly one photorealistic image with the same dimensions as image 2.';
 
 function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
