@@ -131,8 +131,23 @@ export async function freistellenU2Net(foto: Buffer): Promise<Buffer> {
     maske[i] = Math.max(0, Math.min(255, Math.round(((roh[i] - min) / spanne) * 255)));
   }
 
+  /*
+   * Kante nachziehen.
+   *
+   * Das Modell rechnet auf 320 mal 320 Bildpunkten. Auf ein Foto mit
+   * 2000 Punkten Breite hochgezogen deckt ein Maskenpunkt rund sechs
+   * Bildpunkte ab — daher die ausgefranste Dachkante und der helle Saum
+   * um dunkle Autos, an dem noch Himmel klebt.
+   *
+   * Drei Schritte dagegen: weichzeichnen glaettet die Treppenstufen,
+   * die Kennlinie macht aus dem weichen Verlauf wieder eine klare
+   * Kante, und weil sie erst bei 130 statt bei 128 ansetzt, rutscht
+   * die Kante einen Hauch nach innen. Genau dort sass der Saum.
+   */
   const alpha = await sharp(maske, { raw: { width: KANTE, height: KANTE, channels: 1 } })
     .resize(breite, hoehe, { fit: 'fill' })
+    .blur(Math.max(0.6, breite / 1400))
+    .linear(3.0, -3.0 * 130)
     .toColourspace('b-w')
     .raw()
     .toBuffer();
