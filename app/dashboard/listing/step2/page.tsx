@@ -146,6 +146,8 @@ interface Photo {
   processed: string | null;
   processing: boolean;
   error: boolean;
+  /* Klartext des Fehlers, damit unter dem Foto nicht nur "Fehler" steht. */
+  fehlerText?: string;
   issues: QualityIssue[];
   analyzing: boolean;
   /**
@@ -544,7 +546,23 @@ function Step2Inner() {
       // In der Konsole (F12) steht der genaue Grund. Ohne diese Zeile wurde
       // der Fehler verschluckt, und "Fehler" unter dem Foto war alles.
       console.error('[Studio] Foto fehlgeschlagen:', err);
-      setPhotos(p => p.map(x => x.id === photo.id ? { ...x, processing: false, error: true } : x));
+      /*
+       * Der Grund gehoert unter das Foto, nicht nur in die Konsole. Wer
+       * "Fehler" liest, kann nichts tun; wer "Kontingent aufgebraucht"
+       * liest, weiss Bescheid.
+       */
+      const roh = err instanceof Error ? err.message : String(err);
+      const klartext =
+        /Kontingent/i.test(roh)        ? 'Kontingent aufgebraucht'
+        : /kein Fahrzeug|keinFahrzeug/i.test(roh) ? 'Kein Fahrzeug erkannt'
+        : /Freistell|Guete|Qualitaet/i.test(roh)  ? 'Freistellen misslungen'
+        : /50[0-9]|Unerwartet/i.test(roh)         ? 'Serverfehler, bitte nochmal'
+        : /413|too large|gross/i.test(roh)        ? 'Foto zu gross'
+        : /Failed to fetch|NetworkError|aborted/i.test(roh) ? 'Verbindung abgebrochen'
+        : roh.replace(/^Server d+: /, '').slice(0, 60);
+      setPhotos(p => p.map(x => x.id === photo.id
+        ? { ...x, processing: false, error: true, fehlerText: klartext }
+        : x));
     }
   };
 
@@ -1097,7 +1115,12 @@ function Step2Inner() {
                   {p.error && (
                     <div style={{ position: 'absolute', bottom: '6px', left: '6px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(239,68,68,0.85)', padding: '3px 8px', borderRadius: '6px' }}>
                       <AlertCircle size={11} color="#fff" />
-                      <span style={{ fontSize: '10px', color: '#fff', fontWeight: '700' }}>Fehler</span>
+                      <span
+                        title={p.fehlerText || 'Fehler'}
+                        style={{ fontSize: '10px', color: '#fff', fontWeight: '700', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
+                        {p.fehlerText || 'Fehler'}
+                      </span>
                     </div>
                   )}
 
