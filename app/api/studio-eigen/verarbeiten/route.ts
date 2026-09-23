@@ -207,11 +207,21 @@ export async function POST(req: NextRequest) {
      * Freistellen, Skalieren, Schatten — traegt den Ersatz automatisch
      * mit, ohne dass ihn ein Pfad vergessen kann.
      */
+    /*
+     * Laeuft der Gemini-Weg, setzt GEMINI das Haendlerschild — so steht
+     * es in seiner Anweisung. Dann darf es hier nicht vorher gesetzt
+     * werden, sonst malt Gemini ein Schild auf ein Schild.
+     *
+     * Lehnt Gemini spaeter ab, wird es weiter unten nachgeholt. Ein
+     * echtes Kennzeichen darf unter keinen Umstaenden im Inserat landen.
+     */
+    const geminiWeg = process.env.STUDIO_WEG === 'gemini' && !!process.env.GEMINI_API_KEY;
+
     let kennzeichenErsetzt = false;
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
-    let kennzeichenQuelle: 'modell' | 'farbregel' | null = null;
+    let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0) {
+      if (roh.length > 0 && !geminiWeg) {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -370,6 +380,7 @@ export async function POST(req: NextRequest) {
          * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
          * Modell nicht.
          */
+        if (geminiWeg) throw new Error('Gemini setzt das Schild');
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -477,8 +488,11 @@ export async function POST(req: NextRequest) {
      */
     if (process.env.STUDIO_WEG === 'gemini' && process.env.GEMINI_API_KEY) {
       const quelle = roh.length > 0 ? roh : freigestellt;
-      const ki = await studioBildMitGemini(quelle, hg, zielBreite, zielHoehe);
+      const ki = await studioBildMitGemini(quelle, hg, zielBreite, zielHoehe, firma ?? null);
       if (ki) {
+        /* Das Schild hat Gemini gesetzt, siehe seine Anweisung. */
+        kennzeichenErsetzt = true;
+        kennzeichenQuelle = 'gemini';
         await logApiCost({
           userId: await currentUserId(),
           draftId: draftId ?? null,
@@ -497,6 +511,24 @@ export async function POST(req: NextRequest) {
         });
       }
       console.warn('[verarbeiten] Gemini-Studio nicht verwendbar, nehme den eigenen Weg');
+      /*
+       * Gemini hat abgelehnt und damit auch das Schild nicht gesetzt.
+       * Jetzt nachholen, bevor irgendetwas anderes passiert.
+       */
+      try {
+        const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(freigestellt);
+        const kasten = fund && fund !== 'keins' ? fund : null;
+        const kz = kasten
+          ? await ersetzeKennzeichenImKasten(freigestellt, kasten, firma ?? null)
+          : fund === 'keins'
+            ? { bild: freigestellt, ersetzt: false }
+            : await ersetzeKennzeichen(freigestellt, firma ?? null);
+        freigestellt = kz.bild;
+        kennzeichenErsetzt = kz.ersetzt;
+        kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
+      } catch (err) {
+        console.error('[verarbeiten] Schild nachholen fehlgeschlagen:', err);
+      }
     }
 
     let ergebnis = await komponieren(freigestellt, hg, {

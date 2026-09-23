@@ -49,7 +49,7 @@ const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.82');
  * Zeichen am Kennzeichen anders. Haelt es sich nicht daran, faengt die
  * Aehnlichkeitspruefung weiter unten das Bild ab.
  */
-const ANWEISUNG =
+const anweisung = (firma?: string | null) =>
   'You are preparing a photograph for a professional car dealership listing. '
   + 'Image 1 is the original photograph of the car, and image 2 is the empty showroom it must be placed into. '
   + 'Your task is to place the car from image 1 into the showroom from image 2 so that it looks like the car was really photographed in that room. '
@@ -58,13 +58,18 @@ const ANWEISUNG =
   + 'The whole car must stand on the floor area of the room and must never cross or overlap the edge where the floor meets the back wall. '
   + 'Choose a size for the car that fits the room naturally, leaving clear floor space in front of it and around it. '
   + 'Keep the camera angle and the perspective of the car itself exactly as in image 1; you may only translate, scale and very slightly rotate it, never re-photograph it from a different side. '
+  + 'Never mirror or flip the car: the side of the car that faces the camera in image 1 must face the camera in the result, the steering wheel must stay on the same side, and the car must keep pointing in the same direction. '
   + 'Align the car so that its ground plane matches the floor plane of the room, so the perspective of the car and the perspective of the room agree. '
   + 'Add a realistic soft ambient-occlusion shadow on the floor beneath the car, darkest directly under the tyres and the underbody and fading out softly a short distance beyond the outline of the car. '
   + 'The shadow must lie only on the floor and must never be cast onto the walls or the ceiling. '
   + 'Match the brightness, contrast and white balance of the car to the lighting of the showroom, without repainting the car. '
   + 'The windows of the car currently reflect the place where the photo was taken, for example trees, fences, sky, buildings or other cars, and these outdoor reflections must be replaced by the calm, soft reflections of the showroom itself. '
   + 'Keep the glass as glass: it must stay transparent where it was transparent, the interior of the car must remain visible through it, and the tint of the windows must stay as dark or as light as in the original photograph. '
-  + 'Where the number plate sits there may be a dealer sign with a company name on it, and that sign must keep exactly the same text, the same letters and the same layout as in image 1. '
+  + (firma
+    ? `Cover the number plate of the car completely with a plain dark rectangular dealer sign, in the same place, at the same angle and with the same size and shape as the plate, so that not a single character of the original plate stays readable. `
+      + `On that sign write exactly this text in clean white letters, centred, spelled character for character: "${firma}". `
+      + `Write nothing else on the sign, add no logo, no border, no second line and no other text anywhere in the image. `
+    : 'Cover the number plate of the car completely with a plain dark rectangular sign, in the same place and at the same angle as the plate, so that not a single character of the original plate stays readable, and write no text on it. ')
   + 'Cut the car out cleanly and completely: no part of the original surroundings may survive anywhere in the image, including through the windows, so no other vehicle, no fence, no tree, no building and no person may remain visible through the windscreen, the side windows or the rear window. '
   + 'Never hide or repair damage in the glass: any chip, crack, scratch, sticker, inspection badge or sunshade that is visible in a window must remain clearly visible in the result. '
   + 'CRITICAL: the car itself must remain exactly as photographed, so do not change its shape, its colour, its wheels, its badges, its trim, its mirrors, its windows or the characters on its number plate. '
@@ -139,6 +144,8 @@ export async function studioBildMitGemini(
   raumBild: Buffer,
   zielBreite: number,
   zielHoehe: number,
+  /** Name fuers Haendlerschild. Leer: nur ein dunkles Schild ohne Text. */
+  firma?: string | null,
 ): Promise<StudioErgebnis | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
@@ -155,7 +162,7 @@ export async function studioBildMitGemini(
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: ANWEISUNG },
+              { text: anweisung(firma) },
               { inline_data: { mime_type: 'image/jpeg', data: auto.toString('base64') } },
               { inline_data: { mime_type: 'image/jpeg', data: halle.toString('base64') } },
             ],
