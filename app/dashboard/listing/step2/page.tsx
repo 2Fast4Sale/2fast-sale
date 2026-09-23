@@ -185,6 +185,50 @@ const resizeImage = (b64: string, max = 2400): Promise<string> =>
     img.onerror = () => res(b64);
   });
 
+/**
+ * Bild so weit verkleinern, bis es sicher durch Vercel passt.
+ *
+ * Vercel weist Anfragen ueber 4,5 MB ab. Ein Handyfoto und erst recht ein
+ * freigestelltes Bild mit Alphakanal liegen leicht darueber — im Studio
+ * stand dann "Foto zu gross" unter dem Bild. Deshalb wird vor jedem
+ * Senden geprueft und notfalls in Stufen verkleinert: erst die Qualitaet,
+ * dann die Kantenlaenge. Lieber ein etwas kleineres Bild als gar keines.
+ */
+const GRENZE_BYTES = 3_200_000;
+
+const aufGrenzeBringen = async (b64: string, grenze = GRENZE_BYTES): Promise<string> => {
+  if (b64.length <= grenze) return b64;
+  let kante = 2400;
+  let guete = 0.9;
+  let aktuell = b64;
+  for (let versuch = 0; versuch < 5 && aktuell.length > grenze; versuch++) {
+    kante = Math.round(kante * 0.8);
+    guete = Math.max(0.72, guete - 0.05);
+    aktuell = await new Promise<string>(res => {
+      const img = new Image();
+      img.src = b64;
+      img.onload = () => {
+        const faktor = Math.min(1, kante / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * faktor);
+        cv.height = Math.round(img.height * faktor);
+        const ctx = cv.getContext('2d');
+        if (!ctx) { res(b64); return; }
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        /*
+         * Freigestellte Bilder haben einen Alphakanal. Als JPEG waere er
+         * weg und das Auto hinge auf schwarzem Grund — deshalb WebP,
+         * sobald die Vorlage PNG oder WebP ist.
+         */
+        const mitAlpha = b64.startsWith('data:image/png') || b64.startsWith('data:image/webp');
+        res(cv.toDataURL(mitAlpha ? 'image/webp' : 'image/jpeg', guete));
+      };
+      img.onerror = () => res(b64);
+    });
+  }
+  return aktuell;
+};
+
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const r = new FileReader();
@@ -372,7 +416,7 @@ function Step2Inner() {
     setPhotos(p => p.map(x => x.id === photo.id ? { ...x, processing: true, error: false } : x));
     try {
       const b64 = await fileToBase64(photo.file);
-      const compressed = await resizeImage(b64);
+      const compressed = await aufGrenzeBringen(await resizeImage(b64));
       const backgroundId = typeof window !== 'undefined'
         ? localStorage.getItem('dealer_background') || 'studio_infinity'
         : 'studio_infinity';
@@ -508,7 +552,7 @@ function Step2Inner() {
           // Nicht beides schicken — zusammen liegen sie ueber dem Limit von
           // Vercel. Mit freigestelltem Auto wird das Original nicht gebraucht.
           image: vorab ? undefined : compressed,
-          freigestellt: vorab,
+          freigestellt: vorab ? await aufGrenzeBringen(vorab) : undefined,
           // Vom Modell im Browser gefunden; ohne Kasten nimmt der Server
           // die Farbregel.
           kennzeichen: kennzeichenKasten ?? undefined,

@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logApiCost, imageCostMicros, currentUserId } from '../../../../lib/apiCosts';
 import { budget, istSandbox, reservieren, freigeben } from '../../../../lib/photoroomBudget';
+import sharp from 'sharp';
 import { freistellenU2Net } from '../../../../lib/studio/freistellenU2Net';
+
+/*
+ * Das freigestellte Bild geht als WebP zurueck, nicht als PNG.
+ *
+ * Vercel nimmt hoechstens 4,5 MB je Anfrage an. Ein PNG mit Alphakanal
+ * bei 2400 Bildpunkten wiegt schnell 8 MB, als Base64 elf — der naechste
+ * Schritt lief damit in "Foto zu gross". WebP mit Alphakanal bringt
+ * dasselbe Bild auf einen Bruchteil.
+ */
+async function alsWebp(bild: Buffer): Promise<string> {
+  const webp = await sharp(bild).webp({ quality: 92, alphaQuality: 100, effort: 4 }).toBuffer();
+  return `data:image/webp;base64,${webp.toString("base64")}`;
+}
 
 export const dynamic = 'force-dynamic';
 /*
@@ -54,7 +68,7 @@ export async function POST(req: NextRequest) {
         const png = await freistellenU2Net(roh0);
         console.info('[studio-eigen] freigestellt mit U-2-Net in', Date.now() - start, 'ms');
         return NextResponse.json({
-          freigestellt: `data:image/png;base64,${png.toString('base64')}`,
+          freigestellt: await alsWebp(png),
           verfahren: 'u2net',
         });
       } catch (err) {
@@ -143,7 +157,7 @@ export async function POST(req: NextRequest) {
 
     const png = Buffer.from(await antwort.arrayBuffer());
     return NextResponse.json({
-      freigestellt: `data:image/png;base64,${png.toString('base64')}`,
+      freigestellt: await alsWebp(png),
       verfahren: 'photoroom',
       sandbox,
     });
