@@ -194,7 +194,7 @@ const resizeImage = (b64: string, max = 2400): Promise<string> =>
  * Senden geprueft und notfalls in Stufen verkleinert: erst die Qualitaet,
  * dann die Kantenlaenge. Lieber ein etwas kleineres Bild als gar keines.
  */
-const GRENZE_BYTES = 3_200_000;
+const GRENZE_BYTES = 2_400_000;
 
 const aufGrenzeBringen = async (b64: string, grenze = GRENZE_BYTES): Promise<string> => {
   if (b64.length <= grenze) return b64;
