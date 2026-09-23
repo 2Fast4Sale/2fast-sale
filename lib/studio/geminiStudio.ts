@@ -62,6 +62,9 @@ const ANWEISUNG =
   + 'Add a realistic soft ambient-occlusion shadow on the floor beneath the car, darkest directly under the tyres and the underbody and fading out softly a short distance beyond the outline of the car. '
   + 'The shadow must lie only on the floor and must never be cast onto the walls or the ceiling. '
   + 'Match the brightness, contrast and white balance of the car to the lighting of the showroom, without repainting the car. '
+  + 'The windows of the car currently reflect the place where the photo was taken, for example trees, fences, sky, buildings or other cars, and these outdoor reflections must be replaced by the calm, soft reflections of the showroom itself. '
+  + 'Keep the glass as glass: it must stay transparent where it was transparent, the interior of the car must remain visible through it, and the tint of the windows must stay as dark or as light as in the original photograph. '
+  + 'Never hide or repair damage in the glass: any chip, crack, scratch, sticker, inspection badge or sunshade that is visible in a window must remain clearly visible in the result. '
   + 'CRITICAL: the car itself must remain exactly as photographed, so do not change its shape, its colour, its wheels, its badges, its trim, its mirrors, its windows or the characters on its number plate. '
   + 'Do not remove, hide, smooth or repair any scratch, dent, rust, dirt, sticker or damage, and do not add any part that is not on the original car. '
   + 'Do not add people, other vehicles, plants, text, logos, watermarks or reflections, and return exactly one photorealistic image with the same dimensions as image 2.';
