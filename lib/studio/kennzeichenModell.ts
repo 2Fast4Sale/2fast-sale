@@ -155,3 +155,57 @@ export async function kennzeichenAufServerFinden(bild: Buffer): Promise<Kennzeic
     return null;
   }
 }
+
+/**
+ * Sucht die Glasflaechen (Front-, Seiten- und Heckscheibe) und liefert
+ * EINEN Kasten, der sie zusammenfasst.
+ *
+ * Das Modell ist hier unsicher — gemessen an einem Golf lagen die Werte
+ * bei 0,09 bis 0,12, waehrend ein Kennzeichen 0,3 und mehr erreicht.
+ * Deshalb wird bewusst nur ein grober Bereich zurueckgegeben, den der
+ * Aufrufer weiter eingrenzt; ein praeziser Scheibenumriss ist damit
+ * nicht zu holen.
+ *
+ * 'keins' heisst: nichts Glaubwuerdiges gefunden, dann bleibt das Bild
+ * unveraendert.
+ */
+export async function glasKastenFinden(bild: Buffer): Promise<KennzeichenKasten | 'keins' | null> {
+  try {
+    const ergebnis = await mitZeitlimit((async () => {
+      const { RawImage } = await import('@huggingface/transformers');
+      const jpg = await sharp(bild).flatten({ background: '#808080' })
+        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 88 }).toBuffer();
+      const roh = await RawImage.fromBlob(new Blob([new Uint8Array(jpg)], { type: 'image/jpeg' }));
+      const e = await erkenner();
+      return e(roh, ['windshield of a car', 'side window of a car', 'rear window of a car'],
+        { threshold: 0.07, top_k: 6, percentage: true });
+    })(), ZEITLIMIT_MS);
+
+    if (ergebnis === null) return null;
+    const treffer = Array.isArray(ergebnis) ? ergebnis : [];
+    if (!treffer.length) return 'keins';
+
+    let x0 = 1, y0 = 1, x1 = 0, y1 = 0, gezaehlt = 0;
+    for (const t of treffer) {
+      const k = t?.box;
+      if (!k) continue;
+      const breit = k.xmax - k.xmin, hoch = k.ymax - k.ymin;
+      // Streifen am Bildrand und Winzlinge sind keine Scheibe.
+      if (breit < 0.08 || hoch < 0.04) continue;
+      if (breit > 0.95 || hoch > 0.8) continue;
+      x0 = Math.min(x0, k.xmin); y0 = Math.min(y0, k.ymin);
+      x1 = Math.max(x1, k.xmax); y1 = Math.max(y1, k.ymax);
+      gezaehlt++;
+    }
+    if (!gezaehlt) return 'keins';
+
+    return {
+      x0: Math.max(0, x0), y0: Math.max(0, y0),
+      x1: Math.min(1, x1), y1: Math.min(1, y1),
+    };
+  } catch (err) {
+    console.error('[scheiben] Suche fehlgeschlagen:', err);
+    return null;
+  }
+}
