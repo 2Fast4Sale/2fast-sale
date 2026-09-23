@@ -64,6 +64,8 @@ const ANWEISUNG =
   + 'Match the brightness, contrast and white balance of the car to the lighting of the showroom, without repainting the car. '
   + 'The windows of the car currently reflect the place where the photo was taken, for example trees, fences, sky, buildings or other cars, and these outdoor reflections must be replaced by the calm, soft reflections of the showroom itself. '
   + 'Keep the glass as glass: it must stay transparent where it was transparent, the interior of the car must remain visible through it, and the tint of the windows must stay as dark or as light as in the original photograph. '
+  + 'Where the number plate sits there may be a dealer sign with a company name on it, and that sign must keep exactly the same text, the same letters and the same layout as in image 1. '
+  + 'Cut the car out cleanly and completely: no part of the original surroundings may survive anywhere in the image, including through the windows, so no other vehicle, no fence, no tree, no building and no person may remain visible through the windscreen, the side windows or the rear window. '
   + 'Never hide or repair damage in the glass: any chip, crack, scratch, sticker, inspection badge or sunshade that is visible in a window must remain clearly visible in the result. '
   + 'CRITICAL: the car itself must remain exactly as photographed, so do not change its shape, its colour, its wheels, its badges, its trim, its mirrors, its windows or the characters on its number plate. '
   + 'Do not remove, hide, smooth or repair any scratch, dent, rust, dirt, sticker or damage, and do not add any part that is not on the original car. '
