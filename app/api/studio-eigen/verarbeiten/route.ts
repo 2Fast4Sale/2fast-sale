@@ -9,7 +9,7 @@ import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
-import { studioVerfeinernMitGemini, letzterGrund } from '../../../../lib/studio/geminiStudio';
+import { studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -598,6 +598,8 @@ export async function POST(req: NextRequest) {
       verfeinert,
       /* Warum nicht verfeinert wurde — fuer die Fehlersuche im Browser. */
       verfeinertGrund: verfeinert === false ? (letzterGrund || 'Gemini aus') : '',
+      /* Welches Bildmodell gefragt wurde — sonst raet man, ob das grosse oder das kleine lief. */
+      modell: GENUTZTES_MODELL,
       geminiSchatten,
       sandbox,
     });

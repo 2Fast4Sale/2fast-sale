@@ -306,6 +306,9 @@ const verfeinernText = (firma?: string | null) =>
  */
 export let letzterGrund = '';
 
+/** Welches Modell tatsaechlich gefragt wurde — zur Anzeige im Browser. */
+export const GENUTZTES_MODELL = MODELL;
+
 export async function studioVerfeinernMitGemini(
   komponiert: Buffer,
   /** Name fuers Haendlerschild, nur zur Information fuer das Modell. */
