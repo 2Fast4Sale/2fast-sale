@@ -491,6 +491,7 @@ export async function POST(req: NextRequest) {
      * winzig aus, und zweimal wurde der Wagen sogar gespiegelt. An
      * Groessenangaben im Text haelt sich das Modell nicht.
      */
+    let verfeinert: false | number = false;
     if (geminiWeg) {
       const fein = await studioVerfeinernMitGemini(ergebnis.bild);
       if (fein) {
@@ -503,6 +504,7 @@ export async function POST(req: NextRequest) {
           costMicros: imageCostMicros('gemini_bild'),
         });
         ergebnis = { ...ergebnis, bild: fein.bild };
+        verfeinert = Number(fein.aehnlich.toFixed(3));
       }
     }
 
@@ -545,6 +547,8 @@ export async function POST(req: NextRequest) {
       kennzeichenErsetzt,
       kennzeichenQuelle,
       eigenbau: true,
+      /* false: Gemini lief nicht oder wurde verworfen. Sonst die Aehnlichkeit. */
+      verfeinert,
       geminiSchatten,
       sandbox,
     });
