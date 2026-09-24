@@ -57,6 +57,10 @@ const nextConfig: NextConfig = {
      * Pakets. Ohne diese Zeile fehlt die native Laufzeit auf Vercel und
      * jedes Foto fiele still auf den Browser zurueck.
      */
+    /* Der Selbsttest braucht sein Testfoto im Bundle. */
+    '/api/studio-eigen/selbsttest': [
+      'tools/proben/golf_frei.png',
+    ],
     '/api/studio-eigen/freistellen': [
       'node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**',
     ],
