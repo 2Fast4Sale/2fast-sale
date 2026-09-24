@@ -148,6 +148,8 @@ interface Photo {
   error: boolean;
   /* Klartext des Fehlers, damit unter dem Foto nicht nur "Fehler" steht. */
   fehlerText?: string;
+  /* Welcher Weg das Bild gemacht hat — steht als Merkzettel auf dem Foto. */
+  wegText?: string;
   issues: QualityIssue[];
   analyzing: boolean;
   /**
@@ -595,7 +597,20 @@ function Step2Inner() {
         try { result = await addWatermark(result, dealerName); } catch { /* ignorieren */ }
       }
 
-      setPhotos(p => p.map(x => x.id === photo.id ? { ...x, processed: result, processing: false } : x));
+      /*
+       * Den gelaufenen Weg sichtbar aufs Foto schreiben.
+       *
+       * Ohne das war beim Testen nicht zu erkennen, ob Gemini das Bild
+       * verbessert hat oder ob nur der eigene Kompositor lief — beide
+       * Ergebnisse sehen auf den ersten Blick gleich aus. Das hat uns
+       * einen ganzen Abend gekostet.
+       */
+      const weg = data.verfeinert
+        ? 'Gemini ' + data.verfeinert
+        : 'eigen' + (data.verfeinertGrund ? ' · ' + String(data.verfeinertGrund).slice(0, 40) : '');
+      setPhotos(p => p.map(x => x.id === photo.id
+        ? { ...x, processed: result, processing: false, wegText: weg }
+        : x));
     } catch (err) {
       // In der Konsole (F12) steht der genaue Grund. Ohne diese Zeile wurde
       // der Fehler verschluckt, und "Fehler" unter dem Foto war alles.
@@ -1175,6 +1190,17 @@ function Step2Inner() {
                       >
                         {p.fehlerText || 'Fehler'}
                       </span>
+                    </div>
+                  )}
+
+                  {p.wegText && !p.processing && (
+                    <div
+                      title={p.wegText}
+                      style={{ position: 'absolute', bottom: '6px', left: '6px', maxWidth: '85%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        background: p.wegText.startsWith('Gemini') ? 'rgba(16,185,129,0.85)' : 'rgba(100,116,139,0.85)',
+                        color: '#fff', fontSize: '10px', fontWeight: '700', padding: '3px 7px', borderRadius: '6px' }}
+                    >
+                      {p.wegText}
                     </div>
                   )}
 
