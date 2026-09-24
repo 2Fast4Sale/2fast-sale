@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
     let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0) {
+      if (roh.length > 0 && !geminiWeg) {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -403,6 +403,7 @@ export async function POST(req: NextRequest) {
          * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
          * Modell nicht.
          */
+        if (geminiWeg) throw new Error('Gemini setzt das Schild');
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -520,35 +521,24 @@ export async function POST(req: NextRequest) {
     if (geminiWeg) {
       const fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
       /*
-       * Schild nach der Verfeinerung neu zeichnen.
-       *
-       * Gemini malt Schrift nach und verdreht dabei Buchstaben: aus
-       * "Autohaus Muster" wurde im Test "Autoheue Mueter", bei einer
-       * Aehnlichkeit von 0,970. Noch einmal suchen hilft nicht — das
-       * Modell findet das dunkle Schild im fertigen Bild nicht wieder.
-       * Also wird die Stelle gerechnet: aus dem Kasten im freigestellten
-       * Bild, dem Zuschnitt des Kompositors und der Lage der
-       * Fahrzeugebene im Studiobild.
+       * Kein Gemini-Bild: Dann hat auch niemand das Kennzeichen
+       * abgedeckt. Das holt der eigene Code nach, sonst stuende ein
+       * fremdes Kennzeichen im Inserat.
        */
-      if (fein && firma && schildKasten) {
+      if (!fein) {
         try {
-          const ebene = await sharp(ergebnis.fahrzeugEbene.bild).metadata();
-          const quelle = await sharp(freigestellt).metadata();
-          const rahmen = ergebnis.quellRahmen;
-          const qb = quelle.width ?? 0, qh = quelle.height ?? 0;
-          const eb = ebene.width ?? 0, eh = ebene.height ?? 0;
-          if (!qb || !qh || !eb || !eh) throw new Error('Masse fehlen');
-          const inX = (r: number) => ergebnis.fahrzeugEbene.left + ((r * qb - rahmen.links) / rahmen.breite) * eb;
-          const inY = (r: number) => ergebnis.fahrzeugEbene.top + ((r * qh - rahmen.oben) / rahmen.hoehe) * eh;
-          const kz2 = await ersetzeKennzeichenImKasten(fein.bild, {
-            x0: Math.max(0, inX(schildKasten.x0) / ergebnis.breite),
-            x1: Math.min(1, inX(schildKasten.x1) / ergebnis.breite),
-            y0: Math.max(0, inY(schildKasten.y0) / ergebnis.hoehe),
-            y1: Math.min(1, inY(schildKasten.y1) / ergebnis.hoehe),
-          }, firma);
-          if (kz2.ersetzt) fein.bild = kz2.bild;
+          const fund = await kennzeichenAufServerFinden(ergebnis.bild);
+          const kasten = fund && fund !== 'keins' ? fund : null;
+          if (kasten) {
+            const kz2 = await ersetzeKennzeichenImKasten(ergebnis.bild, kasten, firma ?? null);
+            if (kz2.ersetzt) {
+              ergebnis = { ...ergebnis, bild: kz2.bild };
+              kennzeichenErsetzt = true;
+              kennzeichenQuelle = 'modell';
+            }
+          }
         } catch (err) {
-          console.warn('[verarbeiten] Schild nach der Verfeinerung nicht erneuert:', err);
+          console.error('[verarbeiten] Schild nachholen fehlgeschlagen:', err);
         }
       }
       if (fein) {
