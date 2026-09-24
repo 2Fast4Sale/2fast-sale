@@ -260,7 +260,7 @@ export async function studioBildMitGemini(
  */
 const VERFEINERN_MIN = Number(process.env.GEMINI_VERFEINERN_MIN || '0.90');
 
-const VERFEINERN =
+const verfeinernText = (firma?: string | null) =>
   'Image 1 shows a car that has already been placed into a showroom at exactly the right size and position, but it still looks pasted in. '
   + 'Your MOST IMPORTANT task is the glass: look carefully through the windscreen, the side windows and the rear window of the car. '
   + 'Whatever is visible through that glass comes from the place where the car was originally photographed, so every other car, fence, tree, building, street, sky and person behind the glass must be painted over. '
@@ -272,9 +272,15 @@ const VERFEINERN =
   + 'Keep the car exactly where it is and exactly as large as it is: do not move it, do not scale it, do not rotate it, do not mirror it and do not re-frame the picture. '
   + 'Keep the room exactly as it is: same walls, same floor, same ceiling lights, same camera, same framing. '
   + 'The car itself must stay exactly as photographed: same shape, same colour, same wheels, same badges, same trim, same mirrors. '
-  + 'Where the number plate would be there is a dealer sign; keep it in the same place with exactly the same text, letter for letter, and never show the original number plate. '
+  + (firma
+    ? `Your fourth task is the number plate: cover it completely with a plain dark rectangular dealer sign, in the same place, at the same angle and with the same size and shape as the plate, so that not one character of the original plate stays readable. `
+      + `On that sign write this text and nothing else, in clean white letters, centred, spelled character for character exactly as given here: "${firma}". `
+      + `Check the spelling of that text letter by letter before you finish, because a misspelled dealer name is worse than no sign at all, and write no other text anywhere in the image. `
+    : 'Your fourth task is the number plate: cover it completely with a plain dark rectangular sign, in the same place and at the same angle as the plate, so that not one character stays readable, and write no text on it. ')
   + 'Never hide, smooth or repair a scratch, a dent, rust, dirt, a sticker or any damage, neither in the paint nor in the glass. '
-  + 'Do not add people, other vehicles, plants, text, logos or watermarks, and return exactly one photorealistic image with the same dimensions as image 1.';
+  + 'Do not add people, other vehicles, plants, text, logos or watermarks, and return exactly one photorealistic image with the same dimensions as image 1. '
+  + 'Before you finish, check the result once more: is any car, fence, tree, building, street or sky still visible through the windscreen, a side window or the rear window? '
+  + 'If anything like that is still there, paint it over with the plain surfaces of this hall, because a showroom photograph in which the old surroundings show through the glass is the one mistake you must not make.';
 
 /**
  * Nimmt das fertig zusammengesetzte Studiobild und laesst Gemini nur
@@ -284,6 +290,8 @@ const VERFEINERN =
  */
 export async function studioVerfeinernMitGemini(
   komponiert: Buffer,
+  /** Name fuers Haendlerschild. Gemini setzt das Schild selbst. */
+  firma?: string | null,
 ): Promise<StudioErgebnis | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
@@ -301,7 +309,7 @@ export async function studioVerfeinernMitGemini(
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: VERFEINERN },
+              { text: verfeinernText(firma) },
               { inline_data: { mime_type: 'image/jpeg', data: eingabe.toString('base64') } },
             ],
           }],
