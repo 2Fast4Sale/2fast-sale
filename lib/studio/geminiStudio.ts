@@ -36,7 +36,13 @@ import sharp from 'sharp';
  * gesaeubert. Dieselben Texte mit dem grossen Modell liefen sauber.
  */
 const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-3.1-flash-image';
-const ZEITLIMIT_MS = 60_000;
+/*
+ * 35 statt 60 Sekunden: Auf dem Hobby-Tarif bricht Vercel eine Funktion
+ * nach 60 Sekunden hart ab. Dann kaeme gar keine Antwort beim Haendler
+ * an — mit dem kuerzeren Limit bleibt Zeit, wenigstens das eigene Bild
+ * zurueckzugeben.
+ */
+const ZEITLIMIT_MS = 35_000;
 
 /**
  * Wie aehnlich das Fahrzeug dem Original mindestens bleiben muss, 0 bis 1.
