@@ -18,7 +18,7 @@
 
 import sharp from 'sharp';
 
-const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-2.5-flash-image';
+const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-3.1-flash-image';
 const ZEITLIMIT_MS = 45_000;
 
 const ANWEISUNG =

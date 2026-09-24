@@ -29,7 +29,13 @@
 
 import sharp from 'sharp';
 
-const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-3.1-flash-lite-image';
+/*
+ * Nano Banana 2. Das kleinere "lite" stand hier als Voreinstellung, und
+ * genau daran lag es: In der Vorschau hielt sich das kleine Modell nicht
+ * an die Anweisung — Kennzeichen nicht ueberdeckt, Scheiben nicht
+ * gesaeubert. Dieselben Texte mit dem grossen Modell liefen sauber.
+ */
+const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-3.1-flash-image';
 const ZEITLIMIT_MS = 60_000;
 
 /**
