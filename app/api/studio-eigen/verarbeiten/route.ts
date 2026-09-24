@@ -228,12 +228,14 @@ export async function POST(req: NextRequest) {
     const geminiWeg = !!process.env.GEMINI_API_KEY && process.env.STUDIO_WEG !== 'aus';
 
     /*
-     * Auf Wunsch setzt GEMINI das Haendlerschild, nicht der eigene Code.
-     * Der eigene Ersatz bleibt als Rueckfall: Lehnt Gemini ab, wird das
-     * Schild unten nachgeholt, damit nie ein echtes Kennzeichen im
-     * Inserat steht.
+     * Das Kennzeichen deckt IMMER der eigene Code ab.
+     *
+     * Gemini bekam die Aufgabe dreimal ausdruecklich in seiner Anweisung
+     * und hat sie dreimal uebergangen: Im Live-Test stand das Kennzeichen
+     * unveraendert im Bild, einmal sogar mit der Werbeadresse eines
+     * fremden Autohauses. Ein lesbares Kennzeichen ist ein
+     * personenbezogenes Datum — das ist keine Stelle fuer "meistens".
      */
-    const geminiSchild = geminiWeg;
 
     /* Wo das Schild im freigestellten Bild sitzt, relativ 0 bis 1. */
     let schildKasten: KennzeichenKasten | null = null;
@@ -242,7 +244,7 @@ export async function POST(req: NextRequest) {
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
     let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0 && !geminiSchild) {
+      if (roh.length > 0) {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -401,7 +403,6 @@ export async function POST(req: NextRequest) {
          * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
          * Modell nicht.
          */
-        if (geminiSchild) throw new Error('Gemini setzt das Schild');
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -519,28 +520,39 @@ export async function POST(req: NextRequest) {
     if (geminiWeg) {
       const fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
       /*
-       * Gemini hat abgelehnt: Dann hat auch niemand das Schild gesetzt.
-       * Jetzt nachholen, bevor das Bild das Haus verlaesst.
+       * Schild nach der Verfeinerung neu zeichnen.
+       *
+       * Gemini malt Schrift nach und verdreht dabei Buchstaben: aus
+       * "Autohaus Muster" wurde im Test "Autoheue Mueter", bei einer
+       * Aehnlichkeit von 0,970. Noch einmal suchen hilft nicht, das
+       * Modell findet das dunkle Schild im fertigen Bild nicht wieder.
+       * Die Stelle wird deshalb gerechnet: aus dem Kasten im
+       * freigestellten Bild, dem Zuschnitt des Kompositors und der Lage
+       * der Fahrzeugebene.
        */
-      if (!fein && geminiSchild) {
+      if (fein && firma && schildKasten) {
         try {
-          const fund = await kennzeichenAufServerFinden(ergebnis.bild);
-          const kasten = fund && fund !== 'keins' ? fund : null;
-          if (kasten) {
-            const kz2 = await ersetzeKennzeichenImKasten(ergebnis.bild, kasten, firma ?? null);
-            if (kz2.ersetzt) {
-              ergebnis = { ...ergebnis, bild: kz2.bild };
-              kennzeichenErsetzt = true;
-              kennzeichenQuelle = 'modell';
-            }
-          }
+          const ebene = await sharp(ergebnis.fahrzeugEbene.bild).metadata();
+          const quelleMasse = await sharp(freigestellt).metadata();
+          const rahmen = ergebnis.quellRahmen;
+          const qb = quelleMasse.width ?? 0, qh = quelleMasse.height ?? 0;
+          const eb = ebene.width ?? 0, eh = ebene.height ?? 0;
+          if (!qb || !qh || !eb || !eh) throw new Error('Masse fehlen');
+          const inX = (rel: number) =>
+            ergebnis.fahrzeugEbene.left + ((rel * qb - rahmen.links) / rahmen.breite) * eb;
+          const inY = (rel: number) =>
+            ergebnis.fahrzeugEbene.top + ((rel * qh - rahmen.oben) / rahmen.hoehe) * eh;
+          const neuerKasten = {
+            x0: Math.max(0, inX(schildKasten.x0) / ergebnis.breite),
+            x1: Math.min(1, inX(schildKasten.x1) / ergebnis.breite),
+            y0: Math.max(0, inY(schildKasten.y0) / ergebnis.hoehe),
+            y1: Math.min(1, inY(schildKasten.y1) / ergebnis.hoehe),
+          };
+          const kz2 = await ersetzeKennzeichenImKasten(fein.bild, neuerKasten, firma);
+          if (kz2.ersetzt) fein.bild = kz2.bild;
         } catch (err) {
-          console.error('[verarbeiten] Schild nachholen fehlgeschlagen:', err);
+          console.warn('[verarbeiten] Schild nach der Verfeinerung nicht erneuert:', err);
         }
-      }
-      if (fein) {
-        kennzeichenErsetzt = true;
-        kennzeichenQuelle = 'gemini';
       }
       if (fein) {
         await logApiCost({
