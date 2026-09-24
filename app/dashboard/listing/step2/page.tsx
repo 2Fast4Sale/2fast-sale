@@ -585,6 +585,7 @@ function Step2Inner() {
         '[Studio] Weg:',
         data.verfeinert ? 'Gemini verfeinert ' + data.verfeinert : 'nur eigener Kompositor',
         '| Schild:', data.kennzeichenQuelle ?? 'keins',
+        data.verfeinertGrund ? '| Grund: ' + data.verfeinertGrund : '',
       );
 
       // Wasserzeichen drauf wenn aktiviert
