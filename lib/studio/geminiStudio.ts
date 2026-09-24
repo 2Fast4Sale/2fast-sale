@@ -261,14 +261,16 @@ export async function studioBildMitGemini(
 const VERFEINERN_MIN = Number(process.env.GEMINI_VERFEINERN_MIN || '0.90');
 
 const VERFEINERN =
-  'Image 1 is a photograph of a car that has already been placed into a showroom, at exactly the right size and in exactly the right position. '
-  + 'Your only job is to make image 1 look like a real photograph taken in that showroom. '
+  'Image 1 shows a car that has already been placed into a showroom at exactly the right size and position, but it still looks pasted in. '
+  + 'Your MOST IMPORTANT task is the glass: look carefully through the windscreen, the side windows and the rear window of the car. '
+  + 'Whatever is visible through that glass comes from the place where the car was originally photographed, so every other car, fence, tree, building, street, sky and person behind the glass must be painted over. '
+  + 'Replace all of it with the calm, plain reflections and surfaces of this showroom, so that only this hall can be seen in the glass. '
+  + 'Keep the glass as glass: it stays transparent where it was transparent, the seats, the steering wheel and the interior stay visible, and the tint stays exactly as dark as it is now. '
+  + 'Your second task is the ground shadow: add a realistic soft shadow under the car, darkest under the tyres and the underbody, fading out softly, lying only on the floor and never on the walls. '
+  + 'Your third task is the light: match brightness, contrast and white balance of the car to the light of this hall, without repainting the car. '
+  + 'Everything else must stay exactly as it is. '
   + 'Keep the car exactly where it is and exactly as large as it is: do not move it, do not scale it, do not rotate it, do not mirror it and do not re-frame the picture. '
-  + 'Keep the room exactly as it is: same walls, same floor, same lights, same camera, same framing. '
-  + 'Add a realistic soft ground shadow under the car, darkest under the tyres and the underbody, fading out softly, lying only on the floor and never on the walls. '
-  + 'Match the brightness, contrast and white balance of the car to the light of the room, without repainting the car. '
-  + 'The windows still reflect the place where the car was photographed, so replace those reflections with the calm reflections of this showroom, and remove anything foreign that is visible through the glass, such as other cars, fences, trees, buildings or people. '
-  + 'Keep the glass transparent where it was transparent, keep the interior visible, and keep the tint exactly as dark as it is. '
+  + 'Keep the room exactly as it is: same walls, same floor, same ceiling lights, same camera, same framing. '
   + 'The car itself must stay exactly as photographed: same shape, same colour, same wheels, same badges, same trim, same mirrors. '
   + 'Where the number plate would be there is a dealer sign; keep it in the same place with exactly the same text, letter for letter, and never show the original number plate. '
   + 'Never hide, smooth or repair a scratch, a dent, rust, dirt, a sticker or any damage, neither in the paint nor in the glass. '

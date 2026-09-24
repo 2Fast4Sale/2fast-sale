@@ -181,6 +181,12 @@ export interface Ergebnis {
    * pixelgenau wieder obenauf legen — siehe geminiSchatten.ts.
    */
   fahrzeugEbene: { bild: Buffer; left: number; top: number };
+  /**
+   * Wo das Fahrzeug im uebergebenen freigestellten Bild lag, in dessen
+   * Bildpunkten. Zusammen mit fahrzeugEbene laesst sich damit jede Stelle
+   * des freigestellten Bildes im Ergebnis wiederfinden.
+   */
+  quellRahmen: { links: number; oben: number; breite: number; hoehe: number };
 }
 
 /**
@@ -301,9 +307,16 @@ async function nurGroesstesObjekt(freigestellt: Buffer): Promise<Buffer> {
  * Silhouette: Der Alphakanal wird zu einem Schwarzweissbild, und
  * dessen Rand ist der gesuchte.
  */
-async function aufFahrzeugZuschneiden(freigestellt: Buffer): Promise<Buffer> {
-  const bild = sharp(freigestellt).ensureAlpha();
-  const { width, height } = await bild.metadata();
+/**
+ * Schneidet auf das Fahrzeug zu und sagt dazu, WO es im Ausgangsbild lag.
+ *
+ * Der Rahmen wird gebraucht, um spaeter eine Stelle aus dem
+ * freigestellten Bild — etwa das Haendlerschild — im fertigen Studiobild
+ * wiederzufinden, ohne sie dort noch einmal suchen zu muessen.
+ */
+async function aufFahrzeugZuschneiden(freigestellt: Buffer): Promise<{ bild: Buffer; rahmen: { links: number; oben: number; breite: number; hoehe: number } }> {
+  const quelle = sharp(freigestellt).ensureAlpha();
+  const { width, height } = await quelle.metadata();
   if (!width || !height) throw new Error('Freigestelltes Bild ohne Masse');
 
   const alpha = await sharp(freigestellt).ensureAlpha().extractChannel(3).raw().toBuffer();
@@ -324,11 +337,15 @@ async function aufFahrzeugZuschneiden(freigestellt: Buffer): Promise<Buffer> {
 
   if (unten < 0) throw new Error('Freigestelltes Bild ist vollstaendig leer');
 
-  return sharp(freigestellt).ensureAlpha().extract({
-    left: links, top: oben,
-    width: rechts - links + 1,
-    height: unten - oben + 1,
+  const rahmen = {
+    links, oben,
+    breite: rechts - links + 1,
+    hoehe: unten - oben + 1,
+  };
+  const ausschnitt = await sharp(freigestellt).ensureAlpha().extract({
+    left: links, top: oben, width: rahmen.breite, height: rahmen.hoehe,
   }).png().toBuffer();
+  return { bild: ausschnitt, rahmen };
 }
 
 /** Mittlere Helligkeit der sichtbaren Pixel, 0 bis 255. */
@@ -857,7 +874,7 @@ export async function komponieren(
   const zielHoehe  = hgDaten.height ?? 1333;
 
   const bereinigt = await nurGroesstesObjekt(await bodenresteEntfernen(freigestellt));
-  const zugeschnitten = await aufFahrzeugZuschneiden(bereinigt);
+  const { bild: zugeschnitten, rahmen: quellRahmen } = await aufFahrzeugZuschneiden(bereinigt);
   const zMeta = await sharp(zugeschnitten).metadata();
   const zBreite = zMeta.width ?? 1;
   const zHoehe  = zMeta.height ?? 1;
@@ -993,6 +1010,7 @@ export async function komponieren(
 
   return {
     bild,
+    quellRahmen,
     breite: zielBreite,
     hoehe: zielHoehe,
     messwerte: {
