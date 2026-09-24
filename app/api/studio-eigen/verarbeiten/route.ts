@@ -561,8 +561,22 @@ export async function POST(req: NextRequest) {
      * wieder obenauf gelegt (geminiSchatten.ts). Geht es schief, bleibt
      * das Ergebnis oben mit dem eigenen Schatten.
      */
+    /*
+     * Der aeltere Schatten-Schritt laeuft NUR NOCH, wenn die
+     * Verfeinerung nicht zustande kam.
+     *
+     * Vorher lief er immer — und er hat alles zunichtegemacht: Er baut
+     * das Bild neu zusammen und legt danach das Originalfahrzeug
+     * pixelgenau wieder obenauf. Damit waren saubere Scheiben und das
+     * Haendlerschild aus der Verfeinerung wieder weg, und im Ergebnis
+     * standen erneut das echte Kennzeichen und das fremde Auto hinter
+     * der Frontscheibe. Auf dem Merkzettel stand trotzdem "Gemini
+     * 0.981", weil die Verfeinerung ja stattgefunden hatte.
+     *
+     * Nebenbei kostete das jedes Foto einen zweiten Gemini-Aufruf.
+     */
     let geminiSchatten = false;
-    if (process.env.GEMINI_API_KEY && process.env.STUDIO_SCHATTEN !== 'eigen') {
+    if (!verfeinert && process.env.GEMINI_API_KEY && process.env.STUDIO_SCHATTEN !== 'eigen') {
       const ohne = await komponieren(freigestellt, hg, {
         ...STANDARD, ...ausRaum, ...(kompositor ?? {}),
         schattenStaerke: 0, kontaktStaerke: 0, spiegelungStaerke: 0,
