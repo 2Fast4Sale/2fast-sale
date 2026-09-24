@@ -577,6 +577,15 @@ function Step2Inner() {
         throw new Error(`Server ${res.status}: ${meldung}`);
       }
       const data = await res.json();
+      /*
+       * Sichtbar machen, welcher Weg gelaufen ist. Ohne das raet man beim
+       * Testen, ob Gemini ueberhaupt drankam oder verworfen wurde.
+       */
+      console.info(
+        '[Studio] Weg:',
+        data.verfeinert ? 'Gemini verfeinert ' + data.verfeinert : 'nur eigener Kompositor',
+        '| Schild:', data.kennzeichenQuelle ?? 'keins',
+      );
 
       // Wasserzeichen drauf wenn aktiviert
       let result = data.result as string;
