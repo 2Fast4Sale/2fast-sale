@@ -294,6 +294,18 @@ export async function studioBildMitGemini(
  */
 const VERFEINERN_MIN = Number(process.env.GEMINI_VERFEINERN_MIN || '0.90');
 
+/*
+ * Wie viel Prozent des Bildes Gemini mindestens angefasst haben muss.
+ *
+ * Ein Modell, das die Aufgabe ueberspringt, schickt das Eingabebild
+ * beinahe unveraendert zurueck. Die Aehnlichkeit liegt dann bei 0,98 —
+ * genau wie bei einer gelungenen Verfeinerung, denn auch die aendert nur
+ * Scheiben, Schatten und Licht. Nur der Anteil geaenderter Bildpunkte
+ * trennt beide Faelle: gemessen 4,9 Prozent bei echter Arbeit, nahe null
+ * bei blosser Rueckgabe.
+ */
+const GEAENDERT_MIN = Number(process.env.GEMINI_GEAENDERT_MIN || '0.8');
+
 const verfeinernText = (firma?: string | null) =>
   'Image 1 shows a car that has already been placed into a showroom at exactly the right size and position, but it still looks pasted in. '
   + 'Your MOST IMPORTANT task is the glass: look carefully through the windscreen, the side windows and the rear window of the car. '
@@ -384,6 +396,12 @@ export async function studioVerfeinernMitGemini(
     const geaendert = await anteilGeaendert(komponiert, bild);
     console.info('[gemini-verfeinern] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3),
       'geaendert', geaendert.toFixed(1) + '%');
+    if (geaendert < GEAENDERT_MIN) {
+      letzterGrund = 'Gemini gab das Bild unveraendert zurueck ('
+        + geaendert.toFixed(1) + '% statt mindestens ' + GEAENDERT_MIN + '%)';
+      console.warn('[gemini-verfeinern]', letzterGrund);
+      return null;
+    }
     if (aehnlich < VERFEINERN_MIN) {
       letzterGrund = `verworfen, Aehnlichkeit ${aehnlich.toFixed(3)} unter ${VERFEINERN_MIN}`;
       console.warn('[gemini-verfeinern] verworfen: Bild weicht zu stark ab');

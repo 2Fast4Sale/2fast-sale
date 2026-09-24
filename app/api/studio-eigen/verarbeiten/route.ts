@@ -543,6 +543,39 @@ export async function POST(req: NextRequest) {
           console.error('[verarbeiten] Schild nachholen fehlgeschlagen:', err);
         }
       }
+      /*
+       * Sicherheitsnetz nach der Verfeinerung.
+       *
+       * Gemini soll das Kennzeichen abdecken, hat es aber im Live-Betrieb
+       * dreimal nicht getan — einmal blieb sogar die Werbeadresse eines
+       * fremden Autohauses lesbar. Ein Kennzeichen ist ein
+       * personenbezogenes Datum, das darf nicht vom Zufall abhaengen.
+       *
+       * Deshalb wird im fertigen Bild noch einmal gesucht. Findet das
+       * Modell dort etwas Kennzeichenfoermiges, kommt das eigene Schild
+       * darueber — auch dann, wenn es Geminis eigenes Schild ist. Dann
+       * steht eben der Name sauber gezeichnet darauf.
+       */
+      if (fein) {
+        try {
+          const fund = await kennzeichenAufServerFinden(fein.bild);
+          if (fund && fund !== 'keins') {
+            const kz = await ersetzeKennzeichenImKasten(fein.bild, fund, firma ?? null);
+            if (kz.ersetzt) {
+              fein.bild = kz.bild;
+              kennzeichenErsetzt = true;
+              kennzeichenQuelle = 'modell';
+            }
+          } else if (fund === 'keins') {
+            /* Nichts Kennzeichenfoermiges mehr da: Gemini hat es zugemacht. */
+            kennzeichenErsetzt = true;
+            kennzeichenQuelle = 'gemini';
+          }
+        } catch (err) {
+          console.error('[verarbeiten] Nachkontrolle des Kennzeichens fehlgeschlagen:', err);
+        }
+      }
+
       if (fein) {
         await logApiCost({
           userId: await currentUserId(),
@@ -579,7 +612,7 @@ export async function POST(req: NextRequest) {
      * Nebenbei kostete das jedes Foto einen zweiten Gemini-Aufruf.
      */
     let geminiSchatten = false;
-    if (!verfeinert && process.env.GEMINI_API_KEY && process.env.STUDIO_SCHATTEN !== 'eigen') {
+    if (!verfeinert && geminiWeg && process.env.STUDIO_SCHATTEN !== 'eigen') {
       const ohne = await komponieren(freigestellt, hg, {
         ...STANDARD, ...ausRaum, ...(kompositor ?? {}),
         schattenStaerke: 0, kontaktStaerke: 0, spiegelungStaerke: 0,
