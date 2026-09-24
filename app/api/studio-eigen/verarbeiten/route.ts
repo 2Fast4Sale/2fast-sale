@@ -215,7 +215,17 @@ export async function POST(req: NextRequest) {
      * Lehnt Gemini spaeter ab, wird es weiter unten nachgeholt. Ein
      * echtes Kennzeichen darf unter keinen Umstaenden im Inserat landen.
      */
-    const geminiWeg = process.env.STUDIO_WEG === 'gemini' && !!process.env.GEMINI_API_KEY;
+    /*
+     * Verfeinern laeuft, sobald ein Schluessel hinterlegt ist.
+     *
+     * Vorher musste zusaetzlich STUDIO_WEG=gemini gesetzt sein. Genau
+     * daran ist es zweimal gescheitert: Der Schluessel lag bereit, die
+     * Variable stand aber auf dem alten Wert, und im Bild blieben die
+     * Spiegelungen stehen — ohne dass man es dem Ergebnis ansah.
+     *
+     * Abschalten geht weiterhin, mit STUDIO_WEG=aus.
+     */
+    const geminiWeg = !!process.env.GEMINI_API_KEY && process.env.STUDIO_WEG !== 'aus';
 
     let kennzeichenErsetzt = false;
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
