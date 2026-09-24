@@ -279,8 +279,10 @@ const verfeinernText = (firma?: string | null) =>
   + 'Keep the room exactly as it is: same walls, same floor, same ceiling lights, same camera, same framing. '
   + 'The car itself must stay exactly as photographed: same shape, same colour, same wheels, same badges, same trim, same mirrors. '
   + (firma
-    ? `The number plate of the car is already covered by a dealer sign showing the text "${firma}"; leave that sign exactly where it is, at the same size, with the same colours and the same text, and never reveal or redraw the original plate underneath. `
-    : 'The number plate of the car is already covered by a plain sign; leave that sign exactly where it is, at the same size and in the same colours, and never reveal or redraw the original plate underneath. ')
+    ? `Your fourth task is the number plate: cover it completely with a plain dark rectangular dealer sign, in the same place, at the same angle and with the same size and shape as the plate, so that not one character of the original plate stays readable. `
+      + `On that sign write this text and nothing else, in clean white letters, centred, spelled character for character exactly as given here: "${firma}". `
+      + `Check that spelling letter by letter before you finish, and write no other text anywhere in the image. `
+    : 'Your fourth task is the number plate: cover it completely with a plain dark rectangular sign, in the same place and at the same angle as the plate, so that not one character stays readable, and write no text on it. ')
   + 'Do not add people, other vehicles, plants, text, logos or watermarks, and return exactly one photorealistic image with the same dimensions as image 1. '
   + 'Before you finish, check the result once more: is any car, fence, tree, building, street or sky still visible through the windscreen, a side window or the rear window? '
   + 'If anything like that is still there, paint it over with the plain surfaces of this hall, because a showroom photograph in which the old surroundings show through the glass is the one mistake you must not make.';
@@ -291,13 +293,21 @@ const verfeinernText = (firma?: string | null) =>
  *
  * null heisst: nicht verwendbar — dann bleibt das Bild des Kompositors.
  */
+/**
+ * Warum eine Verfeinerung nicht benutzt wurde. Steht in der Antwort und
+ * damit in der Konsole des Browsers — sonst raet man beim Testen, ob
+ * Gemini lief, verworfen wurde oder gar nicht erst antwortete.
+ */
+export let letzterGrund = '';
+
 export async function studioVerfeinernMitGemini(
   komponiert: Buffer,
-  /** Name fuers Haendlerschild. Gemini setzt das Schild selbst. */
+  /** Name fuers Haendlerschild, nur zur Information fuer das Modell. */
   firma?: string | null,
 ): Promise<StudioErgebnis | null> {
+  letzterGrund = '';
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+  if (!key) { letzterGrund = 'kein Schluessel'; return null; }
 
   const start = Date.now();
   try {
@@ -321,6 +331,7 @@ export async function studioVerfeinernMitGemini(
     ), ZEITLIMIT_MS);
 
     if (!antwort || !antwort.ok) {
+      letzterGrund = antwort ? `Gemini antwortete ${antwort.status}` : 'Zeitlimit';
       console.warn('[gemini-verfeinern] Antwort nicht brauchbar:', antwort?.status);
       return null;
     }
@@ -330,7 +341,7 @@ export async function studioVerfeinernMitGemini(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const teil = teile.find((p: any) => p.inline_data?.data || p.inlineData?.data);
     const b64 = teil?.inline_data?.data ?? teil?.inlineData?.data;
-    if (!b64) return null;
+    if (!b64) { letzterGrund = 'Gemini schickte kein Bild'; return null; }
 
     const masse = await sharp(komponiert).metadata();
     const bild = await sharp(Buffer.from(b64, 'base64'))
@@ -341,11 +352,13 @@ export async function studioVerfeinernMitGemini(
     const aehnlich = await aehnlichkeit(komponiert, bild);
     console.info('[gemini-verfeinern] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3));
     if (aehnlich < VERFEINERN_MIN) {
+      letzterGrund = `verworfen, Aehnlichkeit ${aehnlich.toFixed(3)} unter ${VERFEINERN_MIN}`;
       console.warn('[gemini-verfeinern] verworfen: Bild weicht zu stark ab');
       return null;
     }
     return { bild, aehnlich };
   } catch (err) {
+    letzterGrund = 'Fehler: ' + (err instanceof Error ? err.message : String(err));
     console.error('[gemini-verfeinern] fehlgeschlagen:', err);
     return null;
   }
