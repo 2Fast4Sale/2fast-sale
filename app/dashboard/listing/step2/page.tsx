@@ -607,7 +607,7 @@ function Step2Inner() {
        */
       const kurz = String(data.modell || '').replace('gemini-3.1-', '').replace('-image', '');
       const weg = data.verfeinert
-        ? 'Gemini ' + data.verfeinert + (kurz ? ' · ' + kurz : '')
+        ? 'Gemini ' + data.verfeinert + (kurz ? ' · ' + kurz : '') + ' · ' + (data.geaendert ?? '?') + '% geaendert'
         : 'eigen' + (data.verfeinertGrund ? ' · ' + String(data.verfeinertGrund).slice(0, 40) : '');
       setPhotos(p => p.map(x => x.id === photo.id
         ? { ...x, processed: result, processing: false, wegText: weg }

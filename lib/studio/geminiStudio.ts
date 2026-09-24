@@ -98,6 +98,18 @@ function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
 }
 
+/** Anteil deutlich veraenderter Bildpunkte in Prozent, an 256er-Miniaturen. */
+async function anteilGeaendert(a: Buffer, b: Buffer): Promise<number> {
+  const masse = { width: 256, height: 256, fit: 'fill' as const };
+  const [ga, gb] = await Promise.all([
+    sharp(a).flatten({ background: '#808080' }).resize(masse).greyscale().raw().toBuffer(),
+    sharp(b).flatten({ background: '#808080' }).resize(masse).greyscale().raw().toBuffer(),
+  ]);
+  let zaehler = 0;
+  for (let i = 0; i < ga.length; i++) if (Math.abs(ga[i] - gb[i]) > 25) zaehler++;
+  return (zaehler / ga.length) * 100;
+}
+
 /** Mittlere Abweichung zweier Graustufen-Miniaturen, als Aehnlichkeit 0 bis 1. */
 async function aehnlichkeit(a: Buffer, b: Buffer): Promise<number> {
   const masse = { width: 96, height: 96, fit: 'fill' as const };
@@ -151,6 +163,16 @@ async function fahrzeugAehnlichkeit(a: Buffer, b: Buffer): Promise<number | null
 export interface StudioErgebnis {
   bild: Buffer;
   aehnlich: number;
+  /**
+   * Anteil der Bildpunkte, die sich deutlich geaendert haben, in Prozent.
+   *
+   * Die Aehnlichkeit allein sagt zu wenig: Ein Bild, an dem Gemini nur
+   * die Scheiben gesaeubert hat, und ein Bild, das es unveraendert
+   * zurueckschickt, liegen beide bei 0,98. Dieser Wert unterscheidet
+   * beide Faelle — bei einer echten Aenderung liegt er ueber 1 Prozent,
+   * bei einer blossen Rueckgabe nahe null.
+   */
+  geaendert: number;
 }
 
 /**
@@ -246,7 +268,7 @@ export async function studioBildMitGemini(
       console.warn('[gemini-studio] verworfen: Fahrzeug weicht zu stark ab');
       return null;
     }
-    return { bild, aehnlich };
+    return { bild, aehnlich, geaendert: await anteilGeaendert(foto, bild) };
   } catch (err) {
     console.error('[gemini-studio] fehlgeschlagen:', err);
     return null;
@@ -359,13 +381,15 @@ export async function studioVerfeinernMitGemini(
       .toBuffer();
 
     const aehnlich = await aehnlichkeit(komponiert, bild);
-    console.info('[gemini-verfeinern] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3));
+    const geaendert = await anteilGeaendert(komponiert, bild);
+    console.info('[gemini-verfeinern] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3),
+      'geaendert', geaendert.toFixed(1) + '%');
     if (aehnlich < VERFEINERN_MIN) {
       letzterGrund = `verworfen, Aehnlichkeit ${aehnlich.toFixed(3)} unter ${VERFEINERN_MIN}`;
       console.warn('[gemini-verfeinern] verworfen: Bild weicht zu stark ab');
       return null;
     }
-    return { bild, aehnlich };
+    return { bild, aehnlich, geaendert };
   } catch (err) {
     letzterGrund = 'Fehler: ' + (err instanceof Error ? err.message : String(err));
     console.error('[gemini-verfeinern] fehlgeschlagen:', err);

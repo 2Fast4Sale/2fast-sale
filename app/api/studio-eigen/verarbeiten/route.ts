@@ -518,6 +518,8 @@ export async function POST(req: NextRequest) {
      * Groessenangaben im Text haelt sich das Modell nicht.
      */
     let verfeinert: false | number = false;
+    /* Wie viel Prozent des Bildes Gemini wirklich angefasst hat. */
+    let geaendert = 0;
     if (geminiWeg) {
       const fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
       /*
@@ -552,6 +554,7 @@ export async function POST(req: NextRequest) {
         });
         ergebnis = { ...ergebnis, bild: fein.bild };
         verfeinert = Number(fein.aehnlich.toFixed(3));
+        geaendert = Number(fein.geaendert.toFixed(1));
       }
     }
 
@@ -614,6 +617,8 @@ export async function POST(req: NextRequest) {
       verfeinertGrund: verfeinert === false ? (letzterGrund || 'Gemini aus') : '',
       /* Welches Bildmodell gefragt wurde — sonst raet man, ob das grosse oder das kleine lief. */
       modell: GENUTZTES_MODELL,
+      /* Anteil wirklich geaenderter Bildpunkte in Prozent. */
+      geaendert,
       geminiSchatten,
       sandbox,
     });
