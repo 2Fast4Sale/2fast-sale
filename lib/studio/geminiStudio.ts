@@ -56,7 +56,13 @@ const anweisung = (firma?: string | null) =>
   + 'You ARE allowed to move the car within the room, to shift it left, right, up or down, to scale it larger or smaller, and to rotate it very slightly, so that it is positioned perfectly on the floor. '
   + 'Every wheel that is visible must rest exactly on the floor surface, with the tyre contact patch touching the ground, so the car neither floats above the floor nor sinks into it. '
   + 'The whole car must stand on the floor area of the room and must never cross or overlap the edge where the floor meets the back wall. '
-  + 'Choose a size for the car that fits the room naturally, leaving clear floor space in front of it and around it. '
+  + 'The room must keep exactly the size it has in image 2: do not move the walls closer, do not lower the ceiling, do not zoom in, and keep the ceiling lights, the wall edges and the floor pattern at the same size and in the same place as in image 2. '
+  + 'Treat image 2 as a finished photograph of a room that you are not allowed to change: keep its camera position, its field of view and its framing exactly, and only paste the car into it. '
+  + 'Size the car so that it covers about 55 percent of the image width and never more than 65 percent, measured from its rearmost point to its foremost point. '
+  + 'Leave a wide empty margin around the car: at least 15 percent of the image width of bare floor between the car and the left edge, the same on the right, and the highest point of the roof must stay below the middle height of the picture. '
+  + 'Do not zoom in on the car, do not crop the room, and do not make the hall look small or narrow: a viewer must see a small car standing in a big empty hall. '
+  + 'Respect real proportions: a passenger car is about 1.5 metres high and the hall is about 3 metres high, so the empty space above the roof of the car must be roughly as tall as the car itself. '
+  + 'Never crop the car: the whole vehicle, including both bumpers and all wheels, must be inside the picture with clear margin to every edge. '
   + 'Keep the camera angle and the perspective of the car itself exactly as in image 1; you may only translate, scale and very slightly rotate it, never re-photograph it from a different side. '
   + 'Never mirror or flip the car: the side of the car that faces the camera in image 1 must face the camera in the result, the steering wheel must stay on the same side, and the car must keep pointing in the same direction. '
   + 'Align the car so that its ground plane matches the floor plane of the room, so the perspective of the car and the perspective of the room agree. '
@@ -231,6 +237,103 @@ export async function studioBildMitGemini(
     return { bild, aehnlich };
   } catch (err) {
     console.error('[gemini-studio] fehlgeschlagen:', err);
+    return null;
+  }
+}
+
+/*
+ * ── Zweiter Weg: Gemini verfeinert nur ─────────────────────────────
+ *
+ * Warum es diesen Weg gibt: Gemini haelt sich nicht an Groessenangaben.
+ * Zwei Versuche mit klaren Zahlen im Text ("etwa 55 Prozent der
+ * Bildbreite, hoechstens 65", "mindestens 15 Prozent freier Boden an
+ * jeder Seite") aenderten nichts — das Auto fuellte weiter fast das
+ * ganze Bild, und die Halle wirkte wie eine Garage.
+ *
+ * Also bestimmt der Kompositor die Groesse, und Gemini bekommt das
+ * fertig zusammengesetzte Bild. Es darf dann nur noch das tun, was es
+ * wirklich besser kann als eine Rechnung: Schatten, Licht und die
+ * Spiegelungen in den Scheiben.
+ *
+ * Weil Lage und Groesse festliegen, vergleicht die Pruefung hier das
+ * GANZE Bild und darf streng sein.
+ */
+const VERFEINERN_MIN = Number(process.env.GEMINI_VERFEINERN_MIN || '0.90');
+
+const VERFEINERN =
+  'Image 1 is a photograph of a car that has already been placed into a showroom, at exactly the right size and in exactly the right position. '
+  + 'Your only job is to make image 1 look like a real photograph taken in that showroom. '
+  + 'Keep the car exactly where it is and exactly as large as it is: do not move it, do not scale it, do not rotate it, do not mirror it and do not re-frame the picture. '
+  + 'Keep the room exactly as it is: same walls, same floor, same lights, same camera, same framing. '
+  + 'Add a realistic soft ground shadow under the car, darkest under the tyres and the underbody, fading out softly, lying only on the floor and never on the walls. '
+  + 'Match the brightness, contrast and white balance of the car to the light of the room, without repainting the car. '
+  + 'The windows still reflect the place where the car was photographed, so replace those reflections with the calm reflections of this showroom, and remove anything foreign that is visible through the glass, such as other cars, fences, trees, buildings or people. '
+  + 'Keep the glass transparent where it was transparent, keep the interior visible, and keep the tint exactly as dark as it is. '
+  + 'The car itself must stay exactly as photographed: same shape, same colour, same wheels, same badges, same trim, same mirrors. '
+  + 'Where the number plate would be there is a dealer sign; keep it in the same place with exactly the same text, letter for letter, and never show the original number plate. '
+  + 'Never hide, smooth or repair a scratch, a dent, rust, dirt, a sticker or any damage, neither in the paint nor in the glass. '
+  + 'Do not add people, other vehicles, plants, text, logos or watermarks, and return exactly one photorealistic image with the same dimensions as image 1.';
+
+/**
+ * Nimmt das fertig zusammengesetzte Studiobild und laesst Gemini nur
+ * Schatten, Licht und Scheiben verbessern.
+ *
+ * null heisst: nicht verwendbar — dann bleibt das Bild des Kompositors.
+ */
+export async function studioVerfeinernMitGemini(
+  komponiert: Buffer,
+): Promise<StudioErgebnis | null> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+
+  const start = Date.now();
+  try {
+    const eingabe = await sharp(komponiert).resize(1536, 1536, { fit: 'inside' })
+      .jpeg({ quality: 92 }).toBuffer();
+
+    const antwort = await mitZeitlimit(fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODELL}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: VERFEINERN },
+              { inline_data: { mime_type: 'image/jpeg', data: eingabe.toString('base64') } },
+            ],
+          }],
+        }),
+      },
+    ), ZEITLIMIT_MS);
+
+    if (!antwort || !antwort.ok) {
+      console.warn('[gemini-verfeinern] Antwort nicht brauchbar:', antwort?.status);
+      return null;
+    }
+
+    const daten = await antwort.json();
+    const teile = daten?.candidates?.[0]?.content?.parts ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const teil = teile.find((p: any) => p.inline_data?.data || p.inlineData?.data);
+    const b64 = teil?.inline_data?.data ?? teil?.inlineData?.data;
+    if (!b64) return null;
+
+    const masse = await sharp(komponiert).metadata();
+    const bild = await sharp(Buffer.from(b64, 'base64'))
+      .resize(masse.width, masse.height, { fit: 'fill' })
+      .jpeg({ quality: 92 })
+      .toBuffer();
+
+    const aehnlich = await aehnlichkeit(komponiert, bild);
+    console.info('[gemini-verfeinern] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3));
+    if (aehnlich < VERFEINERN_MIN) {
+      console.warn('[gemini-verfeinern] verworfen: Bild weicht zu stark ab');
+      return null;
+    }
+    return { bild, aehnlich };
+  } catch (err) {
+    console.error('[gemini-verfeinern] fehlgeschlagen:', err);
     return null;
   }
 }

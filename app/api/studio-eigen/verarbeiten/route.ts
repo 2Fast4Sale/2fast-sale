@@ -9,7 +9,7 @@ import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
-import { studioBildMitGemini } from '../../../../lib/studio/geminiStudio';
+import { studioVerfeinernMitGemini } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
     let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0 && !geminiWeg) {
+      if (roh.length > 0) {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -380,7 +380,6 @@ export async function POST(req: NextRequest) {
          * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
          * Modell nicht.
          */
-        if (geminiWeg) throw new Error('Gemini setzt das Schild');
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -475,65 +474,37 @@ export async function POST(req: NextRequest) {
       hg = await studioHintergrund(gerechnet, zielBreite, zielHoehe);
     }
 
+    let ergebnis = await komponieren(freigestellt, hg, {
+      ...STANDARD, ...ausRaum, ...(kompositor ?? {}),
+    });
+
     /*
-     * ── Weg 3: Gemini macht das ganze Bild ─────────────────────────
+     * ── Gemini verfeinert das fertige Bild ─────────────────────────
      *
-     * Nur mit STUDIO_WEG=gemini und gesetztem Schluessel. Gedacht fuer
-     * Fotos, an denen das kostenlose Freistellen scheitert (dunkles Auto
-     * auf dunklem Pflaster). Kostet rund 3 Cent je Bild.
+     * Nur mit STUDIO_WEG=gemini. Gemini bekommt das Bild, in dem der
+     * Wagen schon an der richtigen Stelle und in der richtigen Groesse
+     * steht, und verbessert daran Schatten, Licht und die Spiegelungen
+     * in den Scheiben.
      *
-     * Die Pruefung steckt in geminiStudio.ts: Weicht das Fahrzeug zu
-     * stark vom Original ab, kommt null zurueck, und es geht unten ganz
-     * normal weiter. Ein geschoentes Auto darf nie in ein Inserat.
+     * Der Weg davor liess Gemini das ganze Bild bauen. Das Ergebnis war
+     * unbrauchbar: Das Auto fuellte fast das ganze Bild, die Halle sah
+     * winzig aus, und zweimal wurde der Wagen sogar gespiegelt. An
+     * Groessenangaben im Text haelt sich das Modell nicht.
      */
-    if (process.env.STUDIO_WEG === 'gemini' && process.env.GEMINI_API_KEY) {
-      const quelle = roh.length > 0 ? roh : freigestellt;
-      const ki = await studioBildMitGemini(quelle, hg, zielBreite, zielHoehe, firma ?? null);
-      if (ki) {
-        /* Das Schild hat Gemini gesetzt, siehe seine Anweisung. */
-        kennzeichenErsetzt = true;
-        kennzeichenQuelle = 'gemini';
+    if (geminiWeg) {
+      const fein = await studioVerfeinernMitGemini(ergebnis.bild);
+      if (fein) {
         await logApiCost({
           userId: await currentUserId(),
           draftId: draftId ?? null,
           service: 'gemini_bild',
-          operation: 'studio-komplett',
+          operation: 'studio-verfeinern',
           unitsIn: 1,
           costMicros: imageCostMicros('gemini_bild'),
         });
-        return NextResponse.json({
-          result: `data:image/jpeg;base64,${ki.bild.toString('base64')}`,
-          kennzeichenErsetzt,
-          kennzeichenQuelle,
-          gemini: true,
-          aehnlichkeit: Number(ki.aehnlich.toFixed(3)),
-          sandbox,
-        });
-      }
-      console.warn('[verarbeiten] Gemini-Studio nicht verwendbar, nehme den eigenen Weg');
-      /*
-       * Gemini hat abgelehnt und damit auch das Schild nicht gesetzt.
-       * Jetzt nachholen, bevor irgendetwas anderes passiert.
-       */
-      try {
-        const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(freigestellt);
-        const kasten = fund && fund !== 'keins' ? fund : null;
-        const kz = kasten
-          ? await ersetzeKennzeichenImKasten(freigestellt, kasten, firma ?? null)
-          : fund === 'keins'
-            ? { bild: freigestellt, ersetzt: false }
-            : await ersetzeKennzeichen(freigestellt, firma ?? null);
-        freigestellt = kz.bild;
-        kennzeichenErsetzt = kz.ersetzt;
-        kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
-      } catch (err) {
-        console.error('[verarbeiten] Schild nachholen fehlgeschlagen:', err);
+        ergebnis = { ...ergebnis, bild: fein.bild };
       }
     }
-
-    let ergebnis = await komponieren(freigestellt, hg, {
-      ...STANDARD, ...ausRaum, ...(kompositor ?? {}),
-    });
 
     /*
      * Schatten von Gemini, falls ein Schluessel gesetzt ist. Gemini bekommt
