@@ -547,6 +547,51 @@ export async function POST(req: NextRequest) {
         }
       }
       /*
+       * Zweiter Anlauf, wenn die Scheiben ausgelassen wurden.
+       *
+       * Gemini pickt sich manchmal nur den Schatten heraus: Das Bild
+       * aendert sich dann um mehrere Prozent, die obere Haelfte des
+       * Fahrzeugs aber so gut wie gar nicht. Gemessen an gelungenen
+       * Durchlaeufen liegt dieser Wert bei 7 Prozent, bei uebergangener
+       * Aufgabe nahe null.
+       *
+       * Dann bekommt es dieselbe Aufgabe noch einmal — auf dem bereits
+       * verbesserten Bild, damit Schatten und Licht erhalten bleiben.
+       * Das kostet nur in diesem Fall einen zweiten Aufruf.
+       */
+      if (fein && fahrzeugGeaendert < 1.5) {
+        console.warn('[verarbeiten] Scheiben kaum veraendert (' + fahrzeugGeaendert + '%), zweiter Anlauf');
+        const zweiter = await studioVerfeinernMitGemini(fein.bild, firma ?? null);
+        if (zweiter) {
+          await logApiCost({
+            userId: await currentUserId(),
+            draftId: draftId ?? null,
+            service: 'gemini_bild',
+            operation: 'studio-verfeinern-2',
+            unitsIn: 1,
+            costMicros: imageCostMicros('gemini_bild'),
+          });
+          try {
+            const em2 = await sharp(ergebnis.fahrzeugEbene.bild).metadata();
+            const breit2 = Math.max(8, Math.min(em2.width ?? 0, ergebnis.breite - ergebnis.fahrzeugEbene.left));
+            const hoch2 = Math.max(8, Math.round((em2.height ?? 0) * 0.55));
+            const neuWert = await anteilGeaendertImKasten(vorherBild, zweiter.bild, {
+              left: Math.max(0, ergebnis.fahrzeugEbene.left),
+              top: Math.max(0, ergebnis.fahrzeugEbene.top),
+              width: breit2,
+              height: Math.min(hoch2, ergebnis.hoehe - Math.max(0, ergebnis.fahrzeugEbene.top)),
+            });
+            if (neuWert > fahrzeugGeaendert) {
+              fein.bild = zweiter.bild;
+              fahrzeugGeaendert = Number(neuWert.toFixed(1));
+              verfeinert = Number(zweiter.aehnlich.toFixed(3));
+            }
+          } catch (err) {
+            console.warn('[verarbeiten] zweiter Anlauf nicht messbar:', err);
+          }
+        }
+      }
+      /*
        * Sicherheitsnetz nach der Verfeinerung.
        *
        * Gemini soll das Kennzeichen abdecken, hat es aber im Live-Betrieb
