@@ -937,7 +937,21 @@ export async function komponieren(
   }
 
   const bodenLinie = zielHoehe * (1 - bodenabstand);
-  const maxHoehe = Math.max(1, bodenLinie * 0.95);
+  /*
+   * Zwei Grenzen fuer die Groesse, nicht nur eine.
+   *
+   * Bisher zaehlte allein die Breite. Ein Kombi von der Seite ist im
+   * Bild rund 2,7-mal so breit wie hoch — da passt das. Ein SUV von
+   * schraeg vorn ist aber nur etwa 1,5-mal so breit wie hoch: Auf
+   * dieselbe Breite gezogen stiess sein Dach fast an die Decke, und der
+   * Wagen wirkte groesser als die Halle. Am Audi Q7 war genau das zu
+   * sehen.
+   *
+   * Deshalb zusaetzlich eine Hoehengrenze. Ein Auto ist etwa halb so
+   * hoch wie eine Halle; mehr als die Haelfte der Bildhoehe darf es
+   * deshalb nie einnehmen.
+   */
+  const maxHoehe = Math.max(1, Math.min(bodenLinie * 0.95, zielHoehe * 0.5));
   let fBreite = Math.max(1, Math.round(zielBreite * e.breitenanteil * wandFaktor));
   let fHoehe  = Math.max(1, Math.round((fBreite / zBreite) * zHoehe));
   if (fHoehe > maxHoehe) {
