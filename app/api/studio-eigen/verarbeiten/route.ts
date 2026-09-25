@@ -9,7 +9,7 @@ import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
-import { studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL } from '../../../../lib/studio/geminiStudio';
+import { studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -520,7 +520,10 @@ export async function POST(req: NextRequest) {
     let verfeinert: false | number = false;
     /* Wie viel Prozent des Bildes Gemini wirklich angefasst hat. */
     let geaendert = 0;
+    /* Anteil geaenderter Punkte an der oberen Fahrzeughaelfte (Scheiben). */
+    let fahrzeugGeaendert = 0;
     if (geminiWeg) {
+      const vorherBild = ergebnis.bild;
       const fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
       /*
        * Kein Gemini-Bild: Dann hat auch niemand das Kennzeichen
@@ -588,6 +591,26 @@ export async function POST(req: NextRequest) {
         ergebnis = { ...ergebnis, bild: fein.bild };
         verfeinert = Number(fein.aehnlich.toFixed(3));
         geaendert = Number(fein.geaendert.toFixed(1));
+        /*
+         * Getrennt messen, wie viel sich an der oberen Haelfte des
+         * Fahrzeugs geaendert hat. Dort sitzen die Scheiben. Bleibt der
+         * Wert nahe null, hat Gemini nur Schatten und Licht gemacht und
+         * die Spiegelungen ausgelassen — genau der Fall, der im Bild
+         * aussieht, als waere nichts passiert.
+         */
+        try {
+          const em = await sharp(ergebnis.fahrzeugEbene.bild).metadata();
+          const breit = Math.max(8, Math.min(em.width ?? 0, ergebnis.breite - ergebnis.fahrzeugEbene.left));
+          const hoch = Math.max(8, Math.round((em.height ?? 0) * 0.55));
+          fahrzeugGeaendert = Number((await anteilGeaendertImKasten(vorherBild, fein.bild, {
+            left: Math.max(0, ergebnis.fahrzeugEbene.left),
+            top: Math.max(0, ergebnis.fahrzeugEbene.top),
+            width: breit,
+            height: Math.min(hoch, ergebnis.hoehe - Math.max(0, ergebnis.fahrzeugEbene.top)),
+          })).toFixed(1));
+        } catch (err) {
+          console.warn('[verarbeiten] Fahrzeugbereich nicht messbar:', err);
+        }
       }
     }
 
@@ -652,6 +675,8 @@ export async function POST(req: NextRequest) {
       modell: GENUTZTES_MODELL,
       /* Anteil wirklich geaenderter Bildpunkte in Prozent. */
       geaendert,
+      /* Davon an der oberen Fahrzeughaelfte, wo die Scheiben sitzen. */
+      fahrzeugGeaendert,
       geminiSchatten,
       sandbox,
     });

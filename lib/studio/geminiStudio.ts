@@ -343,6 +343,27 @@ export let letzterGrund = '';
 /** Welches Modell tatsaechlich gefragt wurde — zur Anzeige im Browser. */
 export const GENUTZTES_MODELL = MODELL;
 
+/**
+ * Anteil geaenderter Bildpunkte in einem Ausschnitt, in Prozent.
+ *
+ * Gebraucht fuer die obere Haelfte des Fahrzeugs: Dort sitzen die
+ * Scheiben. Ein Schatten auf dem Boden aendert das Gesamtbild, laesst
+ * diesen Ausschnitt aber unberuehrt — nur so ist zu erkennen, ob Gemini
+ * die Spiegelungen wirklich angefasst hat.
+ */
+export async function anteilGeaendertImKasten(
+  a: Buffer,
+  b: Buffer,
+  kasten: { left: number; top: number; width: number; height: number },
+): Promise<number> {
+  const schneiden = (bild: Buffer) =>
+    sharp(bild).extract(kasten).resize(192, 192, { fit: 'fill' }).greyscale().raw().toBuffer();
+  const [ga, gb] = await Promise.all([schneiden(a), schneiden(b)]);
+  let zaehler = 0;
+  for (let i = 0; i < ga.length; i++) if (Math.abs(ga[i] - gb[i]) > 25) zaehler++;
+  return (zaehler / ga.length) * 100;
+}
+
 export async function studioVerfeinernMitGemini(
   komponiert: Buffer,
   /** Name fuers Haendlerschild, nur zur Information fuer das Modell. */
