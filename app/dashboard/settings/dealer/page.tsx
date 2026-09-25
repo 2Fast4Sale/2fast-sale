@@ -40,30 +40,36 @@ export default function DealerSettingsPage() {
   const [speicherFehler, setSpeicherFehler] = useState('');
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
-      const { data } = await supabase.from('profiles')
-        .select('*').eq('id', user.id).single();
-      if (data) {
-        setProfile({
-          company:   data.company    || '',
-          full_name: data.full_name  || '',
-          phone:     data.phone      || '',
-          email:     user.email      || '',
-          website:   data.website    || '',
-          address:   data.address    || '',
-        });
-        setAiStyle(data.ai_style_template || '');
-        setAiTitle(data.ai_title_template || '');
-        setDefaultBg(data.default_background || 'studio_white');
-        setPlan(data.plan || 'free');
+    /*
+     * Laden ueber den Server, aus demselben Grund wie das Speichern:
+     * Die Zugriffsregel auf der Tabelle gibt dem Browser nichts zurueck.
+     */
+    (async () => {
+      try {
+        const antwort = await fetch('/api/haendler-profil');
+        const daten = await antwort.json().catch(() => ({}));
+        const p = daten?.profil;
+        if (p) {
+          setProfile({
+            company:   p.company    || '',
+            full_name: p.full_name  || '',
+            phone:     p.phone      || '',
+            email:     daten.email  || '',
+            website:   p.website    || '',
+            address:   p.address    || '',
+          });
+          setAiStyle(p.ai_style_template || '');
+          setAiTitle(p.ai_title_template || '');
+          setDefaultBg(p.default_background || 'studio_white');
+          setPlan(p.plan || 'free');
+        }
+      } catch (err) {
+        console.error('[Haendler-Profil] Laden fehlgeschlagen:', err);
       }
       setWatermark(localStorage.getItem('dealer_watermark') === 'true');
       setLoading(false);
-    });
+    })();
   }, []);
-
   const save = async () => {
     setSaving(true);
     const supabase = createClient();

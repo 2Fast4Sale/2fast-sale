@@ -56,3 +56,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unerwarteter Fehler beim Speichern.' }, { status: 500 });
   }
 }
+
+/**
+ * Profil laden.
+ *
+ * Aus demselben Grund wie das Speichern: Sperrt die Zugriffsregel die
+ * Tabelle, bekommt der Browser beim Lesen einfach nichts zurueck — die
+ * Felder blieben leer, und es sah aus, als waere nichts gespeichert
+ * worden.
+ */
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      return NextResponse.json({ error: 'Server ist nicht vollstaendig eingerichtet.' }, { status: 503 });
+    }
+
+    const dienst = createServiceClient(url, key);
+    const { data, error } = await dienst.from('profiles')
+      .select('company, full_name, phone, website, address, ai_style_template, ai_title_template, default_background, plan')
+      .eq('id', user.id).maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ profil: data ?? null, email: user.email ?? '' });
+  } catch (err) {
+    console.error('[haendler-profil] Laden fehlgeschlagen:', err);
+    return NextResponse.json({ error: 'Unerwarteter Fehler beim Laden.' }, { status: 500 });
+  }
+}
