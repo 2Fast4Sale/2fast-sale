@@ -74,45 +74,44 @@ export default function DealerSettingsPage() {
       return;
     }
     setSpeicherFehler('');
-    const { error } = await supabase.from('profiles').upsert({
-      id:                 user.id,
-      full_name:          profile.full_name,
-      company:            profile.company,
-      phone:              profile.phone,
-      website:            profile.website,
-      address:            profile.address,
-      ai_style_template:  aiStyle,
-      ai_title_template:  aiTitle,
-      default_background: defaultBg,
-    });
     /*
-     * Fehler nicht mehr verschlucken.
+     * Ueber den Server speichern, nicht direkt aus dem Browser.
      *
-     * Vorher meldete die Seite "Alles gespeichert", auch wenn die
-     * Datenbank die Zeile abgelehnt hat. Der Firmenname war dann nach dem
-     * naechsten Laden wieder weg, und niemand konnte sehen, warum.
+     * Der direkte Weg lief still ins Leere: Der Knopf meldete Erfolg, in
+     * der Datenbank blieb `company` leer. Der Server prueft die Sitzung
+     * und schreibt die eigene Zeile, an der Zugriffsregel vorbei.
      */
-    if (error) {
-      console.error('[Haendler-Profil] Speichern fehlgeschlagen:', error);
-      setSpeicherFehler(error.message || 'Unbekannter Fehler beim Speichern.');
+    const antwort = await fetch('/api/haendler-profil', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name:          profile.full_name,
+        company:            profile.company,
+        phone:              profile.phone,
+        website:            profile.website,
+        address:            profile.address,
+        ai_style_template:  aiStyle,
+        ai_title_template:  aiTitle,
+        default_background: defaultBg,
+      }),
+    });
+    const daten = await antwort.json().catch(() => ({}));
+    if (!antwort.ok) {
+      console.error('[Haendler-Profil] Speichern fehlgeschlagen:', daten);
+      setSpeicherFehler(daten.error || ('Server ' + antwort.status));
       setSaving(false);
       return;
     }
-
-    localStorage.setItem('dealer_company',    profile.company);
-    localStorage.setItem('dealer_watermark',  watermark ? 'true' : 'false');
-    localStorage.setItem('dealer_default_bg', defaultBg);
-
-    /* Gegenprobe: Was steht jetzt wirklich in der Datenbank? */
-    const { data: geprueft } = await supabase.from('profiles')
-      .select('company').eq('id', user.id).single();
-    if ((geprueft?.company ?? '') !== profile.company) {
+    if ((daten.gespeichert?.company ?? '') !== profile.company) {
       setSpeicherFehler(
-        'Gespeichert wurde "' + (geprueft?.company ?? '') + '" statt "' + profile.company + '".',
+        'Gespeichert wurde "' + (daten.gespeichert?.company ?? '') + '" statt "' + profile.company + '".',
       );
       setSaving(false);
       return;
     }
+    localStorage.setItem('dealer_company',    profile.company);
+    localStorage.setItem('dealer_watermark',  watermark ? 'true' : 'false');
+    localStorage.setItem('dealer_default_bg', defaultBg);
 
     setSaving(false);
     setSaved(true);
