@@ -36,6 +36,8 @@ export default function DealerSettingsPage() {
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
+  /* Klartext, wenn das Speichern scheitert — vorher wurde der Fehler verschluckt. */
+  const [speicherFehler, setSpeicherFehler] = useState('');
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,8 +68,13 @@ export default function DealerSettingsPage() {
     setSaving(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from('profiles').upsert({
+    if (!user) {
+      setSpeicherFehler('Nicht angemeldet. Bitte neu einloggen.');
+      setSaving(false);
+      return;
+    }
+    setSpeicherFehler('');
+    const { error } = await supabase.from('profiles').upsert({
       id:                 user.id,
       full_name:          profile.full_name,
       company:            profile.company,
@@ -78,9 +85,35 @@ export default function DealerSettingsPage() {
       ai_title_template:  aiTitle,
       default_background: defaultBg,
     });
+    /*
+     * Fehler nicht mehr verschlucken.
+     *
+     * Vorher meldete die Seite "Alles gespeichert", auch wenn die
+     * Datenbank die Zeile abgelehnt hat. Der Firmenname war dann nach dem
+     * naechsten Laden wieder weg, und niemand konnte sehen, warum.
+     */
+    if (error) {
+      console.error('[Haendler-Profil] Speichern fehlgeschlagen:', error);
+      setSpeicherFehler(error.message || 'Unbekannter Fehler beim Speichern.');
+      setSaving(false);
+      return;
+    }
+
     localStorage.setItem('dealer_company',    profile.company);
     localStorage.setItem('dealer_watermark',  watermark ? 'true' : 'false');
     localStorage.setItem('dealer_default_bg', defaultBg);
+
+    /* Gegenprobe: Was steht jetzt wirklich in der Datenbank? */
+    const { data: geprueft } = await supabase.from('profiles')
+      .select('company').eq('id', user.id).single();
+    if ((geprueft?.company ?? '') !== profile.company) {
+      setSpeicherFehler(
+        'Gespeichert wurde "' + (geprueft?.company ?? '') + '" statt "' + profile.company + '".',
+      );
+      setSaving(false);
+      return;
+    }
+
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -348,6 +381,12 @@ export default function DealerSettingsPage() {
           : saved ? <><CheckCircle2 size={17} /> Alles gespeichert!</>
           : <><Save size={17} /> Händler-Profil speichern</>}
       </button>
+
+      {speicherFehler && (
+        <div style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#b91c1c', fontSize: '13px', fontWeight: 600 }}>
+          Nicht gespeichert: {speicherFehler}
+        </div>
+      )}
 
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
