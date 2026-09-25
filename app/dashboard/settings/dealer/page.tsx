@@ -387,6 +387,17 @@ export default function DealerSettingsPage() {
           : <><Save size={17} /> Händler-Profil speichern</>}
       </button>
 
+      {/*
+        * Sichtbare Kennung der Fassung.
+        *
+        * Beim Suchen eines Speicherfehlers war nie klar, ob der Browser
+        * noch die alte Seite aus dem Zwischenspeicher zeigt. Diese Zeile
+        * beantwortet das in einer Sekunde.
+        */}
+      <div style={{ marginTop: '10px', fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+        Speichern über Server · Fassung 2
+      </div>
+
       {speicherFehler && (
         <div style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', color: '#b91c1c', fontSize: '13px', fontWeight: 600 }}>
           Nicht gespeichert: {speicherFehler}
