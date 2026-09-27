@@ -135,22 +135,22 @@ export default function FeaturesPage() {
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: 'linear-gradient(rgba(99,102,241,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.025) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
 
       {/* Navbar */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(5,13,26,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #f8fafc', padding: '0 48px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav className="kopf-leiste" style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(5,13,26,0.92)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #f8fafc', padding: '0 48px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '14px' }}>
             <ArrowLeft size={15} /> Startseite
           </Link>
-          <Link href="/" style={{ textDecoration: 'none', fontSize: '18px', fontWeight: '800', color: TH, letterSpacing: '-0.5px' }}>
+          <Link href="/" className="kopf-logo" style={{ textDecoration: 'none', fontSize: '18px', fontWeight: '800', color: TH, letterSpacing: '-0.5px' }}>
             2Fast<span style={{ color: '#6366f1' }}>4</span>Sale
           </Link>
         </div>
-        <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '700' }}>
+        <Link href="/auth/register" className="kopf-knopf" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', textDecoration: 'none', padding: '9px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', whiteSpace: 'nowrap' }}>
           Kostenlos starten <ArrowRight size={14} />
         </Link>
       </nav>
 
       {/* Hero */}
-      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '100px 48px 80px' }}>
+      <div className="kopf-bereich" style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '100px 48px 80px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '5px 16px', borderRadius: '100px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', fontSize: '12px', fontWeight: '700', color: '#6366f1', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '24px' }}>
           <Sparkles size={13} /> Alle Features
         </div>

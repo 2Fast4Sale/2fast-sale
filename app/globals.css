@@ -369,3 +369,29 @@ button {
     min-height: 44px;
   }
 }
+
+/*
+ * Kopfzeile der Unterseiten auf dem Handy.
+ *
+ * Bei 375 Punkten standen "Startseite", das Logo und der Knopf
+ * "Kostenlos starten" uebereinander — das Logo verschwand hinter dem
+ * Knopf. Auf schmalen Geraeten faellt das Logo weg: Es steht ohnehin
+ * schon im Zurueck-Link zur Startseite, und der Knopf ist wichtiger.
+ */
+@media (max-width: 768px) {
+  .kopf-leiste {
+    padding: 0 16px !important;
+  }
+  .kopf-logo {
+    display: none !important;
+  }
+  .kopf-knopf {
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+  }
+  .kopf-bereich {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 56px !important;
+  }
+}
