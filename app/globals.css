@@ -395,3 +395,19 @@ button {
     padding-top: 56px !important;
   }
 }
+
+/*
+ * Telefon- und E-Mail-Links auf dem Handy.
+ *
+ * Gemessen waren sie 20 Punkte hoch. Genau diese beiden trifft man mit
+ * dem Daumen am haeufigsten — ein Haendler, der anrufen will, tippt auf
+ * die Nummer und landet daneben.
+ */
+@media (max-width: 768px) {
+  a[href^="tel:"],
+  a[href^="mailto:"] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
