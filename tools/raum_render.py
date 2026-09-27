@@ -441,6 +441,173 @@ def licht():
     bpy.context.scene.world = welt
 
 
+def showroom(wandfarbe, bodenfarbe, sockel, wandsatz, bodensatz):
+    """
+    Grosse Ausstellungshalle: 30 m tief, 32 m breit, 8 m hoch.
+
+    ── Warum so gross ────────────────────────────────────────────────
+
+    Die erste Fassung war 16 m tief und 5 m hoch. Trotzdem wirkte sie
+    eng, und ein Q7 sah darin aus wie in einer Garage. Der Grund ist
+    nicht die Zahl, sondern der fehlende Massstab: Eine leere weisse
+    Wand koennte 3 m oder 30 m entfernt sein, das Auge kann es nicht
+    entscheiden — und im Zweifel liest es klein.
+
+    ── Woran man Groesse erkennt ─────────────────────────────────────
+
+    An Wiederholung, die in die Tiefe laeuft. Deshalb hat diese Halle:
+
+    1. Stuetzen im Abstand von 8 m an beiden Seiten. Ihre Reihe gibt dem
+       Blick etwas zum Abzaehlen.
+    2. Dehnungsfugen im Boden alle 5 m, quer und laengs. Ein
+       Hallenboden wird in Feldern gegossen, und genau diese Felder
+       sagen dem Auge, wie weit hinten die Wand steht.
+    3. Lichtbaender in vier Reihen hintereinander, nach hinten kleiner
+       werdend.
+
+    Diese drei Dinge tun mehr fuer den Eindruck von Groesse als jede
+    Verdoppelung der Maszahlen.
+    """
+    m_wand  = material("Wand",  wandfarbe,  0.88, wandsatz,  kachel_m=3.0)
+    m_boden = material("Boden", bodenfarbe, 0.22, bodensatz, kachel_m=5.0)
+    # Ohne diese beiden Zeilen sieht der Raum aus wie aus dem Katalog.
+    schmutz_auf(m_boden, staerke=0.30, groesse=11.0)
+    schmutz_auf(m_wand,  staerke=0.16, groesse=16.0)
+    m_sock  = material("Sockel", sockel,    0.40)
+    m_decke = material("Decke", (0.82, 0.83, 0.85), 0.92)
+    m_fuge  = material("Fuge", (0.42, 0.42, 0.43), 0.75)
+    m_stuetze = material("Stuetze", (0.90, 0.90, 0.91), 0.70)
+
+    TIEFE, HALB, DECKE = 36.0, 19.0, 9.0
+
+    flaeche("Boden", 120, (0, 0, 0), (0, 0, 0), m_boden)
+    flaeche("Rueckwand", 120, (0, TIEFE, 0), (math.radians(90), 0, 0), m_wand)
+    flaeche("Decke", 120, (0, 0, DECKE), (math.radians(180), 0, 0), m_decke)
+    flaeche("WandLinks",  120, (-HALB, 0, 0), (0, math.radians(90), 0), m_wand)
+    flaeche("WandRechts", 120, ( HALB, 0, 0), (0, math.radians(90), 0), m_wand)
+
+    # Dehnungsfugen: hauchduenne dunkle Baender knapp ueber dem Boden.
+    for y in range(-10, int(TIEFE) + 1, 5):
+        quader((0, float(y), 0.002), (HALB, 0.02, 0.002), m_fuge)
+    for x in range(-15, 16, 5):
+        quader((float(x), 10.0, 0.002), (0.02, 22.0, 0.002), m_fuge)
+
+    # Stuetzen an beiden Seiten, alle 8 m.
+    for y in (8.0, 18.0, 28.0):
+        for x in (-13.5, 13.5):
+            quader((x, y, DECKE / 2), (0.45, 0.45, DECKE / 2), m_stuetze)
+
+    for ort, mass in (
+        ((0, TIEFE - 0.04, 0.07), (HALB, 0.06, 0.07)),
+        ((-HALB + 0.04, TIEFE / 2, 0.07), (0.06, TIEFE, 0.07)),
+        (( HALB - 0.04, TIEFE / 2, 0.07), (0.06, TIEFE, 0.07)),
+    ):
+        bpy.ops.mesh.primitive_cube_add(location=ort)
+        ob = bpy.context.active_object
+        ob.scale = mass
+        ob.data.materials.append(m_sock)
+
+    # Lichtbaender, vier Reihen in die Tiefe.
+    band = leuchtstoff("Lichtband", 16.0, (1.0, 0.97, 0.92))
+    for y in (3.0, 11.0, 19.0, 27.0):
+        for x in (-10.0, 0.0, 10.0):
+            quader((x, y, DECKE - 0.10), (3.0, 0.18, 0.05), band)
+
+    for y, kraft in ((3.0, 520), (11.0, 560), (19.0, 500), (27.0, 400)):
+        bpy.ops.object.light_add(type='AREA', location=(0, y, DECKE - 0.3))
+        l = bpy.context.active_object.data
+        l.shape = 'RECTANGLE'
+        l.size, l.size_y = 22.0, 2.4
+        l.energy = kraft
+        l.color = (1.0, 0.96, 0.90)
+
+    # Wandfluter fuer den Helligkeitsverlauf an der Rueckwand.
+    for x in (-6.0, 6.0):
+        bpy.ops.object.light_add(type='AREA', location=(x, TIEFE - 1.5, DECKE - 0.8))
+        l = bpy.context.active_object.data
+        l.shape = 'RECTANGLE'
+        l.size, l.size_y = 4.0, 0.5
+        l.energy = 220
+        bpy.context.active_object.rotation_euler = (math.radians(55), 0, 0)
+
+    welt = bpy.data.worlds.new("Welt")
+    welt.use_nodes = True
+    welt.node_tree.nodes["Background"].inputs["Color"].default_value = (0.5, 0.52, 0.55, 1)
+    welt.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.3
+    bpy.context.scene.world = welt
+
+
+def studio(wandfarbe, bodenfarbe, wandsatz, bodensatz, bodenrauheit=0.25):
+    """
+    Aufnahmestudio, wie es Haendler wirklich benutzen.
+
+    ── Was die Beispielbilder zeigen ─────────────────────────────────
+
+    Zwei echte Inseratfotos als Vorlage: eines von ClassicBid mit
+    dunklem Plattenboden vor heller Wand, eines von Autohero mit weisser
+    Hohlkehle. Beiden fehlt alles, was ich vorher gebaut habe — keine
+    Decke, keine Stuetzen, keine Raumecke, kein Hallentor.
+
+    Das ist kein Zufall, sondern der Trick: Jede sichtbare Kante sagt dem
+    Auge, wo die Wand steht. Ohne Kante kann es die Entfernung nicht
+    schaetzen, und der Raum wirkt gross. Meine Halle mit Stuetzen und
+    Deckenbaendern war das Gegenteil davon — sie hat jede Entfernung
+    vermessbar gemacht und dadurch klein gewirkt.
+
+    ── Wie hier Tiefe entsteht ───────────────────────────────────────
+
+    Nur ueber Licht: Hinter dem Fahrzeug ist die Wand am hellsten, nach
+    aussen faellt sie weich ab. Der Boden wird nach hinten dunkler. Das
+    sind dieselben zwei Verlaeufe, die in beiden Vorlagen zu sehen sind.
+    """
+    m_wand  = material("Wand",  wandfarbe,  0.90, wandsatz,  kachel_m=4.0)
+    m_boden = material("Boden", bodenfarbe, bodenrauheit, bodensatz, kachel_m=2.4)
+    schmutz_auf(m_boden, staerke=0.22, groesse=7.0)
+    schmutz_auf(m_wand,  staerke=0.12, groesse=14.0)
+
+    # Boden weit ueber den Bildrand hinaus, Wand in 13 m. Keine
+    # Seitenwaende, keine Decke: Was nicht im Bild ist, braucht es nicht,
+    # und jede zusaetzliche Flaeche wirft nur Licht zurueck, das die
+    # Vorlagen nicht haben.
+    flaeche("Boden", 80, (0, 0, 0), (0, 0, 0), m_boden)
+    flaeche("Rueckwand", 80, (0, 13.0, 0), (math.radians(90), 0, 0), m_wand)
+
+    # ── Licht ─────────────────────────────────────────────────────────
+    # Zwei grosse weiche Quellen schraeg von vorn oben, wie zwei
+    # Softboxen im Studio. Sie stehen ASYMMETRISCH: Ein Foto mit exakt
+    # gleichem Licht von beiden Seiten sieht flach aus, weil kein Koerper
+    # eine Schokoladenseite hat.
+    for x, y, z, gross, kraft in (
+        (-7.0, -5.0, 6.5, (8.0, 5.0), 900),
+        ( 7.5, -3.0, 6.0, (6.0, 4.0), 520),
+    ):
+        bpy.ops.object.light_add(type='AREA', location=(x, y, z))
+        ob = bpy.context.active_object
+        l = ob.data
+        l.shape = 'RECTANGLE'
+        l.size, l.size_y = gross
+        l.energy = kraft
+        l.color = (1.0, 0.985, 0.96)
+        richtung = (Vector((0.0, 1.0, 0.6)) - Vector((x, y, z))).normalized()
+        ob.rotation_euler = richtung.to_track_quat('-Z', 'Y').to_euler()
+
+    # Wandlicht: ein breites Feld ueber dem Fahrzeug, auf die Wand
+    # gerichtet. Es erzeugt den hellen Fleck hinter dem Auto, der in
+    # beiden Vorlagen zu sehen ist.
+    bpy.ops.object.light_add(type='AREA', location=(0.0, 8.0, 5.5))
+    ob = bpy.context.active_object
+    ob.data.shape = 'RECTANGLE'
+    ob.data.size, ob.data.size_y = 9.0, 3.0
+    ob.data.energy = 600
+    ob.rotation_euler = (math.radians(38), 0, 0)
+
+    welt = bpy.data.worlds.new("Welt")
+    welt.use_nodes = True
+    welt.node_tree.nodes["Background"].inputs["Color"].default_value = (0.45, 0.46, 0.48, 1)
+    welt.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.25
+    bpy.context.scene.world = welt
+
+
 def galerie(wandfarbe, bodenfarbe, bodensatz, extras=''):
     """
     Ein heller Ausstellungsraum: weisse Waende, dunkler glaenzender Boden,
@@ -683,6 +850,80 @@ def led_streifen():
     fl.energy = 2200
 
 
+def schmutz_auf(mat, staerke=0.35, groesse=9.0):
+    """
+    Grossflaeckige Unregelmaessigkeit auf eine Flaeche legen.
+
+    Der Grund, warum gerenderte Raeume unecht aussehen, ist selten die
+    Form — es ist die Gleichmaessigkeit. Ein echter Hallenboden hat
+    helle und dunkle Felder, Reifenspuren, Putzschlieren. Ohne das wirkt
+    jede Flaeche wie lackiertes Papier.
+
+    Ein weiches Rauschmuster in Farbe UND Rauheit genuegt dafuer: Es
+    macht keine sichtbaren Flecken, nimmt der Flaeche aber das
+    Fabrikneue.
+    """
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+
+    koord = nt.nodes.new("ShaderNodeTexCoord")
+    skal = nt.nodes.new("ShaderNodeMapping")
+    skal.inputs["Scale"].default_value = (1.0 / groesse, 1.0 / groesse, 1.0 / groesse)
+    nt.links.new(koord.outputs["Object"], skal.inputs["Vector"])
+
+    rausch = nt.nodes.new("ShaderNodeTexNoise")
+    rausch.inputs["Scale"].default_value = 2.2
+    rausch.inputs["Detail"].default_value = 6.0
+    rausch.inputs["Roughness"].default_value = 0.6
+    nt.links.new(skal.outputs["Vector"], rausch.inputs["Vector"])
+
+    kurve = nt.nodes.new("ShaderNodeMapRange")
+    kurve.inputs["From Min"].default_value = 0.25
+    kurve.inputs["From Max"].default_value = 0.75
+    kurve.inputs["To Min"].default_value = 1.0 - staerke
+    kurve.inputs["To Max"].default_value = 1.0 + staerke * 0.4
+    nt.links.new(rausch.outputs["Fac"], kurve.inputs["Value"])
+
+    # Farbe leicht abdunkeln, wo das Rauschen dunkel ist.
+    farbe_ein = bsdf.inputs["Base Color"]
+    if farbe_ein.is_linked:
+        quelle = farbe_ein.links[0].from_socket
+        mischen = nt.nodes.new("ShaderNodeMix")
+        mischen.data_type = 'RGBA'
+        mischen.blend_type = 'MULTIPLY'
+        mischen.inputs["Factor"].default_value = 0.55
+        nt.links.new(quelle, mischen.inputs[6])
+        nt.links.new(kurve.outputs["Result"], mischen.inputs[7])
+        nt.links.new(mischen.outputs[2], farbe_ein)
+
+    # Rauheit ebenfalls fleckig: mal matter, mal glaenzender.
+    rau_ein = bsdf.inputs["Roughness"]
+    grund = rau_ein.default_value if not rau_ein.is_linked else 0.3
+    rau = nt.nodes.new("ShaderNodeMapRange")
+    rau.inputs["From Min"].default_value = 0.25
+    rau.inputs["From Max"].default_value = 0.75
+    rau.inputs["To Min"].default_value = max(0.05, grund - 0.10)
+    rau.inputs["To Max"].default_value = min(1.0, grund + 0.14)
+    nt.links.new(rausch.outputs["Fac"], rau.inputs["Value"])
+    if rau_ein.is_linked:
+        nt.links.remove(rau_ein.links[0])
+    nt.links.new(rau.outputs["Result"], rau_ein)
+
+
+def kamerafehler(cam, blende=6.3, ziel_m=14.0):
+    """
+    Tiefenunschaerfe wie bei einer echten Kamera.
+
+    Bei 40 mm und Blende 6,3 auf 14 m Entfernung ist die Rueckwand nur
+    leicht weich — genug, damit das Auge Tiefe annimmt, zu wenig, um zu
+    stoeren. Ohne das ist ausnahmslos alles scharf, und das gibt es in
+    keinem Foto.
+    """
+    cam.data.dof.use_dof = True
+    cam.data.dof.focus_distance = ziel_m
+    cam.data.dof.aperture_fstop = blende
+
+
 def kamera(pos=None, ziel=None, brennweite=None):
     pos = pos or KAMERA_POS
     bpy.ops.object.camera_add(location=pos)
@@ -694,7 +935,7 @@ def kamera(pos=None, ziel=None, brennweite=None):
     return cam
 
 
-def rendern(ziel, proben, maschine):
+def rendern(ziel, proben, maschine, skala=100):
     """
     `maschine` ist 'cycles' oder 'eevee'.
 
@@ -719,7 +960,8 @@ def rendern(ziel, proben, maschine):
         s.cycles.samples = proben
         s.cycles.use_denoising = True
     s.render.resolution_x, s.render.resolution_y = BREITE, HOEHE
-    s.render.resolution_percentage = 100
+    # Fuer Probelaeufe: halbe Kantenlaenge rechnet viermal schneller.
+    s.render.resolution_percentage = skala
     s.render.image_settings.file_format = 'JPEG'
     s.render.image_settings.quality = 92
     s.render.filepath = ziel
@@ -763,7 +1005,7 @@ def horizont_in_prozent(cam, bauart='ecke'):
 def wandlinie_in_prozent(cam, bauart='ecke'):
     """Wo Boden und Rueckwand zusammenstossen — nur zur Anschauung."""
     from bpy_extras.object_utils import world_to_camera_view
-    y = 0.0 if bauart == 'kehle' else 6.0
+    y = 0.0 if bauart == 'kehle' else (36.0 if bauart == 'showroom' else (13.0 if bauart == 'studio' else 6.0))
     p = world_to_camera_view(bpy.context.scene, cam, Vector((0.0, y, 0.0)))
     return round(1.0 - p.y, 4)
 
@@ -791,7 +1033,29 @@ def main():
 
     leeren()
     bauart = opt.get('bauart', 'ecke')
-    if bauart == 'galerie':
+    if bauart == 'studio':
+        studio(wand, boden,
+               opt.get('wandsatz', 'PaintedPlaster017_1K-JPG'),
+               opt.get('bodensatz', 'Tiles141_1K-JPG'),
+               float(opt.get('bodenrauheit', '0.25')))
+        # 50 mm wie bei echten Inseratfotos: weniger Verzerrung als 40,
+        # und die Wand rueckt optisch naeher an das Fahrzeug heran.
+        cam_pos, cam_brenn = Vector((0.0, -8.5, 1.30)), 50.0
+        cam = kamera(cam_pos, Vector((0.0, 1.0, 0.55)), cam_brenn)
+        kamerafehler(cam, blende=7.1, ziel_m=9.5)
+    elif bauart == 'showroom':
+        # Grosse Halle: Die Kamera steht weiter hinten und blickt leicht
+        # nach oben, damit die Decke mit ins Bild kommt. 40 mm statt 55,
+        # sonst fuellt der Wagen wieder das halbe Bild.
+        showroom(wand, boden, sockel,
+                 opt.get('wandsatz', 'PaintedPlaster017_1K-JPG'),
+                 opt.get('bodensatz', 'Concrete046_1K-JPG'))
+        cam_pos, cam_brenn = Vector((0.0, -15.0, 1.35)), 40.0
+        # Ziel tiefer: Der Blick geht fast waagerecht auf Kofferraumhoehe,
+        # dadurch faellt die Decke aus dem Bild.
+        cam = kamera(cam_pos, Vector((0.0, 5.0, 0.30)), cam_brenn)
+        kamerafehler(cam, blende=6.3, ziel_m=15.0)
+    elif bauart == 'galerie':
         galerie(wand, boden, opt.get('bodensatz', 'Concrete034_1K-JPG'),
                 opt.get('extras', ''))
         # 35 mm und waagerechter Blick: Nur so kommt die Decke ins Bild.
@@ -808,7 +1072,7 @@ def main():
         licht()
         cam_pos, cam_brenn = KAMERA_POS, BRENNWEITE
         cam = kamera()
-    rendern(ziel, proben, opt.get('maschine', 'cycles'))
+    rendern(ziel, proben, opt.get('maschine', 'cycles'), int(opt.get('skala', '100')))
 
     daten = {
         'kameraHoehe': cam_pos.z,
@@ -824,6 +1088,9 @@ def main():
         # aus wie nass — das war das Einzige, woran man dem Bild ansah,
         # dass es gebaut ist.
         'bodenglanz': glanz,
+        # Kante zwischen Boden und Rueckwand. Der Kompositor haelt das
+        # Fahrzeug darunter, sonst steht ein Rad in der Wand.
+        'wandlinie': wandlinie_in_prozent(cam, bauart),
     }
     with open(os.path.splitext(ziel)[0] + '.json', 'w', encoding='utf-8') as f:
         json.dump(daten, f, indent=2)
