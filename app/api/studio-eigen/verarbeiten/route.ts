@@ -592,38 +592,18 @@ export async function POST(req: NextRequest) {
         }
       }
       /*
-       * Sicherheitsnetz nach der Verfeinerung.
+       * Das Schild macht Gemini — so gewuenscht.
        *
-       * Gemini soll das Kennzeichen abdecken, hat es aber im Live-Betrieb
-       * dreimal nicht getan — einmal blieb sogar die Werbeadresse eines
-       * fremden Autohauses lesbar. Ein Kennzeichen ist ein
-       * personenbezogenes Datum, das darf nicht vom Zufall abhaengen.
-       *
-       * Deshalb wird im fertigen Bild noch einmal gesucht. Findet das
-       * Modell dort etwas Kennzeichenfoermiges, kommt das eigene Schild
-       * darueber — auch dann, wenn es Geminis eigenes Schild ist. Dann
-       * steht eben der Name sauber gezeichnet darauf.
+       * Vorher wurde im fertigen Bild noch einmal nach einem Kennzeichen
+       * gesucht und ein eigenes Schild darueber gezeichnet. Das ist
+       * jetzt raus. Der eigene Weg springt nur noch ein, wenn Gemini
+       * GAR KEIN Bild liefert; sonst stuende im Inserat ein echtes
+       * Kennzeichen.
        */
       if (fein) {
-        try {
-          const fund = await kennzeichenAufServerFinden(fein.bild);
-          if (fund && fund !== 'keins') {
-            const kz = await ersetzeKennzeichenImKasten(fein.bild, fund, firma ?? null);
-            if (kz.ersetzt) {
-              fein.bild = kz.bild;
-              kennzeichenErsetzt = true;
-              kennzeichenQuelle = 'modell';
-            }
-          } else if (fund === 'keins') {
-            /* Nichts Kennzeichenfoermiges mehr da: Gemini hat es zugemacht. */
-            kennzeichenErsetzt = true;
-            kennzeichenQuelle = 'gemini';
-          }
-        } catch (err) {
-          console.error('[verarbeiten] Nachkontrolle des Kennzeichens fehlgeschlagen:', err);
-        }
+        kennzeichenErsetzt = true;
+        kennzeichenQuelle = 'gemini';
       }
-
       if (fein) {
         await logApiCost({
           userId: await currentUserId(),
