@@ -344,6 +344,18 @@ function PricingContent() {
   const [currentPlan, setCurrentPlan] = useState('free');
   const [credits, setCredits]       = useState(0);
   const [buyQty, setBuyQty]         = useState(1);
+  /*
+   * Zustimmung zum sofortigen Beginn.
+   *
+   * Ohne sie erlischt das Widerrufsrecht eines Privatkunden NICHT, wenn
+   * die Leistung schon erbracht ist: Er koennte zwoelf fertige
+   * Studiofotos behalten und zwei Wochen spaeter sein Geld
+   * zurueckverlangen. § 356 Abs. 4 und 5 BGB verlangt zweierlei —
+   * ausdrueckliche Zustimmung zum sofortigen Beginn UND die Bestaetigung,
+   * dass damit das Widerrufsrecht entfaellt. Beides steht im Text neben
+   * diesem Haken.
+   */
+  const [sofortStart, setSofortStart] = useState(false);
   const [buyLoading, setBuyLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [openFaq, setOpenFaq]       = useState<number | null>(null);
@@ -372,7 +384,7 @@ function PricingContent() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId, billing }),
+        body: JSON.stringify({ plan: planId, billing, widerrufVerzicht: sofortStart }),
       });
       const { url, error } = await res.json();
       if (error) { alert(error); return; }
@@ -387,7 +399,7 @@ function PricingContent() {
       const res = await fetch('/api/checkout/private', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: buyQty }),
+        body: JSON.stringify({ quantity: buyQty, widerrufVerzicht: sofortStart }),
       });
       const { url, error } = await res.json();
       if (error) { alert(error); return; }
@@ -396,7 +408,8 @@ function PricingContent() {
     finally { setBuyLoading(false); }
   };
 
-  const totalPrice = (buyQty * 4.99).toFixed(2).replace('.', ',');
+  /* Preis je Inserat aus dem Preismodell, nicht doppelt gepflegt. */
+  const totalPrice = ((buyQty * PREIS_PRO_INSERAT_CENT) / 100).toFixed(2).replace('.', ',');
 
   return (
     <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: F, color: '#0f172a' }}>
@@ -533,10 +546,27 @@ function PricingContent() {
               </span>
             </div>
 
-            <button onClick={handleBuyCredits} disabled={buyLoading} style={{
+            <label style={{
+              display: 'flex', alignItems: 'flex-start', gap: '9px', margin: '0 0 12px',
+              fontSize: '11.5px', lineHeight: 1.5, color: 'rgba(255,255,255,0.92)', cursor: 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={sofortStart}
+                onChange={(e) => setSofortStart(e.target.checked)}
+                style={{ marginTop: '2px', width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
+              />
+              <span>
+                Ich verlange ausdrücklich, dass 2Fast4Sale vor Ablauf der Widerrufsfrist mit der
+                Leistung beginnt. Mir ist bekannt, dass ich mein Widerrufsrecht mit vollständiger
+                Erbringung verliere.
+              </span>
+            </label>
+
+            <button onClick={handleBuyCredits} disabled={buyLoading || !sofortStart} style={{
               width: '100%', padding: '13px', borderRadius: '10px',
-              background: buyLoading ? 'rgba(255,255,255,0.3)' : '#fff',
-              color: buyLoading ? 'rgba(255,255,255,0.7)' : '#065f46',
+              background: (buyLoading || !sofortStart) ? 'rgba(255,255,255,0.3)' : '#fff',
+              color: (buyLoading || !sofortStart) ? 'rgba(255,255,255,0.7)' : '#065f46',
               fontWeight: '800', fontSize: '14px', border: 'none',
               cursor: buyLoading ? 'not-allowed' : 'pointer', fontFamily: F,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',

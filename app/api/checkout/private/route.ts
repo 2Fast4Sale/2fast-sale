@@ -13,7 +13,23 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
 
-    const { quantity = 1, successUrl, cancelUrl } = await req.json();
+    const { quantity = 1, successUrl, cancelUrl, widerrufVerzicht } = await req.json();
+
+    /*
+     * Ohne ausdrueckliche Zustimmung kein Kauf.
+     *
+     * § 356 Abs. 4 und 5 BGB: Das Widerrufsrecht eines Verbrauchers
+     * erlischt nur, wenn er dem sofortigen Beginn zugestimmt UND
+     * bestaetigt hat, dass er es damit verliert. Fehlt das, koennte er
+     * zwoelf fertige Studiofotos behalten und zwei Wochen spaeter sein
+     * Geld zurueckverlangen. Der Haken steht auf der Preisseite; hier
+     * wird geprueft, dass er wirklich gesetzt war.
+     */
+    if (widerrufVerzicht !== true) {
+      return NextResponse.json({
+        error: 'Bitte bestätige den sofortigen Beginn der Leistung, bevor du kaufst.',
+      }, { status: 400 });
+    }
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -53,6 +69,9 @@ export async function POST(req: Request) {
         user_id: user.id,
         type: 'listing_credit',
         quantity: String(quantity),
+        /* Nachweis, dass der Haken gesetzt war — bleibt bei Stripe. */
+        widerruf_verzicht: 'ja',
+        widerruf_verzicht_am: new Date().toISOString(),
       },
       payment_intent_data: {
         metadata: {
