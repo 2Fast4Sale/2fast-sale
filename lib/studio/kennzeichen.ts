@@ -30,6 +30,7 @@
  */
 
 import sharp from 'sharp';
+import { textAlsPfad } from './schrift';
 
 /** Kennzeichen nach DIN 74069: 520 x 110 mm, blaues Feld 40 mm breit. */
 const SCHILD_VERHAELTNIS = 520 / 110;
@@ -198,11 +199,7 @@ export async function ersetzeKennzeichen(
        <rect width="${sw}" height="${sh}" rx="${Math.round(sh * 0.12)}" fill="url(#g)"/>
        <rect x="1" y="1" width="${sw - 2}" height="${sh - 2}"
              rx="${Math.round(sh * 0.11)}" fill="none" stroke="#4c5057" stroke-width="1"/>
-       ${sicher ? `<text x="${sw / 2}" y="${sh / 2}" fill="#e8eaee"
-             font-family="Arial, Helvetica, sans-serif" font-size="${schrift}"
-             font-weight="600" textLength="${laenge.toFixed(1)}"
-             lengthAdjust="spacingAndGlyphs"
-             text-anchor="middle" dominant-baseline="central">${sicher}</text>` : ''}
+       ${beschriftung(sicher, schrift, laenge, sw / 2, sh / 2)}
      </svg>`,
   );
 
@@ -218,6 +215,30 @@ export async function ersetzeKennzeichen(
  * ──────────────────────────────────────────────────────────────────── */
 
 /** Kasten um das Kennzeichen, relativ zur Bildgroesse (0 bis 1). */
+/*
+ * Die Aufschrift als Vektorpfad, mittig im Schild.
+ *
+ * Vorher stand hier ein <text>-Element mit font-family "Arial". Auf dem
+ * Server ist keine Schriftart installiert — im Inserat erschienen
+ * Kaestchen statt des Haendlernamens, auf jedem Foto. Ein Pfad braucht
+ * keine Schrift, nur Geometrie.
+ *
+ * mx/my ist die Mitte des Schildes im jeweiligen Koordinatensystem:
+ * beim geraden Schild die halbe Breite und Hoehe, beim schraegen die
+ * Null, weil dort um den Mittelpunkt gedreht wird.
+ */
+function beschriftung(text: string, groesse: number, maxBreite: number, mx: number, my: number): string {
+  if (!text) return '';
+  const pfad = textAlsPfad(text, groesse);
+  /* Passt der Name nicht, wird er gestaucht statt abgeschnitten. */
+  const stauchen = pfad.breite > maxBreite ? maxBreite / pfad.breite : 1;
+  const links = mx - (pfad.breite * stauchen) / 2;
+  const grund = my + pfad.versalhoehe / 2;
+  return `<g transform="translate(${links.toFixed(1)} ${grund.toFixed(1)}) scale(${stauchen.toFixed(4)} 1)">
+      <path d="${pfad.d}" fill="#e8eaee"/>
+    </g>`;
+}
+
 export interface KennzeichenKasten {
   x0: number; y0: number; x1: number; y1: number;
 }
@@ -269,10 +290,7 @@ function haendlerschildGruppe(sw: number, sh: number, name?: string | null): str
           rx="${Math.round(sh * 0.12)}" fill="url(#g)"/>
     <rect x="${(x + 1).toFixed(1)}" y="${(y + 1).toFixed(1)}" width="${sw - 2}" height="${sh - 2}"
           rx="${Math.round(sh * 0.11)}" fill="none" stroke="#4c5057" stroke-width="1"/>
-    ${sicher ? `<text x="0" y="0" fill="#e8eaee"
-          font-family="Arial, Helvetica, sans-serif" font-size="${schrift}"
-          font-weight="600" textLength="${laenge.toFixed(1)}" lengthAdjust="spacingAndGlyphs"
-          text-anchor="middle" dominant-baseline="central">${sicher}</text>` : ''}`;
+    ${beschriftung(sicher, schrift, laenge, 0, 0)}`;
 }
 
 /**
