@@ -1,4 +1,5 @@
 ﻿import Link from 'next/link';
+import CookieWahlAendern from '../components/CookieWahlAendern';
 
 export const metadata = {
   title: 'Datenschutzerklärung | 2Fast4Sale',
@@ -119,10 +120,18 @@ export default function DatenschutzPage() {
           <h2 style={h2style}>6. Cookies & Speicherung</h2>
           <p style={body}>
             Wir verwenden technisch notwendige Cookies für die Sitzungsverwaltung (Auth-Token von Supabase).
-            Diese Cookies sind für den Betrieb der Plattform unerlässlich und können nicht deaktiviert werden.
-            Es werden keine Tracking- oder Marketing-Cookies gesetzt ohne Einwilligung.
+            Diese sind für den Betrieb der Plattform unerlässlich und lassen sich nicht abschalten.
           </p>
           <p style={body}>
+            Die Reichweitenmessung mit Vercel Analytics läuft <strong style={{ color: '#0f172a' }}>nur nach
+            Ihrer Einwilligung</strong>. Wählen Sie im Hinweis unten „Nur notwendige", wird sie gar nicht erst
+            geladen. Gemessen werden Seitenaufrufe ohne Cookies und ohne geräteübergreifende Wiedererkennung.
+          </p>
+          <p style={body}>
+            Ihre Entscheidung können Sie jederzeit ändern:
+          </p>
+          <CookieWahlAendern />
+          <p style={{ ...body, marginTop: '12px' }}>
             Im Browser (localStorage) werden folgende Daten gespeichert: gewählter Hintergrund, Plan-Informationen
             (zur schnellen Anzeige). Diese Daten verlassen nicht Ihren Browser.
           </p>

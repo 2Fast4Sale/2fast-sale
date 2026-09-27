@@ -3,7 +3,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import { ToastProvider } from "../components/Toast";
 import CookieBanner from "./components/CookieBanner";
-import { Analytics } from "@vercel/analytics/next";
+import AnalyseMitEinwilligung from "./components/AnalyseMitEinwilligung";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +40,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de" className={inter.variable}>
-      <body className={inter.className}><ToastProvider>{children}</ToastProvider><CookieBanner /><Analytics /></body>
+      <body className={inter.className}><ToastProvider>{children}</ToastProvider><CookieBanner /><AnalyseMitEinwilligung /></body>
     </html>
   );
 }
