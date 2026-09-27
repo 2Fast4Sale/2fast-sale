@@ -58,7 +58,7 @@ export default function AGBPage() {
           <p style={body}>
             Die Nutzung der Plattform setzt eine Registrierung voraus. Der Nutzer ist verpflichtet, wahrheitsgemäße
             Angaben zu machen und diese aktuell zu halten. Pro Person / Unternehmen ist grundsätzlich ein Konto
-            zulässig (Ausnahme: Business-Plan mit Mehrfachnutzer-Option).
+            zulässig. Mehrere Mitarbeiter eines Händlers nutzen dasselbe Konto.
           </p>
           <p style={body}>
             Der Nutzer ist für die Sicherheit seiner Zugangsdaten selbst verantwortlich. Bei Verdacht auf
@@ -67,33 +67,59 @@ export default function AGBPage() {
         </div>
 
         <div style={sec}>
-          <h2 style={h2style}>§ 4 Abonnements & Preise</h2>
+          <h2 style={h2style}>§ 4 Preise und Abrechnung</h2>
           <p style={body}>
-            Die Plattform wird in verschiedenen Abo-Modellen (Starter, Basic, Premium, Business, Enterprise) angeboten.
-            Die aktuellen Preise und Leistungsumfänge sind unter <Link href="/dashboard/pricing" style={lnk}>/preise</Link> einsehbar.
+            Die Nutzung wird nach tatsächlich erstellten Inseraten abgerechnet. Ein Inserat kostet
+            3,50 €. Hinzu kommt eine monatliche Grundgebühr von 50 €, die bereits erste Leistungen
+            wie Speicherplatz und Export enthält.
           </p>
           <p style={body}>
-            Abonnements verlängern sich automatisch um den gewählten Zeitraum (monatlich oder jährlich), sofern
-            sie nicht rechtzeitig vor Ablauf gekündigt werden. Die Abrechnung erfolgt im Voraus über Stripe.
+            Zum Kennenlernen gibt es den Probelauf: 5 € für zwei vollständige Inserate, ohne
+            Grundgebühr und ohne weitere Verpflichtung.
+          </p>
+          <p style={body}>
+            Alternativ können Pakete im Voraus gekauft werden. Sie enthalten eine feste Anzahl
+            Inserate zu einem günstigeren Preis je Inserat sowie die Grundgebühr. Ein Paket verfällt
+            nicht automatisch; nicht genutzte Inserate bleiben erhalten, solange das Konto besteht.
+          </p>
+          <p style={body}>
+            Je Inserat sind Studio-Bilder in einem festen Kontingent enthalten. Darüber hinaus
+            erzeugte Bilder werden einzeln berechnet. Optionale Zusatzleistungen, etwa der Abruf von
+            Ausstattungsdaten über die Fahrgestellnummer, werden gesondert ausgewiesen.
+          </p>
+          <p style={body}>
+            Alle Preise verstehen sich in Euro. Gemäß § 19 UStG wird keine Umsatzsteuer berechnet
+            (Kleinunternehmerregelung). Die jeweils gültigen Preise stehen unter
+            <Link href="/dashboard/pricing" style={{ ...lnk, marginLeft: '4px' }}>Preise</Link> und
+            werden vor jedem Kauf angezeigt.
           </p>
           <p style={body}>
             Preisänderungen werden mindestens 30 Tage vor Inkrafttreten per E-Mail angekündigt.
+            Bereits gekaufte Pakete und Guthaben sind davon nicht betroffen.
           </p>
         </div>
 
         <div style={sec}>
-          <h2 style={h2style}>§ 5 Kündigung</h2>
+          <h2 style={h2style}>§ 5 Laufzeit und Kündigung</h2>
           <p style={body}>
-            Monatliche Abonnements können jederzeit zum Ende des laufenden Abrechnungsmonats gekündigt werden.
-            Jährliche Abonnements können zum Ende des laufenden Vertragsjahres gekündigt werden.
+            Es gibt keine Mindestlaufzeit. Die monatliche Grundgebühr kann jederzeit zum Ende des
+            laufenden Abrechnungsmonats gekündigt werden; eine automatische Verlängerung über die
+            Kündigung hinaus findet nicht statt.
           </p>
           <p style={body}>
-            Die Kündigung erfolgt über die Einstellungen im Dashboard unter „Mein Abo" oder per E-Mail an
+            Der Probelauf ist eine einmalige Zahlung und muss nicht gekündigt werden. Pakete sind
+            ebenfalls Einmalkäufe ohne Laufzeit.
+          </p>
+          <p style={body}>
+            Die Kündigung erfolgt über die Seite
+            <Link href="/kuendigung" style={{ ...lnk, marginLeft: '4px' }}>Vertrag kündigen</Link>,
+            im Dashboard unter „Mein Abo" oder per E-Mail an
             <a href="mailto:info@2fast4sale.com" style={{ ...lnk, marginLeft: '4px' }}>info@2fast4sale.com</a>.
           </p>
           <p style={body}>
             Der Anbieter behält sich das Recht vor, Nutzerkonten bei Verstößen gegen diese AGB oder bei
-            Zahlungsverzug fristlos zu sperren oder zu kündigen.
+            Zahlungsverzug zu sperren. Bereits bezahltes, ungenutztes Guthaben wird in diesem Fall
+            erstattet, soweit die Sperre nicht auf einem Verstoß des Nutzers beruht.
           </p>
         </div>
 
@@ -104,9 +130,11 @@ export default function AGBPage() {
             diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt 14 Tage ab Vertragsschluss.
           </p>
           <p style={body}>
-            Das Widerrufsrecht erlischt bei digitalen Inhalten vorzeitig, wenn der Anbieter mit der Ausführung
-            begonnen hat und der Nutzer zuvor ausdrücklich zugestimmt hat, dass der Anbieter vor Ablauf der
-            Widerrufsfrist mit der Ausführung beginnt (§ 356 Abs. 5 BGB).
+            Das Widerrufsrecht erlischt vorzeitig, wenn der Anbieter die Leistung vollständig erbracht hat und
+            der Nutzer vorher ausdrücklich zugestimmt hat, dass die Ausführung vor Ablauf der Widerrufsfrist
+            beginnt, und zugleich bestätigt hat, dass er damit sein Widerrufsrecht verliert (§ 356 Abs. 4 und
+            Abs. 5 BGB). Diese Zustimmung wird vor jedem Kauf von Guthaben oder eines Pakets ausdrücklich
+            eingeholt; erst danach wird das erste Inserat erstellt.
           </p>
           <p style={body}>
             <strong style={{ color: '#0f172a' }}>Für Unternehmer</strong> (gewerbliche Händler) gilt kein Verbraucher-Widerrufsrecht.
