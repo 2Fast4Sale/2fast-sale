@@ -33,7 +33,7 @@ export default function CookieBanner() {
   if (!visible) return null;
 
   return (
-    <div style={{
+    <div className="cookie-hinweis" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
       background: '#0a1628',
       borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -44,12 +44,11 @@ export default function CookieBanner() {
       fontFamily: '"Inter", -apple-system, sans-serif',
     }}>
       <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', maxWidth: '680px', lineHeight: 1.6 }}>
-        Technisch notwendige Speicherung brauchen wir für Anmeldung und Warenkorb — die läuft immer.
-        Zusätzlich möchten wir anonym messen, welche Seiten aufgerufen werden, um das Angebot zu verbessern.
-        Das passiert nur mit deiner Zustimmung, und du kannst sie jederzeit widerrufen. Mehr dazu in der{' '}
+        Für Anmeldung und Warenkorb speichern wir technisch Notwendiges — das läuft immer.
+        Anonym messen, welche Seiten aufgerufen werden, dürfen wir nur mit deiner Zustimmung. Mehr in der{' '}
         <Link href="/datenschutz" style={{ color: '#60a5fa', textDecoration: 'none' }}>Datenschutzerklärung</Link>.
       </p>
-      <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', gap: '10px', flexShrink: 0, flexWrap: 'wrap' }}>
         <button onClick={decline} style={{
           padding: '9px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)',
           background: 'transparent', color: '#cbd5e1', fontSize: '13px', fontWeight: '700',

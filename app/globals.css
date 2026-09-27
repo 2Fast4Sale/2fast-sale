@@ -325,3 +325,47 @@ button {
 
 /* ── Blue accent ───────────────────────────────────────────────────────── */
 .blue-accent { color: #60a5fa; }
+
+/*
+ * ── Handy: Bedienbarkeit ──────────────────────────────────────────
+ *
+ * Gemessen auf 375 Punkten Breite waren acht Schaltflaechen kleiner als
+ * 40 Punkte — die Fusszeilenlinks nur 22 Punkte hoch, der Menueknopf 38.
+ * Apple nennt 44 Punkte als Mindestmass, Google 48; darunter trifft ein
+ * Daumen daneben, und das aergert besonders bei "Impressum" und
+ * "Verträge hier kündigen", wo ein Fehlgriff peinlich ist.
+ *
+ * Die Hoehe kommt ueber Innenabstand, nicht ueber Schriftgroesse: So
+ * bleibt das Schriftbild gleich und nur die Trefferflaeche waechst.
+ */
+@media (max-width: 768px) {
+  .site-footer a,
+  .site-footer button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 4px 2px;
+  }
+
+  /* Der Menueknopf oben rechts. */
+  header button[aria-label^="Menü"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /*
+   * Der Cookie-Hinweis nahm auf dem Handy ein Drittel des Bildschirms
+   * ein und verdeckte den Anfang der Seite. Schrift und Abstaende
+   * kleiner, Knoepfe nebeneinander in voller Breite.
+   */
+  .cookie-hinweis {
+    padding: 12px 16px;
+  }
+  .cookie-hinweis p {
+    font-size: 12px;
+  }
+  .cookie-hinweis button {
+    flex: 1;
+    min-height: 44px;
+  }
+}
