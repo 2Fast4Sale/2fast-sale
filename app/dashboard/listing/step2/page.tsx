@@ -263,6 +263,8 @@ function Step2Inner() {
    */
   const [zeigeOriginale, setZeigeOriginale] = useState(false);
   const [bulkProcessing, setBulk]     = useState(false);
+  /* Fortschritt beim Hochladen der fertigen Fotos: null = laeuft nicht. */
+  const [hochladen, setHochladen] = useState<{ fertig: number; gesamt: number } | null>(null);
   /*
    * Anzeige waehrend der Studio-Bearbeitung: erst der einmalige
    * Modell-Download, dann "Foto 2 von 5, noch etwa 40 Sekunden". Die Restzeit
@@ -701,9 +703,64 @@ function Step2Inner() {
     setBulk(false);
   };
 
-  const handleNext = () => {
-    const previews = photos.map(p => p.processed || p.preview);
-    sessionStorage.setItem('listing_photos', JSON.stringify(previews));
+  /**
+   * Ein Bild in den Speicher hochladen und die Adresse zurueckgeben.
+   *
+   * Schlaegt es fehl, kommt das Bild selbst zurueck. Lieber ein Inserat
+   * mit Bildern im Speicher des Browsers als eines ohne Bilder.
+   */
+  const bildHochladen = async (bild: string, name: string): Promise<string> => {
+    if (!bild.startsWith('data:')) return bild;
+    try {
+      const antwort = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64: bild, filename: name, folder: 'inserate/' + entwurfId() }),
+      });
+      if (!antwort.ok) throw new Error('Server ' + antwort.status);
+      const { url } = await antwort.json();
+      return url || bild;
+    } catch (err) {
+      console.warn('[Fotos] Hochladen fehlgeschlagen:', err);
+      return bild;
+    }
+  };
+
+  const handleNext = async () => {
+    /*
+     * Die Fotos wandern in den Speicher, nicht in den Sitzungsspeicher.
+     *
+     * Vorher standen sie als vollstaendige Bilddaten in sessionStorage.
+     * Der fasst je nach Browser rund 5 MB — bei zwoelf Studiobildern ist
+     * das schon knapp, bei dreissig Fotos wirft er einen Fehler, und der
+     * Knopf "Weiter" tat dann gar nichts mehr.
+     *
+     * Zweiter Grund, der schwerer wiegt: Was nur im Browser liegt, fehlt
+     * dem gespeicherten Inserat. Bisher hatte jedes fertige Fahrzeug in
+     * der Datenbank null Bilder — Galerie, PDF und ZIP waren leer.
+     */
+    const alle = photos.map(p => p.processed || p.preview);
+    setHochladen({ fertig: 0, gesamt: alle.length });
+
+    const adressen: string[] = [];
+    for (let i = 0; i < alle.length; i += 3) {
+      const teil = alle.slice(i, i + 3);
+      const geladen = await Promise.all(
+        teil.map((bild, k) => bildHochladen(bild, `foto-${String(i + k + 1).padStart(2, '0')}`)),
+      );
+      adressen.push(...geladen);
+      setHochladen({ fertig: Math.min(alle.length, i + teil.length), gesamt: alle.length });
+    }
+    setHochladen(null);
+
+    const previews = adressen;
+    try {
+      sessionStorage.setItem('listing_photos', JSON.stringify(previews));
+    } catch (err) {
+      /* Selbst Adressen koennen den Speicher sprengen, wenn sehr viele. */
+      console.warn('[Fotos] Sitzungsspeicher voll, nur die ersten zwoelf:', err);
+      sessionStorage.setItem('listing_photos', JSON.stringify(previews.slice(0, 12)));
+    }
     // Anzahl der freigestellten Bilder mitgeben — davon haengen die
     // Zusatzposten auf der Rechnung ab.
     sessionStorage.setItem(
@@ -1356,16 +1413,23 @@ function Step2Inner() {
           </button>
           <button
             onClick={handleNext}
-            disabled={photos.length === 0}
+            disabled={photos.length === 0 || hochladen !== null}
             style={{
               display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '12px 26px', background: photos.length > 0 ? '#2563eb' : '#64748b',
+              padding: '12px 26px', background: photos.length > 0 && !hochladen ? '#2563eb' : '#64748b',
               border: 'none', color: '#fff', borderRadius: '9px',
-              fontSize: '13px', fontWeight: '700', cursor: photos.length > 0 ? 'pointer' : 'not-allowed',
-              fontFamily: F, boxShadow: photos.length > 0 ? '0 4px 18px rgba(37,99,235,0.4)' : 'none',
+              fontSize: '13px', fontWeight: '700',
+              cursor: photos.length > 0 && !hochladen ? 'pointer' : 'not-allowed',
+              fontFamily: F,
+              boxShadow: photos.length > 0 && !hochladen ? '0 4px 18px rgba(37,99,235,0.4)' : 'none',
             }}
           >
-            {isMobile ? 'Beschreibung' : 'KI-Beschreibung generieren'} <ChevronRight size={16} />
+            {hochladen
+              ? `Fotos werden gesichert … ${hochladen.fertig} von ${hochladen.gesamt}`
+              : (isMobile ? 'Beschreibung' : 'KI-Beschreibung generieren')}
+            {hochladen
+              ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              : <ChevronRight size={16} />}
           </button>
         </div>
       </div>

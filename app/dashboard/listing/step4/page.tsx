@@ -768,6 +768,41 @@ function Step4Inner() {
           throw new Error(e.error || 'Fehler');
         }
         const data = await res.json(); id = data.vehicle?.id || data.id; setSavedId(id!);
+
+        /*
+         * Die Fotos an das Fahrzeug haengen.
+         *
+         * Das fehlte bisher vollstaendig: Ein gespeichertes Inserat hatte
+         * null Bilder in der Datenbank. Galerie, PDF-Export und
+         * ZIP-Download waren deshalb leer, obwohl der Haendler zwoelf
+         * fertige Studiobilder gesehen hatte — sie lagen nur im
+         * Sitzungsspeicher seines Browsers und waren beim naechsten
+         * Aufruf weg.
+         *
+         * Schritt 2 legt sie inzwischen im Speicher ab und gibt Adressen
+         * weiter; hier werden sie nur noch zugeordnet.
+         */
+        if (id && photos.length > 0) {
+          try {
+            const bilder = photos
+              .filter(p => typeof p === 'string' && p.startsWith('http'))
+              .map(p => ({ original: p, processed: p }));
+            if (bilder.length > 0) {
+              const antwort = await fetch(`/api/vehicles/${id}/images`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: bilder }),
+              });
+              if (!antwort.ok) {
+                console.warn('[Schritt 4] Fotos konnten nicht zugeordnet werden:', antwort.status);
+              }
+            } else {
+              console.warn('[Schritt 4] Keine gespeicherten Bildadressen — Inserat bleibt ohne Fotos');
+            }
+          } catch (err) {
+            console.error('[Schritt 4] Fotos zuordnen fehlgeschlagen:', err);
+          }
+        }
         // Der Entwurf ist abgeschlossen. Ohne das Aufraeumen bekaeme das
         // naechste Inserat im selben Tab dieselbe Nummer.
         entwurfBeenden();
