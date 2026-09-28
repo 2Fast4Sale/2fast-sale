@@ -537,7 +537,114 @@ def showroom(wandfarbe, bodenfarbe, sockel, wandsatz, bodensatz):
     bpy.context.scene.world = welt
 
 
-def studio(wandfarbe, bodenfarbe, wandsatz, bodensatz, bodenrauheit=0.25):
+def echtes_licht(datei, staerke=1.0, drehung=0.0, sichtbar=False):
+    """
+    Die Szene mit dem Licht eines ECHTEN Raums beleuchten.
+
+    ── Warum das der entscheidende Punkt ist ─────────────────────────
+
+    Alle bisherigen Raeume hatten erfundenes Licht: ein paar rechteckige
+    Flaechenlampen, die ich von Hand gesetzt habe. Jede davon leuchtet
+    gleichmaessig, in einer einzigen Farbe, ohne dass irgendwo etwas
+    zurueckstrahlt. Das Auge kennt so ein Licht nicht, und deshalb sah
+    jeder Render gerechnet aus — egal wie viel Korn und Vignette ich
+    darueberlegte.
+
+    Eine HDRI ist eine Rundum-Aufnahme eines wirklichen Raums mit allen
+    Helligkeiten. Als Lichtquelle eingesetzt, bringt sie mit: die Farbe
+    der Leuchtstoffroehren, die Helligkeitsunterschiede zwischen Decke
+    und Ecken, und vor allem die Spiegelungen. Lack lebt von dem, was
+    sich in ihm spiegelt — ohne Umgebung bleibt er stumpf.
+
+    Die Dateien stammen von Poly Haven und stehen unter CC0: gemeinfrei,
+    auch gewerblich, ohne Namensnennung. Das war die Bedingung, unter der
+    hier ueberhaupt fremdes Material infrage kommt.
+
+    `sichtbar=False` heisst: Die Aufnahme leuchtet nur, im Bild bleibt
+    der gebaute Raum. Sonst saehe man ein fremdes Lager statt der
+    eigenen Halle.
+    """
+    welt = bpy.data.worlds.new("EchtesLicht")
+    welt.use_nodes = True
+    nt = welt.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+
+    aus = nt.nodes.new("ShaderNodeOutputWorld")
+    hintergrund = nt.nodes.new("ShaderNodeBackground")
+    hintergrund.inputs["Strength"].default_value = staerke
+
+    bild = nt.nodes.new("ShaderNodeTexEnvironment")
+    bild.image = bpy.data.images.load(datei)
+
+    drehen = nt.nodes.new("ShaderNodeMapping")
+    drehen.inputs["Rotation"].default_value[2] = math.radians(drehung)
+    koord = nt.nodes.new("ShaderNodeTexCoord")
+
+    nt.links.new(koord.outputs["Generated"], drehen.inputs["Vector"])
+    nt.links.new(drehen.outputs["Vector"], bild.inputs["Vector"])
+    nt.links.new(bild.outputs["Color"], hintergrund.inputs["Color"])
+    nt.links.new(hintergrund.outputs["Background"], aus.inputs["Surface"])
+
+    bpy.context.scene.world = welt
+    if not sichtbar:
+        # Nur beleuchten, nicht zu sehen sein.
+        welt.cycles_visibility.camera = False
+
+
+def echtraum(datei, drehung=0.0, staerke=1.0, kamera_hoehe=1.5, brennweite=50.0):
+    """
+    Eine echte Rundum-Aufnahme als Hintergrund UND als Licht.
+
+    ── Der Unterschied zu allem davor ────────────────────────────────
+
+    Bisher habe ich Waende gebaut und sie mit erfundenen Lampen
+    beleuchtet. Das Ergebnis sah gerechnet aus, und das zu Recht: Es war
+    gerechnet.
+
+    Hier ist der Hintergrund ein Foto. Eine HDRI von Poly Haven ist eine
+    Rundum-Aufnahme eines wirklichen Raums — echte Wand, echter Boden,
+    echte Leuchten, echte Helligkeitsverlaeufe. Die Kamera schaut
+    hinein, als staende sie dort. Nichts daran ist konstruiert.
+
+    Dass dieselbe Aufnahme auch die Szene beleuchtet, ist der zweite
+    Gewinn: Was sich spaeter im Lack spiegelt, gehoert zu genau dem
+    Raum, in dem das Auto steht.
+
+    Lizenz: CC0, gemeinfrei, auch gewerblich, ohne Namensnennung.
+
+    `drehung` dreht den Raum um die Hochachse, bis eine ruhige Wand
+    hinter dem Fahrzeug steht.
+    """
+    welt = bpy.data.worlds.new("Echtraum")
+    welt.use_nodes = True
+    nt = welt.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+
+    aus = nt.nodes.new("ShaderNodeOutputWorld")
+    hg = nt.nodes.new("ShaderNodeBackground")
+    hg.inputs["Strength"].default_value = staerke
+
+    bild = nt.nodes.new("ShaderNodeTexEnvironment")
+    bild.image = bpy.data.images.load(datei)
+
+    drehen = nt.nodes.new("ShaderNodeMapping")
+    drehen.inputs["Rotation"].default_value[2] = math.radians(drehung)
+    koord = nt.nodes.new("ShaderNodeTexCoord")
+
+    nt.links.new(koord.outputs["Generated"], drehen.inputs["Vector"])
+    nt.links.new(drehen.outputs["Vector"], bild.inputs["Vector"])
+    nt.links.new(bild.outputs["Color"], hg.inputs["Color"])
+    nt.links.new(hg.outputs["Background"], aus.inputs["Surface"])
+    bpy.context.scene.world = welt
+
+    # Kein eigener Boden: Der Boden steckt in der Aufnahme.
+    return kamera(Vector((0.0, -0.0, kamera_hoehe)),
+                  Vector((0.0, 1.0, kamera_hoehe - 0.28)), brennweite)
+
+
+def studio(wandfarbe, bodenfarbe, wandsatz, bodensatz, bodenrauheit=0.25, kunstlicht=True):
     """
     Aufnahmestudio, wie es Haendler wirklich benutzen.
 
@@ -571,6 +678,29 @@ def studio(wandfarbe, bodenfarbe, wandsatz, bodensatz, bodenrauheit=0.25):
     # Vorlagen nicht haben.
     flaeche("Boden", 80, (0, 0, 0), (0, 0, 0), m_boden)
     flaeche("Rueckwand", 80, (0, 13.0, 0), (math.radians(90), 0, 0), m_wand)
+
+    if not kunstlicht:
+        #
+        # Mit echtem Licht bleibt EINE weiche Quelle stehen.
+        #
+        # Der erste Versuch schaltete alle eigenen Lampen ab und ueberliess
+        # alles der Aufnahme. Das Ergebnis war flach: Ein Fotostudio
+        # leuchtet gleichmaessig, und eine gleichmaessig beleuchtete Wand
+        # hat keinen Verlauf. Echte Haendlerfotos haben immer einen —
+        # hell hinter dem Fahrzeug, dunkler nach aussen.
+        #
+        # Die Aufnahme liefert also Grundhelligkeit, Farbe und
+        # Spiegelungen; dieses eine Licht setzt den Verlauf.
+        #
+        bpy.ops.object.light_add(type='AREA', location=(-2.5, -3.5, 5.2))
+        ob = bpy.context.active_object
+        ob.data.shape = 'RECTANGLE'
+        ob.data.size, ob.data.size_y = 7.0, 4.5
+        ob.data.energy = 420
+        ob.data.color = (1.0, 0.98, 0.95)
+        richtung = (Vector((0.0, 3.0, 0.7)) - Vector((-2.5, -3.5, 5.2))).normalized()
+        ob.rotation_euler = richtung.to_track_quat('-Z', 'Y').to_euler()
+        return
 
     # ── Licht ─────────────────────────────────────────────────────────
     # Zwei grosse weiche Quellen schraeg von vorn oben, wie zwei
@@ -1033,11 +1163,24 @@ def main():
 
     leeren()
     bauart = opt.get('bauart', 'ecke')
-    if bauart == 'studio':
+    hdri = opt.get('hdri', '')
+    if bauart == 'echtraum':
+        cam = echtraum(hdri,
+                       float(opt.get('lichtdrehung', '0')),
+                       float(opt.get('lichtstaerke', '1.0')),
+                       float(opt.get('kamerahoehe', '1.5')),
+                       float(opt.get('brennweite', '50')))
+        cam_pos, cam_brenn = cam.location.copy(), cam.data.lens
+        kamerafehler(cam, blende=8.0, ziel_m=9.0)
+    elif bauart == 'studio':
         studio(wand, boden,
                opt.get('wandsatz', 'PaintedPlaster017_1K-JPG'),
                opt.get('bodensatz', 'Tiles141_1K-JPG'),
-               float(opt.get('bodenrauheit', '0.25')))
+               float(opt.get('bodenrauheit', '0.25')),
+               kunstlicht=not hdri)
+        if hdri:
+            echtes_licht(hdri, float(opt.get('lichtstaerke', '1.0')),
+                         float(opt.get('lichtdrehung', '0')))
         # 50 mm wie bei echten Inseratfotos: weniger Verzerrung als 40,
         # und die Wand rueckt optisch naeher an das Fahrzeug heran.
         cam_pos, cam_brenn = Vector((0.0, -8.5, 1.30)), 50.0
