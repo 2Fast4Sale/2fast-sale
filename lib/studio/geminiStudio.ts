@@ -51,7 +51,19 @@ const ZEITLIMIT_MS = 35_000;
  * anderer Hintergrund und ein neuer Schatten aendern den Wert kaum, ein
  * neu erfundenes Auto sehr wohl.
  */
-const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.82');
+/*
+ * Nur noch eine Notbremse, keine Qualitaetspruefung.
+ *
+ * Solange der eigene Kompositor das Bild baute, war 0,82 sinnvoll: Dort
+ * durfte sich am Fahrzeug fast nichts aendern. Jetzt macht Gemini alles
+ * — freistellen, einsetzen, Schatten — und dabei aendert sich naturgemaess
+ * viel. Eine strenge Schwelle wuerde genau die Arbeit verwerfen, die
+ * gewuenscht ist.
+ *
+ * 0,55 faengt nur noch den Fall ab, dass ein voellig anderes Bild
+ * zurueckkommt. Wer strenger pruefen will, setzt GEMINI_AEHNLICH_MIN.
+ */
+const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.55');
 
 /*
  * Die gesamte Arbeit steht in diesem Text.
@@ -190,7 +202,8 @@ export async function studioBildMitGemini(
   firma?: string | null,
 ): Promise<StudioErgebnis | null> {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return null;
+  letzterGrund = '';
+  if (!key) { letzterGrund = 'kein Schluessel'; return null; }
 
   const start = Date.now();
   try {
@@ -267,11 +280,13 @@ export async function studioBildMitGemini(
       nurAuto === null ? 'ganzes Bild (Fahrzeugmodell lieferte nichts)' : 'nur Fahrzeug');
     console.info('[gemini-studio] fertig in', Date.now() - start, 'ms, Aehnlichkeit', aehnlich.toFixed(3));
     if (aehnlich < AEHNLICH_MIN) {
-      console.warn('[gemini-studio] verworfen: Fahrzeug weicht zu stark ab');
+      letzterGrund = `verworfen, Fahrzeug weicht zu stark ab (${aehnlich.toFixed(3)} unter ${AEHNLICH_MIN})`;
+      console.warn('[gemini-studio]', letzterGrund);
       return null;
     }
     return { bild, aehnlich, geaendert: await anteilGeaendert(foto, bild) };
   } catch (err) {
+    letzterGrund = 'Fehler: ' + (err instanceof Error ? err.message : String(err));
     console.error('[gemini-studio] fehlgeschlagen:', err);
     return null;
   }
