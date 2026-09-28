@@ -43,7 +43,7 @@ import {
 } from 'lucide-react';
 import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
-import { EQUIPMENT_DB, searchEquipment } from '../../../../lib/equipmentDatabase';
+import { EQUIPMENT_DB, ALL_EQUIPMENT, searchEquipment } from '../../../../lib/equipmentDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
 import { validateEnvkv, isEnvkvRequired, type EnvkvData, type VehicleKind } from '../../../../lib/envkv';
 import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
@@ -1167,6 +1167,9 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                     }}>
                     <ChevronDown size={13} style={{ transform: ausstattungOffen ? 'none' : 'rotate(-90deg)', transition: 'transform .15s' }} />
                     {ausstattungOffen ? 'Liste schliessen' : 'Alle Merkmale durchgehen'}
+                    <span style={{ marginLeft: 6, color: T.leise }}>
+                      ({data.equipment.length} von {ALL_EQUIPMENT.length} gewählt)
+                    </span>
                   </button>
 
                   {ausstattungOffen && (
@@ -1183,7 +1186,24 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                               }}>
                               <ChevronDown size={12} style={{ transform: offen ? 'none' : 'rotate(-90deg)' }} />
                               {gruppe.label}
-                              <span style={{ marginLeft: 'auto', fontSize: 11.5, color: T.leise, fontWeight: 500 }}>{gruppe.items.length}</span>
+                              {(() => {
+                                /*
+                                 * Gewaehlt von gesamt, nicht nur gesamt.
+                                 *
+                                 * Der Haendler soll auf einen Blick sehen, wo
+                                 * noch nichts steht. "Sicherheit 0 von 26" ist
+                                 * eine Aufforderung, "26" ist nur eine Zahl.
+                                 */
+                                const gewaehlt = gruppe.items.filter(i => data.equipment.includes(i.label)).length;
+                                return (
+                                  <span style={{
+                                    marginLeft: 'auto', fontSize: 11.5, fontWeight: 600,
+                                    color: gewaehlt > 0 ? T.akzent : T.leise,
+                                  }}>
+                                    {gewaehlt} von {gruppe.items.length}
+                                  </span>
+                                );
+                              })()}
                             </button>
                             {offen && (
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '2px 12px 12px' }}>
