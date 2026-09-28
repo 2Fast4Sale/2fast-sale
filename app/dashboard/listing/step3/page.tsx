@@ -23,10 +23,20 @@ const STEPS = [
   { icon: TrendingUp,label: 'Fertigstellen',               sub: 'Dein Inserat ist gleich fertig…',     duration: 300  },
 ];
 
+/*
+ * Hier standen drei Statistiken: "+14% hoehere Verkaufspreise",
+ * "3x mehr Anfragen", "68% entscheiden binnen 24 Stunden". Keine davon
+ * ist belegt — sie waren erfunden, um die Wartezeit zu fuellen.
+ *
+ * Ein Haendler, der spaeter merkt, dass die Zahlen nichts bedeuten,
+ * glaubt auch den Fahrzeugdaten nicht mehr. Stattdessen stehen hier
+ * jetzt Saetze ueber das, was das Programm in diesem Moment wirklich
+ * tut.
+ */
 const FACTS = [
-  { stat: '+14%', text: 'höhere Verkaufspreise mit professionellen Inseratstexten' },
-  { stat: '3×',   text: 'mehr Anfragen durch optimierte Überschriften' },
-  { stat: '68%',  text: 'der Käufer entscheiden sich binnen 24h nach dem Lesen' },
+  { stat: 'Daten', text: 'Marke, Modell, Leistung und Ausstattung fliessen in den Text ein' },
+  { stat: 'Recht', text: 'Nichts wird erfunden: Was nicht in den Daten steht, steht nicht im Text' },
+  { stat: 'Portal', text: 'Laenge und Aufbau passen zu mobile.de und AutoScout24' },
 ];
 
 function Step3Inner() {
@@ -116,8 +126,17 @@ function Step3Inner() {
         const desc = encodeURIComponent(data.text || data.description || '');
         const params = new URLSearchParams({ brand, km, price, year, fuel, gearbox, color, power, desc });
         setTimeout(() => router.push(`/dashboard/listing/step4?${params.toString()}`), 600);
-      } catch {
-        const params = new URLSearchParams({ brand, km, price, year, fuel, gearbox, color, power, desc: '' });
+      } catch (err) {
+        /*
+         * Scheitert die Texterzeugung, ging es bisher stumm weiter: In
+         * Schritt 4 stand einfach kein Text, und niemand wusste warum.
+         * Jetzt wird der Grund mitgegeben und dort angezeigt.
+         */
+        console.error('[Schritt 3] Beschreibung fehlgeschlagen:', err);
+        const params = new URLSearchParams({
+          brand, km, price, year, fuel, gearbox, color, power, desc: '',
+          textFehler: 'Die Beschreibung konnte nicht erzeugt werden. In Schritt 4 kannst du sie neu erzeugen lassen oder selbst schreiben.',
+        });
         setTimeout(() => router.push(`/dashboard/listing/step4?${params.toString()}`), 800);
       }
     };

@@ -632,6 +632,12 @@ function Step4Inner() {
   const carColor = searchParams.get('color')   || '';
   const power    = searchParams.get('power')   || '';
   const rawDesc  = searchParams.get('desc')    ?? '';
+  /*
+   * Schritt 3 gibt einen Grund mit, wenn die Beschreibung nicht erzeugt
+   * werden konnte. Ohne diesen Hinweis stand hier einfach nichts, und
+   * der Haendler suchte den Fehler bei sich.
+   */
+  const textFehler = searchParams.get('textFehler') ?? '';
 
   const [desc,      setDesc]      = useState(() => { try { return decodeURIComponent(rawDesc); } catch { return ''; } });
   const [editPrice, setEditPrice] = useState(price);
@@ -797,9 +803,12 @@ function Step4Inner() {
           <span style={{ background: 'linear-gradient(135deg, #818cf8, #c4b5fd, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>ist bereit.</span>
         </h1>
         <p style={{ color: G.rahmenLeise, fontSize: '15px', margin: '0 0 40px', lineHeight: 1.7, maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
-          Dein Inserat ist gespeichert. Ab September wird es automatisch auf{' '}
+          Dein Inserat ist gespeichert: Fotos, Beschreibung und alle Fahrzeugdaten.
+          Den Export zu{' '}
           <span style={{ color: '#ff6600', fontWeight: '700' }}>Mobile.de</span> und{' '}
-          <span style={{ color: '#1a77c9', fontWeight: '700' }}>AutoScout24</span> erscheinen.
+          <span style={{ color: '#1a77c9', fontWeight: '700' }}>AutoScout24</span>{' '}
+          bereiten wir gerade vor — bis dahin lädst du das Fotopaket und den Text
+          herunter und stellst beides wie gewohnt selbst ein.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '36px', flexWrap: 'wrap' }}>
@@ -1106,6 +1115,7 @@ function Step4Inner() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px' }}>
+                {/* siehe textFehler oben */}
                 <button onClick={copyText} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 11px', background: copied ? 'rgba(16,185,129,0.08)' : SURF, border: `1px solid ${copied ? 'rgba(16,185,129,0.2)' : BORD}`, borderRadius: '7px', color: copied ? G.gut : TS, fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: F, transition: 'all 0.2s' }}>
                   {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />} {copied ? 'Kopiert!' : 'Kopieren'}
                 </button>
@@ -1139,6 +1149,11 @@ function Step4Inner() {
 
           {/* Die Fotos stehen jetzt oben, gross — siehe dort. */}
 
+          {textFehler && !desc && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.30)', borderRadius: '10px', color: '#92400e', fontSize: '13px' }}>
+              <AlertTriangle size={14} /> {textFehler}
+            </div>
+          )}
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '10px', color: G.fehler, fontSize: '13px' }}>
               <AlertTriangle size={14} /> {error}
@@ -1216,8 +1231,23 @@ function Step4Inner() {
             tun heute dasselbe wie "Veroeffentlichen" und sind laut
             eigener Startseite "in Vorbereitung".
           */}
-          {!isMobile && <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#c2410c', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><Send size={13} /> Mobile.de</button>}
-          {!isMobile && <button onClick={() => save('Aktiv')} disabled={saving} title="Nach September-Gesprächen verfügbar" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: '#003566', border: 'none', color: '#fff', borderRadius: '9px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: F, opacity: 0.45 }}><ExternalLink size={13} /> AutoScout24</button>}
+          {/*
+            Die beiden Knoepfe sahen aus wie Veroeffentlichen-Knoepfe und
+            taten genau das: speichern. Ein Haendler haette geklickt und
+            geglaubt, sein Fahrzeug stehe jetzt auf mobile.de. Bis die
+            Schnittstellen freigeschaltet sind, sind sie deshalb wirklich
+            gesperrt und sagen das auch.
+          */}
+          {!isMobile && (
+            <span title="Die Schnittstelle zu mobile.de ist noch nicht freigeschaltet." style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: 'rgba(194,65,12,0.12)', border: '1px dashed rgba(194,65,12,0.45)', color: '#c2410c', borderRadius: '9px', fontSize: '13px', fontWeight: '700', fontFamily: F, cursor: 'not-allowed' }}>
+              <Send size={13} /> Mobile.de · in Vorbereitung
+            </span>
+          )}
+          {!isMobile && (
+            <span title="Die Schnittstelle zu AutoScout24 ist noch nicht freigeschaltet." style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: 'rgba(0,53,102,0.10)', border: '1px dashed rgba(0,53,102,0.40)', color: '#003566', borderRadius: '9px', fontSize: '13px', fontWeight: '700', fontFamily: F, cursor: 'not-allowed' }}>
+              <ExternalLink size={13} /> AutoScout24 · in Vorbereitung
+            </span>
+          )}
           <button onClick={() => save('Aktiv')} disabled={saving}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: isMobile ? '12px 14px' : '12px 28px', background: saving ? 'rgba(99,102,241,0.45)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: '10px', fontSize: '14px', fontWeight: '900', cursor: saving ? 'wait' : 'pointer', fontFamily: F, boxShadow: saving ? 'none' : '0 4px 24px rgba(99,102,241,0.45)', letterSpacing: '-0.2px', transition: 'all 0.2s' }}
             onMouseEnter={e => !saving && (e.currentTarget.style.transform = 'translateY(-1px)', e.currentTarget.style.boxShadow = '0 8px 32px rgba(99,102,241,0.55)')}
