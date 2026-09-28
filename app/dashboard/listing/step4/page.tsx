@@ -1180,7 +1180,14 @@ function Step4Inner() {
               <div>
                 <label style={{ fontSize: '10px', fontWeight: '700', color: TD, display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Verkaufspreis</label>
                 <div style={{ position: 'relative' }}>
-                  <input value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="24900"
+                  {/*
+                    Nur Ziffern. "24.900 €" wurde vorher genau so
+                    gespeichert — die Spalte ist Text. Ueberall, wo der
+                    Preis danach gerechnet oder formatiert wird, kommt
+                    daraus NaN: im Score, in der Vorschau, im Inserat.
+                  */}
+                  <input value={editPrice} onChange={e => setEditPrice(e.target.value.replace(/\D/g, ''))}
+                    inputMode="numeric" placeholder="24900"
                     style={{ width: '100%', padding: '10px 28px 10px 11px', background: SURF, border: `1px solid ${BORD}`, borderRadius: '8px', color: TH, fontSize: '16px', fontFamily: F, outline: 'none', boxSizing: 'border-box', fontWeight: '900', letterSpacing: '-0.5px', transition: 'border-color 0.2s, box-shadow 0.2s' }}
                     onFocus={e => { e.target.style.borderColor = IND; e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
                     onBlur={e => { e.target.style.borderColor = BORD; e.target.style.boxShadow = 'none'; }} />

@@ -20,7 +20,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       .single();
     if (!vehicle) return NextResponse.json({ error: 'Fahrzeug nicht gefunden' }, { status: 404 });
 
-    const { images } = await req.json();
+    const { images } = await req.json().catch(() => ({ images: null }));
+    if (!Array.isArray(images) || images.length === 0) {
+      return NextResponse.json({ error: 'Keine Bilder uebergeben' }, { status: 400 });
+    }
     const rows = images.map((img: any, i: number) => ({
       vehicle_id: id,
       original_url: img.original,
