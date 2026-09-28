@@ -314,14 +314,16 @@ const verfeinernText = (firma?: string | null) =>
   + 'Keep the glass as glass: it stays transparent where it was transparent, the seats, the steering wheel and the interior stay visible, and the tint stays exactly as dark as it is now. '
   + 'Your second task is the ground shadow: add a realistic soft shadow under the car, darkest under the tyres and the underbody, fading out softly, lying only on the floor and never on the walls. '
   + 'Your third task is the light: match brightness, contrast and white balance of the car to the light of this hall, without repainting the car. '
+  + 'Keep the picture exactly as bright as image 1: wall, floor and empty space must keep their brightness, and you must not darken the room, not even slightly — a dark showroom looks cheap in a listing. '
   + 'Everything else must stay exactly as it is. '
   + 'Keep the car exactly where it is and exactly as large as it is: do not move it, do not scale it, do not rotate it, do not mirror it and do not re-frame the picture. '
   + 'Keep the room exactly as it is: same walls, same floor, same ceiling lights, same camera, same framing. '
   + 'The car itself must stay exactly as photographed: same shape, same colour, same wheels, same badges, same trim, same mirrors. '
   + (firma
     ? `Your fourth task is the number plate: cover it completely with a plain dark rectangular dealer sign, in the same place, at the same angle and with the same size and shape as the plate, so that not one character of the original plate stays readable. `
-      + `On that sign write this text and nothing else, in clean white letters, centred, spelled character for character exactly as given here: "${firma}". `
-      + `Check that spelling letter by letter before you finish, and write no other text anywhere in the image. `
+      + `On that sign write this text and nothing else, in clean white letters, centred: "${firma}". `
+      + `Spell it exactly like this, letter by letter, with no letter added, removed or exchanged: ${[...firma].map((z) => (z === ' ' ? 'SPACE' : z)).join('-')}. `
+      + `Read your own result back before you finish and compare it letter by letter with that spelling; a dealer name with one wrong letter is worse than no sign at all, because it would stand on every photo of the listing. `
     : 'Your fourth task is the number plate: cover it completely with a plain dark rectangular sign, in the same place and at the same angle as the plate, so that not one character of it stays readable, and write no text on that sign. ')
   + 'Do not add people, other vehicles, plants, text, logos or watermarks, and return exactly one photorealistic image with the same dimensions as image 1. '
   + 'Before you finish, check the result once more: is any car, fence, tree, building, street or sky still visible through the windscreen, a side window or the rear window? '
