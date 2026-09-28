@@ -123,7 +123,15 @@ export const STANDARD: KompositorEinstellungen = {
    * hingestellt statt aufgenommen. Mit Boden davor sitzt er sofort
    * richtig.
    */
-  breitenanteil:     0.60,
+  /*
+   * 0,52 statt 0,60.
+   *
+   * Bei 60 Prozent Bildbreite wirkte das Fahrzeug groesser als der Raum
+   * — besonders bei SUVs. Echte Haendlerfotos lassen deutlich mehr Luft;
+   * auf den Vorlagen von ClassicBid und Autohero nimmt der Wagen rund die
+   * Haelfte der Breite ein.
+   */
+  breitenanteil:     0.52,
   bodenabstand:      0.16,
   ausrichtung:       0.50,
   /*
