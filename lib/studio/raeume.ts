@@ -54,6 +54,8 @@ const TITEL: Record<string, string> = {
   grau_sockel:   'Grau mit Sockelzone',
   grau_asphalt:  'Grau auf Asphalt',
   anthrazit:     'Anthrazit',
+  /* Nach echten Haendlerfotos gebaut: dunkler Plattenboden, helle Wand. */
+  studio_anthrazit: 'Studio Anthrazit',
   werkstatt:     'Sichtbeton mit Pflanzen',
   galerie_dunkel: 'Galerie, dunkler Boden',
   galerie_hell:   'Galerie, heller Boden',
