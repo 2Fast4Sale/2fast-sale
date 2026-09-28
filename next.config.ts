@@ -60,6 +60,16 @@ const nextConfig: NextConfig = {
     '/api/studio-eigen/freistellen': [
       'node_modules/onnxruntime-node/bin/napi-v*/linux/x64/**',
     ],
+    /*
+     * pdfkit liest die Schriftmetriken (.afm) zur Laufzeit aus dem
+     * eigenen Paketordner, ueber einen zusammengesetzten Pfad. Die
+     * Abhaengigkeitsanalyse sieht das nicht, und auf Vercel bricht der
+     * PDF-Export dann mit ENOENT auf Helvetica.afm ab — ohne dass es
+     * beim Bauen auffaellt.
+     */
+    '/api/export/pdf': [
+      'node_modules/pdfkit/js/data/**',
+    ],
   },
   headers: async () => [
     {

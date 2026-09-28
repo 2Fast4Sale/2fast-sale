@@ -898,7 +898,12 @@ function Step4Inner() {
           </div>
         )}
 
-        {savedId && (
+        {/*
+          Nur anbieten, wenn die Fotos wirklich am Inserat haengen: sonst
+          landet der Haendler auf einer Fehlermeldung als nackter Text und
+          ist aus dem Erfolgsbildschirm heraus.
+        */}
+        {savedId && !bilderHinweis && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
             <a href={`/api/export/zip?id=${savedId}`} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '12px 18px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '11px', color: '#fff', fontSize: '13px', fontWeight: '700', textDecoration: 'none', fontFamily: F }}>
               <ImgIcon size={14} /> Fotopaket herunterladen
