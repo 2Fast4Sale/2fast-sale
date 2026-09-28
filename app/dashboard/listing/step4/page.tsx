@@ -9,7 +9,7 @@ import {
   Send, Loader2, Zap, Tag as TagIcon,
   AlertTriangle, Shield, Image as ImgIcon, Euro,
   ChevronRight, ExternalLink, Star, Smartphone, Monitor,
-  Phone, Check, BarChart2, Lock,
+  Phone, Check, BarChart2, Lock, FileText,
 } from 'lucide-react';
 import { entwurfId, entwurfBeenden } from '../../../../lib/entwurf';
 import { G } from '../gestaltung';
@@ -860,6 +860,22 @@ function Step4Inner() {
             </div>
           ))}
         </div>
+
+        {/*
+          Der Erfolgstext verspricht ein Fotopaket — ohne Knopf waere das
+          wieder eine Ankuendigung ohne Deckung. Die beiden Downloads
+          holen ZIP und PDF zu genau diesem Fahrzeug.
+        */}
+        {savedId && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <a href={`/api/export/zip?id=${savedId}`} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '12px 18px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '11px', color: '#fff', fontSize: '13px', fontWeight: '700', textDecoration: 'none', fontFamily: F }}>
+              <ImgIcon size={14} /> Fotopaket herunterladen
+            </a>
+            <a href={`/api/export/pdf?id=${savedId}`} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '12px 18px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '11px', color: '#fff', fontSize: '13px', fontWeight: '700', textDecoration: 'none', fontFamily: F }}>
+              <FileText size={14} /> Inserat als PDF
+            </a>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <button onClick={() => router.push('/dashboard')} style={{ padding: '15px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '13px', color: G.rahmenLeise, fontSize: '14px', fontWeight: '700', cursor: 'pointer', fontFamily: F, transition: 'background 0.2s' }}
