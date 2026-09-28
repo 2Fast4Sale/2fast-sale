@@ -9,7 +9,7 @@ import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, istEchtesKennzeichen, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
-import { studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten } from '../../../../lib/studio/geminiStudio';
+import { studioBildMitGemini, studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -284,6 +284,52 @@ export async function POST(req: NextRequest) {
      * allen Fahrzeugen eines Haendlers gleich aus.
      */
     const halle = raum(raumName);
+
+    /*
+     * ── Gemini macht ALLES ────────────────────────────────────────
+     *
+     * Auf ausdruecklichen Wunsch erledigt das Modell in einem Schritt:
+     * freistellen, in den Raum setzen, Groesse waehlen, auf den Boden
+     * stellen, Schatten, Licht, Scheiben und Haendlerschild. Daneben
+     * laeuft kein eigener Rechenschritt mehr, der etwas korrigiert —
+     * alles steht in der Anweisung in geminiStudio.ts.
+     *
+     * Der eigene Weg unten bleibt als Rueckfall, wenn Gemini zweimal
+     * kein Bild liefert. Ohne ihn bekaeme der Haendler gar nichts.
+     */
+    if (geminiWeg && halle) {
+      const quelle = roh.length > 0 ? roh : vorab;
+      if (quelle && quelle.length > 0) {
+        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null);
+        if (!ki) {
+          console.info('[verarbeiten] erster Gemini-Versuch nicht verwendbar (' + letzterGrund + '), zweiter Anlauf');
+          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null);
+        }
+        if (ki) {
+          await logApiCost({
+            userId: await currentUserId(),
+            draftId: draftId ?? null,
+            service: 'gemini_bild',
+            operation: 'studio-komplett',
+            unitsIn: 1,
+            costMicros: imageCostMicros('gemini_bild'),
+          });
+          return NextResponse.json({
+            result: `data:image/jpeg;base64,${ki.bild.toString('base64')}`,
+            kennzeichenErsetzt: true,
+            kennzeichenQuelle: 'gemini',
+            gemini: true,
+            verfeinert: Number(ki.aehnlich.toFixed(3)),
+            geaendert: Number(ki.geaendert.toFixed(1)),
+            fahrzeugGeaendert: 0,
+            modell: GENUTZTES_MODELL,
+            verfeinertGrund: '',
+            sandbox,
+          });
+        }
+        console.warn('[verarbeiten] Gemini lieferte kein Bild, eigener Weg springt ein:', letzterGrund);
+      }
+    }
 
     /* ── Weg 1: PhotoRoom Plus macht alles ── */
     if (weg === 'plus' && halle && !hintergrundUrl) {

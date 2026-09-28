@@ -493,8 +493,25 @@ function Step2Inner() {
        */
       let vorab: string | undefined;
       let kennzeichenKasten: { x0: number; y0: number; x1: number; y1: number } | null = null;
+
+      /*
+       * Macht Gemini alles, wird hier gar nicht freigestellt.
+       *
+       * Das Modell schneidet das Fahrzeug selbst aus — ein eigener
+       * Freistellschritt davor waere verlorene Rechenzeit und wuerde
+       * Gemini ein bereits beschnittenes Bild geben statt des Fotos.
+       * Der Server sagt ueber /api/studio-eigen/weg, was gilt.
+       */
+      let geminiMachtAlles = false;
+      try {
+        const wegAntwort = await fetch('/api/studio-eigen/weg');
+        geminiMachtAlles = !!(await wegAntwort.json()).gemini;
+      } catch { /* im Zweifel den eigenen Weg gehen */ }
+
       const freistellerUrl = process.env.NEXT_PUBLIC_FREISTELLER_URL;
-      if (freistellerUrl) {
+      if (geminiMachtAlles) {
+        vorab = undefined;
+      } else if (freistellerUrl) {
         const foto = await (await fetch(compressed)).blob();
         const antwort = await fetch(`${freistellerUrl.replace(/\/$/, '')}/freistellen`, {
           method: 'POST',
