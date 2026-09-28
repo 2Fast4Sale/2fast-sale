@@ -56,8 +56,19 @@ export const STUDIO_INKLUSIVE_JE_PAKET: Record<'kein' | Paket['id'], number> = {
  * nichts verdienen. Zehn Cent Einkauf plus zwei für Speicher und
  * Auslieferung.
  */
+/*
+ * 25 Cent statt 12.
+ *
+ * Die zwoelf waren gegen PhotoRoom gerechnet. Seit Gemini die Bilder
+ * macht, liegt der Einkauf nach der Abrechnung vom 22. bis 28. September
+ * zwischen 6 und 13 Cent je Bild — bei zwoelf Cent Verkaufspreis waere
+ * jedes zusaetzliche Studio-Bild im schlechtesten Fall ein Minus.
+ *
+ * 25 Cent decken auch den teuren Fall und lassen etwas uebrig. Wer es
+ * anders will, setzt PREIS_EXTRA_BILD_CENT.
+ */
 export const PREIS_EXTRA_BILD_CENT = Number(
-  process.env.NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT || process.env.PREIS_EXTRA_BILD_CENT || '12'
+  process.env.NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT || process.env.PREIS_EXTRA_BILD_CENT || '25'
 );
 
 /** Kontingent für ein Paket. `null` heisst: kein Paket gebucht. */
