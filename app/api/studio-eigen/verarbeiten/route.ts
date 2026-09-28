@@ -6,7 +6,7 @@ import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../..
 import { schattenMitGemini } from '../../../../lib/studio/geminiSchatten';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
 import { raum, raumBild } from '../../../../lib/studio/raeume';
-import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
+import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, istEchtesKennzeichen, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
 import { studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten } from '../../../../lib/studio/geminiStudio';
@@ -623,9 +623,59 @@ export async function POST(req: NextRequest) {
        * GAR KEIN Bild liefert; sonst stuende im Inserat ein echtes
        * Kennzeichen.
        */
+      /*
+       * Letzte Sicherung: Ist wirklich noch ein Kennzeichen zu sehen?
+       *
+       * Gemini setzt das Schild, und im Stapeltest ueber zehn Fotos hat
+       * es das zehnmal getan — kein einziges echtes Kennzeichen blieb
+       * stehen. Verlassen darf man sich darauf trotzdem nicht: Ein
+       * Kennzeichen ist ein personenbezogenes Datum.
+       *
+       * Unterschieden wird an der blauen EU-Leiste links, die jedes
+       * Kennzeichen hat und kein Haendlerschild. Nur wenn sie da ist,
+       * greift der eigene Code ein — so bleibt Gemini zustaendig und
+       * der Fehlalarm (Schild sieht aus wie Kennzeichen) faellt weg.
+       */
       if (fein) {
         kennzeichenErsetzt = true;
         kennzeichenQuelle = 'gemini';
+        try {
+          const fund = await kennzeichenAufServerFinden(fein.bild);
+          if (fund && fund !== 'keins' && await istEchtesKennzeichen(fein.bild, fund)) {
+            console.warn('[verarbeiten] Gemini hat das Kennzeichen offen gelassen, decke es ab');
+            const kz = await ersetzeKennzeichenImKasten(fein.bild, fund, firma ?? null);
+            if (kz.ersetzt) {
+              fein.bild = kz.bild;
+              kennzeichenQuelle = 'modell';
+            }
+          }
+        } catch (err) {
+          console.error('[verarbeiten] Kennzeichen-Nachkontrolle fehlgeschlagen:', err);
+        }
+      }
+
+      /*
+       * Helligkeit festziehen.
+       *
+       * Gemessen ueber zehn Fotos: Gemini gibt das Bild im Schnitt drei
+       * Punkte dunkler zurueck (131 -> 128), obwohl in seiner Anweisung
+       * steht, es solle nicht abdunkeln. Drei Punkte sind wenig, aber
+       * sie summieren sich ueber zwoelf Fotos zu einem Inserat, das
+       * duesterer wirkt als der Raum, den der Haendler gewaehlt hat.
+       */
+      if (fein) {
+        try {
+          const vorher = (await sharp(vorherBild).stats()).channels[0].mean;
+          const nachher = (await sharp(fein.bild).stats()).channels[0].mean;
+          if (nachher > 1 && vorher / nachher > 1.01 && vorher / nachher < 1.25) {
+            fein.bild = await sharp(fein.bild)
+              .linear(vorher / nachher, 0)
+              .jpeg({ quality: 92 })
+              .toBuffer();
+          }
+        } catch (err) {
+          console.warn('[verarbeiten] Helligkeit nicht angeglichen:', err);
+        }
       }
       if (fein) {
         await logApiCost({

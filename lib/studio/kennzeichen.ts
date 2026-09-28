@@ -395,3 +395,54 @@ export async function ersetzeKennzeichenImKasten(
     .toBuffer();
   return { bild: fertig, ersetzt: true, winkel: drehung };
 }
+
+/**
+ * Steckt in diesem Kasten ein ECHTES Kennzeichen — oder nur ein Schild?
+ *
+ * Das Erkennungsmodell meldet beides: Ein Haendlerschild ist genauso
+ * geformt wie ein Kennzeichen, und im Stapeltest hiess es deshalb bei
+ * sechs von zehn Bildern "Kennzeichen offen", obwohl auf allen sechs
+ * das Schild sauber darueberlag. Ein Fehlalarm, der jede Messung
+ * wertlos macht.
+ *
+ * Der Unterschied ist die blaue Leiste links. Jedes deutsche und
+ * europaeische Kennzeichen hat sie, kein Haendlerschild. Gezaehlt wird
+ * der Anteil klar blauer Bildpunkte im linken Sechstel des Kastens.
+ *
+ * true  = echtes Kennzeichen, muss abgedeckt werden
+ * false = Schild oder etwas anderes
+ */
+export async function istEchtesKennzeichen(
+  bild: Buffer,
+  kasten: KennzeichenKasten,
+): Promise<boolean> {
+  const meta = await sharp(bild).metadata();
+  const b = meta.width ?? 0, h = meta.height ?? 0;
+  if (!b || !h) return false;
+
+  const links = Math.max(0, Math.round(kasten.x0 * b));
+  const oben = Math.max(0, Math.round(kasten.y0 * h));
+  const breit = Math.min(b - links, Math.max(6, Math.round((kasten.x1 - kasten.x0) * b)));
+  const hoch = Math.min(h - oben, Math.max(6, Math.round((kasten.y1 - kasten.y0) * h)));
+  if (breit < 12 || hoch < 6) return false;
+
+  /* Nur das linke Sechstel, dort sitzt das EU-Feld. */
+  const feldBreite = Math.max(3, Math.round(breit / 6));
+  const { data } = await sharp(bild)
+    .extract({ left: links, top: oben, width: feldBreite, height: hoch })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  let blau = 0, gesamt = 0;
+  for (let i = 0; i < data.length; i += 3) {
+    const r = data[i], g = data[i + 1], bl = data[i + 2];
+    gesamt++;
+    /*
+     * Kennzeichenblau ist dunkel und deutlich blaustichig: Blau liegt
+     * klar ueber Rot und Gruen, und das Ganze ist nicht hell.
+     */
+    if (bl > 70 && bl - r > 35 && bl - g > 20 && bl < 220) blau++;
+  }
+  return gesamt > 0 && blau / gesamt > 0.12;
+}
