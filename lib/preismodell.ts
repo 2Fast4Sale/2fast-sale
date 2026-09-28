@@ -23,8 +23,23 @@
  * bekommen.
  */
 
-/** Preis je Inserat ohne Paket, in Cent. */
-export const PREIS_PRO_INSERAT_CENT = 350;
+/**
+ * Preis je Inserat ohne Paket, in Cent.
+ *
+ * 10 EUR statt 3,50.
+ *
+ * Die 3,50 stammten aus einer Zeit, in der ein Studio-Bild 2 Cent kosten
+ * sollte. Gemessen ueber die Gemini-Abrechnung vom 22. bis 28. September
+ * kostet ein Bild 6 bis 13 Cent; bei zehn Aussenansichten sind das 0,60
+ * bis 1,30 EUR allein an Bildern, dazu Text, Scan und Rechenzeit.
+ *
+ * Wichtiger ist aber, was der Haendler bekommt: dreissig Fotos, davon
+ * zehn im Studio, ausgelesener Fahrzeugschein, erkannte Ausstattung,
+ * fertige Beschreibung und der Export zu den Boersen. Das ist eine
+ * Dienstleistung, keine Bildbearbeitung — wer sie von Hand macht,
+ * braucht eine halbe Stunde.
+ */
+export const PREIS_PRO_INSERAT_CENT = 1000;
 
 /**
  * Umsatzsteuersatz auf unseren Rechnungen, in Prozent.
@@ -147,10 +162,18 @@ export function probeDeckung(kostenJeInseratCent = 23): number {
   return PROBE.preisCent - PROBE.inserate * kostenJeInseratCent - stripe;
 }
 
+/*
+ * Die Pakete wandern mit dem Einzelpreis mit.
+ *
+ * Sie waren gegen 3,50 EUR gerechnet und haetten bei 10 EUR einen
+ * Rabatt von ueber 70 Prozent bedeutet — das verschenkt Geld, ohne dass
+ * jemand dafuer etwas zusagt. Der Abstand zum Einzelpreis bleibt
+ * derselbe wie vorher: rund 15, 25 und 38 Prozent.
+ */
 export const PAKETE: readonly Paket[] = [
-  { id: 's', name: 'Paket S', preisCent: 15000,  inserate: 50 },
-  { id: 'm', name: 'Paket M', preisCent: 40000,  inserate: 150 },
-  { id: 'l', name: 'Paket L', preisCent: 120000, inserate: 550 },
+  { id: 's', name: 'Paket S', preisCent: 42500,  inserate: 50 },   /* 8,50 je Inserat */
+  { id: 'm', name: 'Paket M', preisCent: 112500, inserate: 150 },  /* 7,50 je Inserat */
+  { id: 'l', name: 'Paket L', preisCent: 341000, inserate: 550 },  /* 6,20 je Inserat */
 ];
 
 export { STUDIO_INKLUSIVE, PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';

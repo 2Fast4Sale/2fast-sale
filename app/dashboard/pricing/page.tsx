@@ -425,7 +425,7 @@ function PricingContent() {
             <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0 }} />
             <div>
               <div style={{ fontWeight: '700', color: '#92400e', fontSize: '14px' }}>Kein Inserat-Credit vorhanden</div>
-              <div style={{ color: '#78350f', fontSize: '12px', marginTop: '2px' }}>Kaufe unten einen Credit für 4,99 € oder wähle ein Händler-Abo.</div>
+              <div style={{ color: '#78350f', fontSize: '12px', marginTop: '2px' }}>Kaufe unten ein Inserat-Guthaben oder wähle ein Händler-Paket.</div>
             </div>
           </div>
         )}

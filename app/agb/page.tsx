@@ -70,7 +70,7 @@ export default function AGBPage() {
           <h2 style={h2style}>§ 4 Preise und Abrechnung</h2>
           <p style={body}>
             Die Nutzung wird nach tatsächlich erstellten Inseraten abgerechnet. Ein Inserat kostet
-            3,50 €. Hinzu kommt eine monatliche Grundgebühr von 50 €, die bereits erste Leistungen
+            10,00 €. Hinzu kommt eine monatliche Grundgebühr von 50 €, die bereits erste Leistungen
             wie Speicherplatz und Export enthält.
           </p>
           <p style={body}>
