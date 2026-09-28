@@ -524,7 +524,30 @@ export async function POST(req: NextRequest) {
     let fahrzeugGeaendert = 0;
     if (geminiWeg) {
       const vorherBild = ergebnis.bild;
-      const fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
+      let fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
+      /*
+       * Ein zweiter Versuch, wenn das erste Ergebnis verworfen wurde.
+       *
+       * Gemini antwortet nicht zweimal gleich: Im Live-Test wurde dasselbe
+       * Foto einmal mit 0,987 angenommen und ein anderes mit 0,857
+       * abgelehnt. Ein zweiter Anlauf kostet 3 Cent und rettet etwa jedes
+       * zweite abgelehnte Bild — sonst bekommt der Haendler ohne Not das
+       * schlechtere Ergebnis.
+       */
+      if (!fein) {
+        console.info('[verarbeiten] erster Versuch verworfen (' + letzterGrund + '), zweiter Anlauf');
+        fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
+        if (fein) {
+          await logApiCost({
+            userId: await currentUserId(),
+            draftId: draftId ?? null,
+            service: 'gemini_bild',
+            operation: 'studio-verfeinern-2',
+            unitsIn: 1,
+            costMicros: imageCostMicros('gemini_bild'),
+          });
+        }
+      }
       /*
        * Kein Gemini-Bild: Dann hat auch niemand das Kennzeichen
        * abgedeckt. Das holt der eigene Code nach, sonst stuende ein
