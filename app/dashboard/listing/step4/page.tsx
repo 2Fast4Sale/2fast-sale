@@ -1038,8 +1038,14 @@ function Step4Inner() {
 
           <div style={{ flex: 1 }} />
           <div style={{ padding: '12px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '10px' }}>
-            <div style={{ fontSize: '11px', fontWeight: '800', color: IND, marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '5px' }}><BarChart2 size={11} /> September 2026</div>
-            <div style={{ fontSize: '11px', color: TS, lineHeight: 1.6 }}>Nach den Gesprächen mit Mobile.de & AutoScout24 wird die Plattform-Verbindung aktiviert.</div>
+            {/*
+              Hier stand "September 2026" als Zusage. Der September ist
+              vorbei, die Schnittstellen sind nicht freigeschaltet — eine
+              Ankuendigung mit Datum wird zur Unwahrheit, sobald das Datum
+              vergeht. Jetzt steht da, was heute gilt.
+            */}
+            <div style={{ fontSize: '11px', fontWeight: '800', color: IND, marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '5px' }}><BarChart2 size={11} /> Export</div>
+            <div style={{ fontSize: '11px', color: TS, lineHeight: 1.6 }}>Fotopaket und PDF kannst du sofort herunterladen. Die direkte Verbindung zu Mobile.de und AutoScout24 ist in Vorbereitung.</div>
           </div>
         </div>
 
