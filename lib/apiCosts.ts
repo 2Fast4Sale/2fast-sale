@@ -47,7 +47,19 @@ const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
    * 0,034 USD je Bild in 1K-Aufloesung. Damit malt die KI das ganze
    * Studiobild, nicht nur den Schatten.
    */
-  gemini_bild: 0.034,
+  /*
+   * GEMESSEN, nicht geschaetzt.
+   *
+   * Hier standen 0,034 USD — das war der Preis des kleinen Modells.
+   * Seit Nano Banana 2 (gemini-3.1-flash-image) die Bilder macht, stimmt
+   * er nicht mehr: Vom 22. bis 28. September wurden rund 9,37 EUR
+   * verbraucht, bei etwa 74 Bildern. Das sind rund 0,13 EUR je Bild,
+   * also knapp das Vierfache.
+   *
+   * Diese Zahl entscheidet ueber den Verkaufspreis: Bei zwoelf Fotos
+   * kostet ein Inserat damit rund 1,55 EUR statt 40 Cent.
+   */
+  gemini_bild: 0.14,
 };
 
 /**
