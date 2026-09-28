@@ -38,6 +38,13 @@ export async function updateSession(request: NextRequest) {
   const kostetGeld = [
     "/api/studio-eigen/", "/api/studio/", "/api/nanobanana", "/api/remove-bg",
     "/api/image/", "/api/ocr/", "/api/listings/generate",
+    /*
+     * Diese fuenf rufen ein Sprach- oder Bildmodell auf und kosten damit
+     * ebenfalls Geld. Sie standen nicht in der Liste: jeder ohne Konto
+     * konnte sie aufrufen und auf meine Rechnung Modelle laufen lassen.
+     */
+    "/api/scan-doc", "/api/scan-equipment-doc", "/api/detect-equipment",
+    "/api/generate-description", "/api/generate-title",
     "/api/autoscout24-publish", "/api/mobilede-publish",
   ].some((praefix) => p.startsWith(praefix));
   if (!user && kostetGeld) {

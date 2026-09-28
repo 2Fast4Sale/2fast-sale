@@ -38,7 +38,8 @@ export const DAT_FELDER = [
 export interface FormData {
   brand: string; model: string; vin: string;
   firstRegistration: string; km: string; price: string;
-  fuelType: string; gearbox: string; powerKw: string;
+  /** Leistung in PS (nicht kW) — umgerechnet wird erst beim Speichern in Schritt 4. */
+  fuelType: string; gearbox: string; leistungPs: string;
   displacementCcm: string; color: string; seats: string;
   equipment: string[]; dealerNotes: string;
   envkv: EnvkvData;
@@ -236,7 +237,7 @@ export function useEntwurf() {
 
   const [data, setData] = useState<FormData>({
     brand: '', model: '', vin: '', firstRegistration: '', km: '', price: '',
-    fuelType: '', gearbox: '', powerKw: '', displacementCcm: '',
+    fuelType: '', gearbox: '', leistungPs: '', displacementCcm: '',
     color: '', seats: '', equipment: [], dealerNotes: '',
     envkv: LEER_ENVKV,
     bodyType: '', vatType: '', damaged: false, metallic: false, warranty: false,
@@ -265,6 +266,8 @@ export function useEntwurf() {
   const erkannt = useMemo(() => new Set(herkunft.keys()), [herkunft]);
   const [scanZustand, setScanZustand] = useState<'ruhe' | 'laeuft' | 'fertig' | 'fehler'>('ruhe');
   const [scanBild, setScanBild]       = useState<string | null>(null);
+  /** Warum der Scan scheiterte — im Klartext, statt einer Sammelmeldung. */
+  const [scanFehler, setScanFehler]   = useState<string | null>(null);
   const [unterwegs, setUnterwegs]     = useState(false);
   const [schmal, setSchmal]           = useState(false);
 
@@ -359,19 +362,42 @@ export function useEntwurf() {
       bild.onerror = () => fertig(b64);
     });
 
+  /** Datei als Data-URL lesen — mit Fehlerfall, nicht stillschweigend. */
+  const alsDataUrl = (datei: File): Promise<string> =>
+    new Promise((fertig, fehler) => {
+      const leser = new FileReader();
+      leser.onload  = () => fertig(String(leser.result));
+      leser.onerror = () => fehler(leser.error ?? new Error('Datei nicht lesbar'));
+      leser.readAsDataURL(datei);
+    });
+
   const einlesen = async (datei: File) => {
-    const leser = new FileReader();
-    leser.onload = async ev => {
-      const klein = await verkleinern(ev.target?.result as string);
-      setScanBild(klein);
-      setScanZustand('laeuft');
+    setScanZustand('laeuft');
+    setScanFehler(null);
+    {
       try {
+        /*
+         * PDF und HEIC kommen als Data-URL durch, aber das Canvas kann
+         * sie nicht zeichnen und das Modell nicht lesen — lieber gleich
+         * sagen, als einen Modellaufruf zu bezahlen, der nichts findet.
+         */
+        if (!/^image\/(jpeg|png|webp)$/.test(datei.type)) {
+          throw new Error(
+            datei.type === 'application/pdf'
+              ? 'PDFs kann ich nicht lesen — mach ein Foto vom Schein.'
+              : 'Bitte ein Foto als JPG, PNG oder WebP.'
+          );
+        }
+        const klein = await verkleinern(await alsDataUrl(datei));
+        setScanBild(klein);
         const antwort = await fetch('/api/scan-doc', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: klein, draftId: entwurfId() }),
         });
-        const d = await antwort.json();
-        if (!antwort.ok) throw new Error(d.error || 'Scan fehlgeschlagen');
+        // .catch: Bei 413 oder 502 antwortet Vercel mit HTML, nicht JSON —
+        // ohne das stand in der Meldung "Unexpected token <".
+        const d = await antwort.json().catch(() => ({} as Record<string, string>));
+        if (!antwort.ok) throw new Error(String(d.error || `Scan fehlgeschlagen (${antwort.status})`));
 
         /*
          * scan-doc liefert Marke, Modell und Variante in EINEM String
@@ -396,7 +422,7 @@ export function useEntwurf() {
             km:    nimm('km', d.km != null ? String(d.km) : '', p.km),
             fuelType: nimm('fuelType', d.fuelType ?? '', p.fuelType),
             // scan-doc liefert powerPs (bereits aus kW umgerechnet, ×1,3596)
-            powerKw: nimm('powerKw', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.powerKw),
+            leistungPs: nimm('leistungPs', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.leistungPs),
             displacementCcm: nimm('displacementCcm', d.displacementCcm != null ? String(d.displacementCcm) : '', p.displacementCcm),
             color: nimm('color', d.color ?? '', p.color),
             seats: nimm('seats', d.seats != null ? String(d.seats) : '', p.seats),
@@ -422,13 +448,13 @@ export function useEntwurf() {
         });
         setScanZustand('fertig');
         setBlattOffen(true);
-      } catch {
+      } catch (err) {
         setScanZustand('fehler');
+        setScanFehler(err instanceof Error ? err.message : null);
         // Auch bei gescheitertem Scan soll er weiterarbeiten können.
         setBlattOffen(true);
       }
-    };
-    leser.readAsDataURL(datei);
+    }
   };
 
   /* ── Weiter ── */
@@ -472,11 +498,26 @@ export function useEntwurf() {
      * Anlegen in /api/vehicles. Hier geht es darum, früh zu informieren
      * statt vier Schritte ausfüllen zu lassen und dann abzuweisen.
      */
-    const credit = await fetch('/api/credits/check');
-    if (!credit.ok) {
-      setUnterwegs(false);
-      router.push('/dashboard/pricing?reason=no_credits');
-      return;
+    /*
+     * Nur bei 402 zur Preisseite. Vorher fuehrte jeder Fehlschlag dorthin
+     * — auch ein Serverfehler oder ein kurzer Netzausfall; wer Credits
+     * hatte, wurde dann mit "keine Credits" abgewiesen. Und ein
+     * geworfener fetch liess den Knopf fuer immer im Ladezustand stehen.
+     */
+    try {
+      const credit = await fetch('/api/credits/check');
+      if (credit.status === 402) {
+        setUnterwegs(false);
+        router.push('/dashboard/pricing?reason=no_credits');
+        return;
+      }
+      if (credit.status === 401) {
+        setUnterwegs(false);
+        router.push('/auth/login?redirect=/dashboard/listing/step1');
+        return;
+      }
+    } catch {
+      /* Netz weg: nicht aufhalten. Abgebucht wird ohnehin erst in Schritt 4. */
     }
 
     const teile: string[] = [];
@@ -484,7 +525,7 @@ export function useEntwurf() {
     if (markeModell) teile.push(markeModell);
     const jahr = data.firstRegistration.match(/(\d{4})/)?.[1];
     if (jahr) teile.push(jahr);
-    const kombi = [data.powerKw ? `${data.powerKw} PS` : '', data.fuelType].filter(Boolean).join(' ');
+    const kombi = [data.leistungPs ? `${data.leistungPs} PS` : '', data.fuelType].filter(Boolean).join(' ');
     if (kombi) teile.push(kombi);
     if (data.equipment.length) teile.push(data.equipment.slice(0, 2).join(', '));
 
@@ -495,7 +536,7 @@ export function useEntwurf() {
         body: JSON.stringify({
           brand: data.brand, model: data.model, year: jahr || '',
           fuel: data.fuelType, gearbox: data.gearbox, color: data.color,
-          power: data.powerKw, equipment: data.equipment, draftId: entwurfId(),
+          power: data.leistungPs, equipment: data.equipment, draftId: entwurfId(),
         }),
       });
       if (res.ok) {
@@ -504,11 +545,26 @@ export function useEntwurf() {
       }
     } catch { /* Rückfall auf den zusammengesetzten Titel */ }
 
-    sessionStorage.setItem('listing_step1', JSON.stringify({ ...data, suggestedTitle: titelVorschlag }));
+    /*
+     * Kann scheitern, wenn im Sitzungsspeicher noch Fotos eines frueheren
+     * Entwurfs liegen (5 MB Grenze). Dann lieber die Fotos wegwerfen als
+     * die Fahrzeugdaten: ohne die geht in Schritt 3 und 4 nichts.
+     */
+    const merken = () =>
+      sessionStorage.setItem('listing_step1', JSON.stringify({ ...data, suggestedTitle: titelVorschlag }));
+    try {
+      merken();
+    } catch {
+      try {
+        sessionStorage.removeItem('listing_photos');
+        sessionStorage.removeItem('listing_step2');
+        merken();
+      } catch { /* dann eben nur ueber die URL-Parameter weiter */ }
+    }
     const p = new URLSearchParams({
       brand: markeModell, km: data.km, price: data.price,
       year: data.firstRegistration, fuel: data.fuelType,
-      gearbox: data.gearbox, color: data.color, power: data.powerKw,
+      gearbox: data.gearbox, color: data.color, power: data.leistungPs,
     });
     router.push(`/dashboard/listing/step2?${p.toString()}`);
   };
@@ -528,16 +584,16 @@ export function useEntwurf() {
     if (mm) teile.push(mm);
     const jahr = data.firstRegistration.match(/(\d{4})/)?.[1];
     if (jahr) teile.push(jahr);
-    if (data.powerKw) teile.push(`${data.powerKw} PS`);
+    if (data.leistungPs) teile.push(`${data.leistungPs} PS`);
     if (data.fuelType) teile.push(data.fuelType);
     return teile;
-  }, [data.brand, data.model, data.firstRegistration, data.powerKw, data.fuelType]);
+  }, [data.brand, data.model, data.firstRegistration, data.leistungPs, data.fuelType]);
 
   return {
     data, setData, setzen,
     fehler, setFehler, erkannt, herkunft, setHerkunft,
     blattOffen, setBlattOffen,
-    scanZustand, scanBild, einlesen, dateiRef,
+    scanZustand, scanBild, scanFehler, einlesen, dateiRef,
     weiter, unterwegs,
     schmal, offenePflicht, envkvPflicht,
     modelle, markenSuchen, ausstattungSuchen, titelBisher,

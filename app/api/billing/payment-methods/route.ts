@@ -24,7 +24,12 @@ export async function GET() {
 
     const [pmList, invoiceList, customer, chargeList] = await Promise.all([
       getStripe().paymentMethods.list({ customer: profile.stripe_customer_id, type: 'card' }),
-      getStripe().invoices.list({ customer: profile.stripe_customer_id, limit: 12 }),
+      // payments mitladen — daraus wird unten erkannt, welche Zahlung
+      // schon als Rechnung in der Liste steht.
+      getStripe().invoices.list({
+        customer: profile.stripe_customer_id, limit: 12,
+        expand: ['data.payments'],
+      }),
       getStripe().customers.retrieve(profile.stripe_customer_id),
       // Einmalzahlungen (z.B. Inserat-Credits) — haben keine Invoice
       getStripe().charges.list({ customer: profile.stripe_customer_id, limit: 20 }),
@@ -68,14 +73,36 @@ export async function GET() {
       type: 'invoice' as const,
     }));
 
-    // Invoice-IDs um Dopplungen zu vermeiden
-    const invoiceChargeIds = new Set(
-      invoiceList.data.map(inv => inv.charge as string | null).filter(Boolean)
-    );
+    /*
+     * Dopplungen vermeiden: Eine Zahlung, zu der es eine Rechnung gibt,
+     * steht schon in der Liste oben.
+     *
+     * Vorher wurde dafuer invoice.charge gelesen — das Feld gibt es in
+     * dieser API-Fassung nicht mehr (2026-05-27). Es kam also immer
+     * undefined zurueck, die Menge blieb leer und jede Abo-Zahlung stand
+     * zweimal in der Zahlungsuebersicht. Der Weg umgekehrt ueber
+     * invoice.payments fuehrt denselben Zusammenhang: pro Rechnung die
+     * Zahlung, entweder als Charge-ID oder als PaymentIntent-ID.
+     */
+    const bezahltUeberRechnung = new Set<string>();
+    for (const inv of invoiceList.data) {
+      for (const zahlung of inv.payments?.data ?? []) {
+        const pi = zahlung.payment?.payment_intent;
+        const ch = zahlung.payment?.charge;
+        if (typeof pi === 'string') bezahltUeberRechnung.add(pi);
+        else if (pi?.id)            bezahltUeberRechnung.add(pi.id);
+        if (typeof ch === 'string') bezahltUeberRechnung.add(ch);
+        else if (ch?.id)            bezahltUeberRechnung.add(ch.id);
+      }
+    }
 
-    // Einmalzahlungen (ohne zugehörige Invoice)
     const chargeItems = chargeList.data
-      .filter(ch => ch.status === 'succeeded' && !invoiceChargeIds.has(ch.id))
+      .filter(ch => {
+        if (ch.status !== 'succeeded') return false;
+        if (bezahltUeberRechnung.has(ch.id)) return false;
+        const pi = typeof ch.payment_intent === 'string' ? ch.payment_intent : ch.payment_intent?.id;
+        return !(pi && bezahltUeberRechnung.has(pi));
+      })
       .map(ch => ({
         id: ch.id,
         number: ch.description || 'Inserat-Credit',

@@ -208,7 +208,8 @@ const GEBRAUCHT_AB_JAHREN = 2;
 interface FormData {
   brand: string; model: string; vin: string;
   firstRegistration: string; km: string; price: string;
-  fuelType: string; gearbox: string; powerKw: string;
+  /** Leistung in PS (nicht kW) — umgerechnet wird erst beim Speichern in Schritt 4. */
+  fuelType: string; gearbox: string; leistungPs: string;
   displacementCcm: string; color: string; seats: string;
   equipment: string[]; dealerNotes: string;
   envkv: EnvkvData;
@@ -231,6 +232,43 @@ const LEER_ENVKV: EnvkvData = {
   co2CombinedDischarged: null,
   electricRangeKm: null,
 };
+
+/**
+ * Ein Foto auf eine verschickbare Groesse bringen.
+ *
+ * Handyfotos haben 8–12 Megapixel; als Base64 sind das schnell 6 MB.
+ * Vercel nimmt hoechstens 4,5 MB pro Anfrage an und antwortet sonst mit
+ * einem HTML-Fehler, den die Oberflaeche nur als "Scan fehlgeschlagen"
+ * zeigen kann. Deshalb wird vor dem Verschicken verkleinert — 1200 px
+ * reichen fuer den Fahrzeugschein, Dokumente mit viel Text bekommen
+ * mehr.
+ *
+ * Stand vorher IM Formular und wurde nur vom Scheinscan benutzt; der
+ * Dokumentenscan (Ausstattung) verschickte das Foto unverkleinert.
+ */
+const verkleinern = (b64: string, max = 1200): Promise<string> =>
+  new Promise(fertig => {
+    const bild = new Image();
+    bild.src = b64;
+    bild.onload = () => {
+      const faktor = Math.min(1, max / Math.max(bild.width, bild.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(bild.width * faktor);
+      c.height = Math.round(bild.height * faktor);
+      c.getContext('2d')?.drawImage(bild, 0, 0, c.width, c.height);
+      fertig(c.toDataURL('image/jpeg', 0.85));
+    };
+    bild.onerror = () => fertig(b64);
+  });
+
+/** Datei als Data-URL lesen — mit Fehlerfall, nicht stillschweigend. */
+const alsDataUrl = (datei: File): Promise<string> =>
+  new Promise((fertig, fehler) => {
+    const leser = new FileReader();
+    leser.onload  = () => fertig(String(leser.result));
+    leser.onerror = () => fehler(leser.error ?? new Error('Datei nicht lesbar'));
+    leser.readAsDataURL(datei);
+  });
 
 /* ────────────────────────── Formular ────────────────────────── */
 
@@ -261,7 +299,7 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
 
   const [data, setData] = useState<FormData>({
     brand: '', model: '', vin: '', firstRegistration: '', km: '', price: '',
-    fuelType: '', gearbox: '', powerKw: '', displacementCcm: '',
+    fuelType: '', gearbox: '', leistungPs: '', displacementCcm: '',
     color: '', seats: '', equipment: [], dealerNotes: '',
     envkv: LEER_ENVKV,
   });
@@ -272,6 +310,14 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
   const [erkannt, setErkannt]         = useState<Set<string>>(new Set());
   const [scanZustand, setScanZustand] = useState<'ruhe' | 'laeuft' | 'fertig' | 'fehler'>('ruhe');
   const [scanBild, setScanBild]       = useState<string | null>(null);
+  /**
+   * Warum der Scan scheiterte — im Klartext.
+   *
+   * Vorher stand in jedem Fall dasselbe: "konnte nicht gelesen werden".
+   * "Bitte anmelden", "Foto zu gross" und "Schein unscharf" sind aber
+   * drei verschiedene Probleme mit drei verschiedenen Lösungen.
+   */
+  const [scanFehler, setScanFehler]   = useState<string | null>(null);
   const [ueberZone, setUeberZone]     = useState(false);
   const [markeSuche, setMarkeSuche]   = useState('');
   const [markeOffen, setMarkeOffen]   = useState(false);
@@ -298,12 +344,12 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
     setDokumentLaeuft(true);
     setDokumentMeldung(null);
     try {
-      const bild = await new Promise<string>((fertig, fehler) => {
-        const leser = new FileReader();
-        leser.onload = () => fertig(String(leser.result));
-        leser.onerror = () => fehler(leser.error);
-        leser.readAsDataURL(datei);
-      });
+      /*
+       * Bei Dokumenten mit viel Text 1600 px statt 1200 — eine
+       * Bestellbestaetigung hat zwanzig Zeilen Kleingedrucktes, die bei
+       * 1200 px auseinanderlaufen.
+       */
+      const bild = await verkleinern(await alsDataUrl(datei), 1600);
 
       const res = await fetch('/api/scan-equipment-doc', {
         method: 'POST',
@@ -399,34 +445,32 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
 
   /* ── Fahrzeugschein einlesen ── */
 
-  const verkleinern = (b64: string, max = 1200): Promise<string> =>
-    new Promise(fertig => {
-      const bild = new Image();
-      bild.src = b64;
-      bild.onload = () => {
-        const faktor = Math.min(1, max / Math.max(bild.width, bild.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(bild.width * faktor);
-        c.height = Math.round(bild.height * faktor);
-        c.getContext('2d')?.drawImage(bild, 0, 0, c.width, c.height);
-        fertig(c.toDataURL('image/jpeg', 0.85));
-      };
-      bild.onerror = () => fertig(b64);
-    });
-
   const einlesen = async (datei: File) => {
-    const leser = new FileReader();
-    leser.onload = async ev => {
-      const klein = await verkleinern(ev.target?.result as string);
+    setScanZustand('laeuft');
+    setScanFehler(null);
+    try {
+      /*
+       * Fruehe Absage statt eines Modellaufrufs, der nichts finden kann:
+       * Ein PDF oder eine HEIC-Datei kommt als Data-URL durch, aber das
+       * Canvas kann sie nicht zeichnen und das Modell nicht lesen.
+       */
+      if (!/^image\/(jpeg|png|webp)$/.test(datei.type)) {
+        throw new Error(
+          datei.type === 'application/pdf'
+            ? 'PDFs kann ich nicht lesen — mach ein Foto vom Schein.'
+            : 'Bitte ein Foto als JPG, PNG oder WebP.'
+        );
+      }
+
+      const klein = await verkleinern(await alsDataUrl(datei));
       setScanBild(klein);
-      setScanZustand('laeuft');
-      try {
+      {
         const antwort = await fetch('/api/scan-doc', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: klein, draftId: entwurfId() }),
         });
-        const d = await antwort.json();
-        if (!antwort.ok) throw new Error(d.error || 'Scan fehlgeschlagen');
+        const d = await antwort.json().catch(() => ({} as Record<string, unknown>));
+        if (!antwort.ok) throw new Error(String(d.error || `Scan fehlgeschlagen (${antwort.status})`));
 
         /*
          * scan-doc liefert Marke, Modell und Variante in EINEM String
@@ -451,7 +495,7 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
             km:    nimm('km', d.km != null ? String(d.km) : '', p.km),
             fuelType: nimm('fuelType', d.fuelType ?? '', p.fuelType),
             // scan-doc liefert powerPs (bereits aus kW umgerechnet, ×1,3596)
-            powerKw: nimm('powerKw', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.powerKw),
+            leistungPs: nimm('leistungPs', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.leistungPs),
             displacementCcm: nimm('displacementCcm', d.displacementCcm != null ? String(d.displacementCcm) : '', p.displacementCcm),
             color: nimm('color', d.color ?? '', p.color),
             seats: nimm('seats', d.seats != null ? String(d.seats) : '', p.seats),
@@ -463,13 +507,13 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
         setErkannt(neu);
         setScanZustand('fertig');
         setBlattOffen(true);
-      } catch {
-        setScanZustand('fehler');
-        // Auch bei einem gescheiterten Scan soll er weiterarbeiten können.
-        setBlattOffen(true);
       }
-    };
-    leser.readAsDataURL(datei);
+    } catch (err) {
+      setScanZustand('fehler');
+      setScanFehler(err instanceof Error ? err.message : null);
+      // Auch bei einem gescheiterten Scan soll er weiterarbeiten können.
+      setBlattOffen(true);
+    }
   };
 
   /* ── Weiter ── */
@@ -497,11 +541,26 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
      * Anlegen in /api/vehicles. Hier geht es darum, früh zu informieren
      * statt vier Schritte ausfüllen zu lassen und dann abzuweisen.
      */
-    const credit = await fetch('/api/credits/check');
-    if (!credit.ok) {
-      setUnterwegs(false);
-      router.push('/dashboard/pricing?reason=no_credits');
-      return;
+    /*
+     * Nur bei 402 zur Preisseite. Vorher fuehrte JEDER Fehlschlag dorthin
+     * — auch ein 500er oder ein kurzer Netzausfall. Wer Credits hat, wurde
+     * dann mit "keine Credits" abgewiesen. Und ein geworfener fetch liess
+     * den Knopf fuer immer im Ladezustand stehen.
+     */
+    try {
+      const credit = await fetch('/api/credits/check');
+      if (credit.status === 402) {
+        setUnterwegs(false);
+        router.push('/dashboard/pricing?reason=no_credits');
+        return;
+      }
+      if (credit.status === 401) {
+        setUnterwegs(false);
+        router.push('/auth/login?redirect=/dashboard/listing/step1');
+        return;
+      }
+    } catch {
+      /* Netz weg: nicht aufhalten. Abgebucht wird ohnehin erst in Schritt 4. */
     }
 
     const teile: string[] = [];
@@ -509,7 +568,7 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
     if (markeModell) teile.push(markeModell);
     const jahr = data.firstRegistration.match(/(\d{4})/)?.[1];
     if (jahr) teile.push(jahr);
-    const kombi = [data.powerKw ? `${data.powerKw} PS` : '', data.fuelType].filter(Boolean).join(' ');
+    const kombi = [data.leistungPs ? `${data.leistungPs} PS` : '', data.fuelType].filter(Boolean).join(' ');
     if (kombi) teile.push(kombi);
     if (data.equipment.length) teile.push(data.equipment.slice(0, 2).join(', '));
 
@@ -520,7 +579,7 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
         body: JSON.stringify({
           brand: data.brand, model: data.model, year: jahr || '',
           fuel: data.fuelType, gearbox: data.gearbox, color: data.color,
-          power: data.powerKw, equipment: data.equipment, draftId: entwurfId(),
+          power: data.leistungPs, equipment: data.equipment, draftId: entwurfId(),
         }),
       });
       if (res.ok) {
@@ -529,11 +588,26 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
       }
     } catch { /* Rückfall auf den zusammengesetzten Titel */ }
 
-    sessionStorage.setItem('listing_step1', JSON.stringify({ ...data, suggestedTitle: titelVorschlag }));
+    /*
+     * Kann scheitern, wenn im Sitzungsspeicher noch Fotos eines frueheren
+     * Entwurfs liegen (5 MB Grenze). Dann lieber die Fotos wegwerfen als
+     * die Fahrzeugdaten: ohne die geht in Schritt 3 und 4 nichts.
+     */
+    const merken = () =>
+      sessionStorage.setItem('listing_step1', JSON.stringify({ ...data, suggestedTitle: titelVorschlag }));
+    try {
+      merken();
+    } catch {
+      try {
+        sessionStorage.removeItem('listing_photos');
+        sessionStorage.removeItem('listing_step2');
+        merken();
+      } catch { /* dann eben nur ueber die URL-Parameter weiter */ }
+    }
     const p = new URLSearchParams({
       brand: markeModell, km: data.km, price: data.price,
       year: data.firstRegistration, fuel: data.fuelType,
-      gearbox: data.gearbox, color: data.color, power: data.powerKw,
+      gearbox: data.gearbox, color: data.color, power: data.leistungPs,
     });
     router.push(`/dashboard/listing/step2?${p.toString()}`);
   };
@@ -741,7 +815,9 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                     <span style={{ color: T.leise }}> Hervorgehoben ist, was noch fehlt.</span>
                   </>
                 ) : scanZustand === 'fehler' ? (
-                  <span style={{ color: T.luecke }}>Der Schein konnte nicht gelesen werden — trag die Daten von Hand ein.</span>
+                  <span style={{ color: T.luecke }}>
+                    {scanFehler || 'Der Schein konnte nicht gelesen werden'} — trag die Daten von Hand ein.
+                  </span>
                 ) : (
                   <span style={{ color: T.luecke }}>Ohne Schein eingetragen. Ein Foto würde die meisten Zeilen füllen.</span>
                 )}
@@ -915,10 +991,10 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                 <Zeile name="Getriebe" kinder={
                   <Wahl optionen={GETRIEBE} wert={data.gearbox} feld="gearbox" />
                 } />
-                <Zeile name="Leistung" markiert={erkannt.has('powerKw')} kinder={
+                <Zeile name="Leistung" markiert={erkannt.has('leistungPs')} kinder={
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <input inputMode="numeric" value={data.powerKw}
-                      onChange={e => setzen('powerKw', e.target.value.replace(/\D/g, ''))}
+                    <input inputMode="numeric" value={data.leistungPs}
+                      onChange={e => setzen('leistungPs', e.target.value.replace(/\D/g, ''))}
                       placeholder="150" style={ZAHL} />
                     <span style={{ fontSize: 12.5, color: T.leise, flexShrink: 0 }}>PS</span>
                   </div>

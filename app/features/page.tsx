@@ -184,7 +184,7 @@ export default function FeaturesPage() {
                 textAlign: 'left', transition: 'all 0.15s',
               }}
             >
-              <span style={{ opacity: active === f.id ? 1 : 0.5 }}>{React.cloneElement(f.icon as React.ReactElement, { size: 16 })}</span>
+              <span style={{ opacity: active === f.id ? 1 : 0.5 }}>{React.cloneElement(f.icon as React.ReactElement<{ size?: number }>, { size: 16 })}</span>
               {f.title}
               <span style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '4px', background: `${f.color}15`, color: f.color, opacity: active === f.id ? 1 : 0.5 }}>{f.tag}</span>
             </button>

@@ -107,9 +107,18 @@ function Step3Inner() {
 
     // API call
     const callAI = async () => {
+      /*
+       * Ohne Zeitlimit blieb diese Seite bei einem haengenden Aufruf fuer
+       * immer in der Animation stehen — kein Fehler, kein Weiter, nur ein
+       * laufender Balken. Die Funktion auf Vercel wird nach 60 Sekunden
+       * ohnehin abgeraeumt; danach kaeme keine Antwort mehr.
+       */
+      const abbruch = new AbortController();
+      const uhr = setTimeout(() => abbruch.abort(), 65_000);
       try {
         const res = await fetch('/api/generate-description', {
           method:  'POST',
+          signal:  abbruch.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             brand, km, year, fuel, gearbox, color,
@@ -121,7 +130,11 @@ function Step3Inner() {
             draftId:      entwurfId(),
           }),
         });
-        if (!res.ok) throw new Error('API-Fehler');
+        if (res.status === 401) {
+          router.push('/auth/login?redirect=/dashboard/listing/step1');
+          return;
+        }
+        if (!res.ok) throw new Error(`API-Fehler ${res.status}`);
         const data = await res.json();
         const desc = encodeURIComponent(data.text || data.description || '');
         const params = new URLSearchParams({ brand, km, price, year, fuel, gearbox, color, power, desc });
@@ -133,11 +146,16 @@ function Step3Inner() {
          * Jetzt wird der Grund mitgegeben und dort angezeigt.
          */
         console.error('[Schritt 3] Beschreibung fehlgeschlagen:', err);
+        const abgebrochen = err instanceof DOMException && err.name === 'AbortError';
         const params = new URLSearchParams({
           brand, km, price, year, fuel, gearbox, color, power, desc: '',
-          textFehler: 'Die Beschreibung konnte nicht erzeugt werden. In Schritt 4 kannst du sie neu erzeugen lassen oder selbst schreiben.',
+          textFehler: abgebrochen
+            ? 'Die Texterzeugung hat zu lange gebraucht und wurde abgebrochen. Du kannst sie hier neu erzeugen lassen oder selbst schreiben.'
+            : 'Die Beschreibung konnte nicht erzeugt werden. In Schritt 4 kannst du sie neu erzeugen lassen oder selbst schreiben.',
         });
         setTimeout(() => router.push(`/dashboard/listing/step4?${params.toString()}`), 800);
+      } finally {
+        clearTimeout(uhr);
       }
     };
     callAI();

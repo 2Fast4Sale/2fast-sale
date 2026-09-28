@@ -646,6 +646,14 @@ function Step4Inner() {
   const [error,     setError]     = useState('');
   const [copied,    setCopied]    = useState(false);
   const [done,      setDone]      = useState(false);
+  /**
+   * Hinweis, wenn die Fotos NICHT am Inserat hängen.
+   *
+   * Stand vorher nur in der Browser-Konsole: Der Erfolgsbildschirm
+   * nannte "30 Fotos", in der Datenbank lag keines. Wer das nicht
+   * merkt, lädt ein leeres Fotopaket herunter.
+   */
+  const [bilderHinweis, setBilderHinweis] = useState('');
   const [platform,  setPlatform]  = useState<Platform>('mobile');
   const [viewMode,  setViewMode]  = useState<ViewMode>('desktop');
   const [isMobile,  setIsMobile]  = useState(false);
@@ -742,7 +750,17 @@ function Step4Inner() {
         emission_class:  (step1.emissionClass as string) || undefined,
         drive_type:      (step1.driveType as string) || undefined,
         // Pkw-EnVKV Pflichtangaben aus Schritt 1
-        vehicle_kind:               step1.envkv?.vehicleKind || 'gebrauchtwagen',
+        /*
+         * KEINE Vorbelegung auf 'gebrauchtwagen'.
+         *
+         * Genau die stand hier: Wer Schritt 4 direkt über die URL
+         * aufrief, bekam ein Inserat, das das Fahrzeug als Gebrauchtwagen
+         * auszeichnet — ohne dass das jemand angegeben hätte. Bei einem
+         * Neuwagen ist das eine falsche Angabe im Inserat, für die der
+         * Händler haftet, und sie schaltet zugleich die EnVKV-Prüfung ab.
+         * Lieber leer als erfunden.
+         */
+        vehicle_kind:               step1.envkv?.vehicleKind || undefined,
         consumption_combined:       step1.envkv?.consumptionCombined ?? undefined,
         power_consumption_combined: step1.envkv?.powerConsumptionCombined ?? undefined,
         co2_combined:               step1.envkv?.co2Combined ?? undefined,
@@ -795,12 +813,15 @@ function Step4Inner() {
               });
               if (!antwort.ok) {
                 console.warn('[Schritt 4] Fotos konnten nicht zugeordnet werden:', antwort.status);
+                setBilderHinweis(`Die ${bilder.length} Fotos konnten nicht am Inserat gespeichert werden (Fehler ${antwort.status}). Öffne das Inserat im Dashboard und lade sie dort erneut hoch.`);
               }
             } else {
               console.warn('[Schritt 4] Keine gespeicherten Bildadressen — Inserat bleibt ohne Fotos');
+              setBilderHinweis('Das Inserat ist ohne Fotos gespeichert — die Bilder aus Schritt 2 wurden nicht hochgeladen. Geh zurück zu Schritt 2 und lade sie neu.');
             }
           } catch (err) {
             console.error('[Schritt 4] Fotos zuordnen fehlgeschlagen:', err);
+            setBilderHinweis('Die Fotos konnten nicht am Inserat gespeichert werden. Öffne das Inserat im Dashboard und lade sie dort erneut hoch.');
           }
         }
         // Der Entwurf ist abgeschlossen. Ohne das Aufraeumen bekaeme das
@@ -866,6 +887,17 @@ function Step4Inner() {
           wieder eine Ankuendigung ohne Deckung. Die beiden Downloads
           holen ZIP und PDF zu genau diesem Fahrzeug.
         */}
+        {bilderHinweis && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '9px', textAlign: 'left',
+            padding: '13px 15px', marginBottom: '16px', borderRadius: '11px',
+            background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.32)',
+            color: '#fbbf24', fontSize: '13px', lineHeight: 1.6,
+          }}>
+            <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 2 }} /> {bilderHinweis}
+          </div>
+        )}
+
         {savedId && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
             <a href={`/api/export/zip?id=${savedId}`} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '12px 18px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '11px', color: '#fff', fontSize: '13px', fontWeight: '700', textDecoration: 'none', fontFamily: F }}>
@@ -1205,6 +1237,17 @@ function Step4Inner() {
           )}
 
           {/* Die Fotos stehen jetzt oben, gross — siehe dort. */}
+
+          {/*
+            Ohne Fahrzeugart fehlt eine Pflichtangabe — bei Neu- und
+            Vorführwagen hängen daran die EnVKV-Verbrauchswerte. Schritt 1
+            erzwingt sie; wer über die URL hier landet, hat sie nicht.
+          */}
+          {!step1.envkv?.vehicleKind && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.30)', borderRadius: '10px', color: '#92400e', fontSize: '13px' }}>
+              <AlertTriangle size={14} /> Die Fahrzeugart fehlt (Gebraucht-, Neu-, Vorführwagen …). Sie bleibt leer, bis du sie in Schritt 1 angibst — ohne sie ist das Inserat nicht vollständig.
+            </div>
+          )}
 
           {textFehler && !desc && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 15px', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.30)', borderRadius: '10px', color: '#92400e', fontSize: '13px' }}>

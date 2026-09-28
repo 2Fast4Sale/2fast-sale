@@ -121,7 +121,7 @@ export default function PublicListingPage() {
               </div>
             )}
 
-            {vehicle.description && (
+            {!!vehicle.description && (
               <div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Beschreibung</div>
                 <p style={{ fontSize: '15px', color: '#64748b', lineHeight: 1.8, margin: 0 }}>{vehicle.description as string}</p>

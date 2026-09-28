@@ -566,6 +566,16 @@ export default function Showroom() {
               </span>
             )}
             {/*
+              Ein gescheiterter Scan war hier unsichtbar: die Ansicht
+              wechselte zum Datenblatt, und der Händler stand vor lauter
+              leeren Zeilen ohne zu wissen, warum.
+            */}
+            {e.scanZustand === 'fehler' && (
+              <span style={{ fontSize: 11.5, color: F.rahmenLuecke, fontWeight: 600 }}>
+                ● {e.scanFehler || 'Schein nicht gelesen'} — bitte von Hand eintragen
+              </span>
+            )}
+            {/*
               Der eingelesene Schein, klein.
 
               Das Bild lag schon vor — es wurde nur nirgends gezeigt.
@@ -1007,10 +1017,10 @@ export default function Showroom() {
         />
 
         <Block titel="Antrieb"
-          fertig={!!data.fuelType && !!data.gearbox && !!data.powerKw}
+          fertig={!!data.fuelType && !!data.gearbox && !!data.leistungPs}
           zusammenfassung={zusammen(
             data.fuelType, data.gearbox,
-            data.powerKw && `${data.powerKw} PS`,
+            data.leistungPs && `${data.leistungPs} PS`,
             data.displacementCcm && `${zahl(data.displacementCcm)} ccm`,
           )}
           kinder={
@@ -1023,8 +1033,8 @@ export default function Showroom() {
             <div style={{ display: 'grid', gridTemplateColumns: schmal ? '1fr' : '1fr 1fr', gap: 20 }}>
               <div>
                 <Beschriftung text="Leistung" />
-                <Eingabe erkannt={erkannt.has('powerKw')} einheit="PS" wert={data.powerKw}
-                  aendern={v => setzen('powerKw', v.replace(/\D/g, ''))} platzhalter="150" />
+                <Eingabe erkannt={erkannt.has('leistungPs')} einheit="PS" wert={data.leistungPs}
+                  aendern={v => setzen('leistungPs', v.replace(/\D/g, ''))} platzhalter="150" />
               </div>
               <div>
                 <Beschriftung text="Hubraum" />

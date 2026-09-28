@@ -38,13 +38,26 @@ export async function POST(req: Request) {
      * aufruft, umgeht jede Pruefung im Frontend. Das ist der Punkt, an dem
      * das Inserat tatsaechlich entsteht.
      */
-    const { data: darfAnlegen, error: creditError } = await supabase
-      .rpc('consume_listing_credit', { uid: user.id });
+    /*
+     * Hier nur PRUEFEN. Abgebucht wird erst, wenn das Fahrzeug wirklich
+     * in der Datenbank steht.
+     *
+     * Vorher stand an dieser Stelle consume_listing_credit — der Credit
+     * war also weg, sobald die Anfrage ankam. Schlug das Insert danach
+     * fehl (fehlende Spalte, Netzfehler, RLS), hatte der Haendler kein
+     * Inserat und trotzdem einen Credit weniger. Bei einem Gratis-Konto
+     * mit genau einem Credit heisst das: nie wieder ein Inserat.
+     */
+    const { data: profil, error: profilFehler } = await supabase
+      .from('profiles')
+      .select('plan, listing_credits')
+      .eq('id', user.id)
+      .single();
 
-    if (creditError) {
-      // Migration 015 noch nicht eingespielt: nicht blockieren, aber laut sein.
-      console.error('[vehicles] Credit-Pruefung fehlgeschlagen:', creditError.message);
-    } else if (darfAnlegen === false) {
+    if (profilFehler) {
+      // Kein Profil lesbar: nicht blockieren, aber laut sein.
+      console.error('[vehicles] Profil nicht lesbar:', profilFehler.message);
+    } else if ((profil?.plan || 'free') === 'free' && (profil?.listing_credits ?? 0) < 1) {
       return NextResponse.json(
         { error: 'Keine Inserat-Credits vorhanden', code: 'no_credits' },
         { status: 402 }
@@ -134,6 +147,22 @@ export async function POST(req: Request) {
      * fest, damit nichts verloren geht.
      */
     if (data?.id) {
+      /*
+       * Jetzt abbuchen — das Fahrzeug steht. consume_listing_credit
+       * prueft und zieht in einem Schritt; sagt es hier nein, ist in der
+       * Zwischenzeit ein zweites Inserat durchgelaufen. Dann bleibt
+       * dieses Inserat trotzdem stehen: es ist angelegt, und dem
+       * Haendler ein fertiges Inserat wieder wegzunehmen waere
+       * schlimmer als ein Credit zu viel.
+       */
+      const { data: abgebucht, error: abbuchFehler } = await supabase
+        .rpc('consume_listing_credit', { uid: user.id });
+      if (abbuchFehler) {
+        console.error('[vehicles] Credit-Abbuchung fehlgeschlagen:', abbuchFehler.message);
+      } else if (abgebucht === false) {
+        console.warn('[vehicles] Inserat angelegt, aber kein Credit mehr vorhanden:', data.id);
+      }
+
       /*
        * Kosten aus den Schritten 1 bis 3 diesem Fahrzeug zuordnen.
        *
