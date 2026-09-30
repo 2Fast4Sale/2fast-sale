@@ -49,6 +49,36 @@ export async function POST(req: NextRequest) {
 
   const eingang = new Date();
 
+  /*
+   * Dieses Formular ist offen (§ 312k BGB) und verschickt eine E-Mail an
+   * eine Adresse, die im Aufruf steht. Ohne Bremse ist es ein
+   * Versandwerkzeug fuer fremde Postfaecher und faellt uns als
+   * Absenderruf zur Last. Also: hoechstens drei Eingaenge je Adresse in
+   * zehn Minuten. Die Kuendigung selbst wird trotzdem gespeichert — nur
+   * die vierte Bestaetigungsmail entfaellt.
+   */
+  const zehnMinuten = new Date(eingang.getTime() - 10 * 60_000).toISOString();
+  const { count: zuletzt } = await dienst
+    .from('kuendigungen')
+    .select('id', { count: 'exact', head: true })
+    .eq('email', String(daten.email).trim().toLowerCase())
+    .gte('eingegangen_am', zehnMinuten);
+  const zuVieleVersuche = (zuletzt ?? 0) >= 3;
+
+  /*
+   * Laengen begrenzen. Die Angaben kommen aus einem offenen Formular und
+   * stehen danach in der Bestaetigungsmail — ein Megabyte "Grund" waere
+   * eine unversendbare E-Mail und ein aufgeblaehter Datensatz.
+   */
+  const kurz = (w: unknown, max: number) => {
+    const t = String(w ?? '').trim();
+    return t ? t.slice(0, max) : null;
+  };
+  daten.name      = kurz(daten.name, 120);
+  daten.vertrag   = kurz(daten.vertrag, 120);
+  daten.grund     = kurz(daten.grund, 2000);
+  daten.zumDatum  = kurz(daten.zumDatum, 40);
+
   const { data: eintrag, error } = await dienst
     .from('kuendigungen')
     .insert({
@@ -126,7 +156,7 @@ export async function POST(req: NextRequest) {
     a.email,
   ].join('\n');
 
-  const verschickt = await sende({
+  const verschickt = zuVieleVersuche ? false : await sende({
     an: String(daten.email).trim(),
     betreff: `Kündigung eingegangen — ${zeitpunkt} Uhr`,
     html: huelle(a, {

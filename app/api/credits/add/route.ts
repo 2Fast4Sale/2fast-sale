@@ -12,6 +12,21 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
 
+  /*
+   * Hier fehlte die Admin-Pruefung.
+   *
+   * Im Kopf stand "Admin-Endpunkt", geprueft wurde aber nur, ob jemand
+   * angemeldet ist. Jeder Haendler konnte sich damit hundert Credits
+   * gutschreiben — hundert Inserate, deren Modell- und Bildkosten ich
+   * bezahle — und den Aufruf beliebig oft wiederholen. Geprueft wird
+   * ueber den normalen Client, damit die Zeilenregeln greifen.
+   */
+  const { data: eigenesProfil } = await supabase
+    .from('profiles').select('is_admin').eq('id', user.id).single();
+  if (!eigenesProfil?.is_admin) {
+    return NextResponse.json({ error: 'Kein Zugriff' }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const targetId = (body.userId as string) || user.id;
   const amount   = parseInt(body.amount ?? '1', 10);
@@ -39,10 +54,10 @@ export async function POST(req: NextRequest) {
   const current = (data as { listing_credits: number | null }).listing_credits ?? 0;
   const updated = current + amount;
 
+  // In der Datenbank addieren: lesen-rechnen-schreiben verliert eine
+  // gleichzeitige Gutschrift aus einem Kauf.
   const { error: updateErr } = await service
-    .from('profiles')
-    .update({ listing_credits: updated })
-    .eq('id', targetId);
+    .rpc('increment_listing_credits', { uid: targetId, amount });
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
 
