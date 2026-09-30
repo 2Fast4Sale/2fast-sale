@@ -31,6 +31,76 @@ export async function DELETE(req: NextRequest) {
     const uid = user.id;
     console.log('[delete-account] Deleting user:', uid);
 
+    /*
+     * 0. Laufendes Abo bei Stripe beenden — VOR dem Loeschen.
+     *
+     * Das fehlte. Wer sein Konto loeschte, wurde weiter abgebucht: Die
+     * Zahlung haengt am Stripe-Kunden, nicht am Konto hier. Und nach dem
+     * Loeschen ist die Abo-Nummer weg, es gibt also keinen Weg zurueck.
+     * Sofort statt zum Periodenende: Wer sein Konto loescht, kann den
+     * Rest des Zeitraums nicht mehr nutzen.
+     */
+    const { data: vorProfil } = await supabaseAdmin
+      .from('profiles')
+      .select('stripe_subscription_id')
+      .eq('id', uid)
+      .single();
+
+    if (vorProfil?.stripe_subscription_id && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2026-05-27.dahlia' });
+        await stripe.subscriptions.cancel(vorProfil.stripe_subscription_id);
+        console.log('[delete-account] Abo beendet:', vorProfil.stripe_subscription_id);
+      } catch (fehler) {
+        /*
+         * Hier NICHT weitermachen: Sonst ist das Konto weg und das Abo
+         * laeuft, ohne dass noch jemand die Nummer kennt.
+         */
+        console.error('[delete-account] Abo konnte nicht beendet werden:', fehler);
+        return NextResponse.json(
+          { error: 'Dein Abo laesst sich gerade nicht beenden. Damit du nicht weiter bezahlst, haben wir das Konto NICHT geloescht. Bitte kurz spaeter erneut versuchen.' },
+          { status: 503 },
+        );
+      }
+    }
+
+    /*
+     * 0b. Die Fotos aus dem Speicher.
+     *
+     * Der Eimer vehicle-images ist oeffentlich lesbar und die Dateien
+     * liegen unter der Nutzer-Nummer. Ohne diesen Schritt bleiben die
+     * Fotos nach dem Loeschen des Kontos fuer jeden erreichbar, der eine
+     * Adresse hat — ein loeschbares Datum, das nicht geloescht wird
+     * (Art. 17 DSGVO).
+     */
+    try {
+      const alleDateien: string[] = [];
+      const ordnerSammeln = async (pfad: string, tiefe = 0) => {
+        if (tiefe > 3) return;
+        const { data: eintraege } = await supabaseAdmin.storage
+          .from('vehicle-images')
+          .list(pfad, { limit: 1000 });
+        for (const eintrag of eintraege ?? []) {
+          const voll = pfad ? `${pfad}/${eintrag.name}` : eintrag.name;
+          // Ordner haben keine id — dann tiefer schauen.
+          if (eintrag.id) alleDateien.push(voll);
+          else await ordnerSammeln(voll, tiefe + 1);
+        }
+      };
+      await ordnerSammeln(uid);
+      for (let i = 0; i < alleDateien.length; i += 100) {
+        const { error: loeschFehler } = await supabaseAdmin.storage
+          .from('vehicle-images')
+          .remove(alleDateien.slice(i, i + 100));
+        if (loeschFehler) console.warn('[delete-account] Fotos loeschen:', loeschFehler.message);
+      }
+      console.log('[delete-account] Fotos geloescht:', alleDateien.length);
+    } catch (fehler) {
+      // Das Konto trotzdem loeschen — sonst haengt der Nutzer fest.
+      console.error('[delete-account] Speicher aufraeumen fehlgeschlagen:', fehler);
+    }
+
     // 1. Vehicle images löschen
     const { data: vehicles } = await supabaseAdmin
       .from('vehicles').select('id').eq('user_id', uid);
