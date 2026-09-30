@@ -13,6 +13,7 @@ export default function PublicListingPage() {
   const [loading, setLoading]   = useState(true);
   const [sending, setSending]   = useState(false);
   const [sent,    setSent]      = useState(false);
+  const [fehler,  setFehler]    = useState('');
   const [form,    setForm]      = useState({ name: '', email: '', phone: '', message: '' });
 
   useEffect(() => {
@@ -26,13 +27,27 @@ export default function PublicListingPage() {
     e.preventDefault();
     if (!vehicle) return;
     setSending(true);
-    await fetch('/api/inquiries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, vehicle_id: id, dealer_id: vehicle.dealer_id || vehicle.user_id }),
-    });
-    setSent(true);
-    setSending(false);
+    /*
+     * Vorher stand hier setSent(true) ohne jede Pruefung: Auch wenn die
+     * Anfrage nie ankam, sah der Interessent "Anfrage gesendet" und
+     * wartete auf eine Antwort, die niemand bekommen hat.
+     */
+    setFehler('');
+    try {
+      const antwort = await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, vehicle_id: id }),
+      });
+      const ergebnis = await antwort.json().catch(() => ({}));
+      if (!antwort.ok) throw new Error(ergebnis.error || 'Die Anfrage konnte nicht gesendet werden.');
+      setSent(true);
+    } catch (err) {
+      setFehler(err instanceof Error ? err.message
+        : 'Die Anfrage konnte nicht gesendet werden. Bitte später erneut versuchen.');
+    } finally {
+      setSending(false);
+    }
   };
 
   if (loading) return (
@@ -173,6 +188,23 @@ export default function PublicListingPage() {
                     {sending ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} />}
                     {sending ? 'Wird gesendet...' : 'Anfrage senden'}
                   </button>
+                  {fehler && (
+                    <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '9px', padding: '10px 13px', color: '#b91c1c', fontSize: '13px', lineHeight: 1.5 }}>
+                      {fehler}
+                    </div>
+                  )}
+                  {/*
+                    Hinweis auf die Datenverarbeitung. Das Formular erhebt
+                    Name, E-Mail und Telefonnummer und gibt sie an den
+                    Haendler weiter — ohne Hinweis waere das eine
+                    Uebermittlung, von der der Interessent nichts weiss
+                    (Art. 13 DSGVO).
+                  */}
+                  <p style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
+                    Deine Angaben gehen an den Händler dieses Fahrzeugs, damit er dir
+                    antworten kann. Mehr dazu in der{' '}
+                    <a href="/datenschutz" style={{ color: '#4f46e5' }}>Datenschutzerklärung</a>.
+                  </p>
                 </form>
               </>
             )}

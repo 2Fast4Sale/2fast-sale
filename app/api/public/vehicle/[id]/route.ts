@@ -21,6 +21,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'Inserat nicht gefunden' }, { status: 404 });
   }
 
+  /*
+   * Entwuerfe sind nicht oeffentlich.
+   *
+   * Diese Route liest mit dem Dienstschluessel und umgeht damit jede
+   * Zeilenregel der Datenbank. Sie gab jedes Fahrzeug heraus, dessen
+   * Nummer man kannte — auch eines, das der Haendler nur als Entwurf
+   * gespeichert hat, mit noch falschem Preis oder unfertigem Text.
+   */
+  if (String(data.status || '').toLowerCase() === 'entwurf') {
+    return NextResponse.json({ error: 'Inserat nicht gefunden' }, { status: 404 });
+  }
+
   supabaseAdmin
     .from('vehicles')
     .update({ views: (data.views || 0) + 1 })
