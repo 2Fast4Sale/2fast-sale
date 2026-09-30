@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { createClient } from '../../../lib/supabase/client';
+import { PREIS_PRO_INSERAT_CENT, PAKETE, euro } from '../../../lib/preismodell';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -155,8 +156,8 @@ export default function RegisterPage() {
               <label style={labelStyle}>Ich verkaufe *</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {([
-                  { id: 'haendler', titel: 'Als Händler', text: 'Autohaus oder Gewerbe · Pakete ab 50 €' },
-                  { id: 'privat',   titel: 'Privat',      text: 'Einzelnes Fahrzeug · 4,99 € je Inserat' },
+                  { id: 'haendler', titel: 'Als Händler', text: `Autohaus oder Gewerbe · Pakete ab ${euro(PAKETE[0].preisCent)} €` },
+                  { id: 'privat',   titel: 'Privat',      text: `Einzelnes Fahrzeug · ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat` },
                 ] as const).map(w => {
                   const an = kontoArt === w.id;
                   return (

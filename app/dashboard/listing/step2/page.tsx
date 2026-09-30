@@ -21,7 +21,7 @@ import { entwurfId } from '../../../../lib/entwurf';
  *
  * Ein normales Foto kostet nur Speicher. Teuer ist allein die
  * Studio-Bearbeitung, und die begrenzt bereits das Kontingent in
- * studioQuota — darueber kostet jedes Bild 4 Cent. Die Menge zweimal zu
+ * studioQuota — darueber kostet jedes Bild den Satz aus studioQuota. Die Menge zweimal zu
  * deckeln bringt nichts ein, sperrt aber den Haendler aus.
  *
  * Und beim groessten Paket gab es kein Upgrade mehr. Wer dort an die
@@ -1150,8 +1150,8 @@ function Step2Inner() {
                 Tacho oder Motorraum wirkt ein Studio-Hintergrund unnatürlich.
                 Du kannst das pro Foto umschalten.
                 {/*
-                  * Das Kontingent haengt am gebuchten Paket — 12 ohne Paket,
-                  * bis 30 bei Paket L. Vorher stand hier fest der kleinste
+                  * Das Kontingent haengt am gebuchten Paket (lib/studioQuota.ts),
+                  * derzeit 8 ohne Paket bis 12. Vorher stand hier fest der kleinste
                   * Wert; ein Haendler mit Paket L haette also 18 Bilder als
                   * kostenpflichtig angezeigt bekommen, die er laengst bezahlt
                   * hat, und sie aus Sparsamkeit weggelassen.

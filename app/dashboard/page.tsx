@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Car, CheckCircle2, ChevronRight, Eye, Pencil, TrendingUp, FileText, ArrowRight } from 'lucide-react';
 import { Suspense } from 'react';
+import { PREIS_PRO_INSERAT_CENT, euro } from '../../lib/preismodell';
 
 interface Vehicle { id:string; brand:string; price:string; date:string; image:string; status:string; km?:string; }
 
@@ -138,7 +139,7 @@ function DashboardContent() {
               </div>
             </div>
             <Link href="/dashboard/pricing" style={{ textDecoration:'none', display:'inline-flex', alignItems:'center', gap:'7px', background:'rgba(255,255,255,0.15)', color:'#fff', padding:'9px 16px', borderRadius:'4px', fontWeight:'700', fontSize:'13px', whiteSpace:'nowrap', border:'1px solid rgba(255,255,255,0.25)', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-              {credits === 0 ? '🔑 Credit kaufen – 4,99 €' : '+ Weiteren kaufen'}
+              {credits === 0 ? `🔑 Credit kaufen – ${euro(PREIS_PRO_INSERAT_CENT)} €` : '+ Weiteren kaufen'}
             </Link>
           </div>
         )}

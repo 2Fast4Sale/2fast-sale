@@ -85,7 +85,7 @@ const FAQS = [
   { q: 'Was kostet ein Inserat ohne Paket?', a: `${euro(GRUNDGEBUEHR_CENT)} € Grundgebühr im Monat plus ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat. Ab ${paketLohntAb('s')} Inseraten im Monat ist Paket S günstiger, ab ${paketLohntAb('m')} Paket M, ab ${paketLohntAb('l')} Paket L.` },
   { q: 'Was passiert über dem Kontingent?', a: `Es läuft mit ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat weiter — nichts wird blockiert. Sobald sich das nächstgrößere Paket lohnt, weisen wir dich darauf hin.` },
   { q: 'Was sind Studio-Bilder?', a: `Fotos, die freigestellt und vor einen Studio-Hintergrund gesetzt werden. Das brauchen nur die Außenansichten — Cockpit, Motorraum oder Serviceheft lädst du normal hoch, die zählen nicht aufs Kontingent und kosten nichts. Zusätzliche Studio-Bilder kosten ${PREIS_EXTRA_BILD_CENT} Cent.` },
-  { q: 'Unterschied Privatperson und Händler?', a: 'Als Privatperson zahlst du 4,99 € pro Inserat — einmalig, kein Abo. Für ein bis zwei Verkäufe im Jahr ist das richtig. Wer regelmäßig verkauft, fährt mit Grundgebühr oder Paket günstiger.' },
+  { q: 'Unterschied Privatperson und Händler?', a: `Als Privatperson zahlst du ${euro(PREIS_PRO_INSERAT_CENT)} € pro Inserat — einmalig, kein Abo. Für ein bis zwei Verkäufe im Jahr ist das richtig. Wer regelmäßig verkauft, fährt mit Grundgebühr oder Paket günstiger.` },
   { q: 'Wie lange gilt ein Inserat-Credit?', a: 'Gekaufte Credits verfallen nicht. Du kannst sie jederzeit einlösen, auch Monate später.' },
   { q: 'Kann ich jederzeit kündigen?', a: 'Ja — monatliche Kündigung zum Ende des Abrechnungszeitraums. Keine Mindestlaufzeit.' },
   { q: 'Stellt ihr direkt auf mobile.de ein?', a: 'Noch nicht. Du lädst Fotopaket und Text herunter und stellst damit selbst ein. Die direkte Übertragung ist in Vorbereitung — wir bewerben sie erst, wenn sie läuft.' },
@@ -494,7 +494,7 @@ function PricingContent() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '52px', fontWeight: '900', color: '#fff', letterSpacing: '-3px', lineHeight: 1 }}>4,99</span>
+              <span style={{ fontSize: '52px', fontWeight: '900', color: '#fff', letterSpacing: '-3px', lineHeight: 1 }}>{euro(PREIS_PRO_INSERAT_CENT)}</span>
               <div>
                 <div style={{ fontSize: '22px', fontWeight: '800', color: 'rgba(255,255,255,0.8)' }}>€</div>
                 <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', whiteSpace: 'nowrap' }}>pro Inserat</div>

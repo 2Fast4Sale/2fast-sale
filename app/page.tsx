@@ -22,6 +22,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PAKETE, PROBE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, euro } from '../lib/preismodell';
+import { studioInklusive } from '../lib/studioQuota';
 import {
   ArrowRight, ScanLine, Camera, Sparkles, FileDown, Check, Menu, X,
   ShieldCheck, Clock, Layers, Gauge, ChevronDown,
@@ -98,11 +99,16 @@ const PLAENE = [
      * Auch "Statistiken zu deinen Inseraten" ist gestrichen: Es gibt sie
      * nicht.
      */
+    /*
+     * Die Zahl kommt aus studioQuota, nicht aus dem Text: Sie stand hier
+     * dreimal von Hand, und eine geaenderte Staffelung haette die
+     * Startseite etwas versprechen lassen, was das Produkt nicht gibt.
+     */
     merkmale: i === 0
-      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', '10 Studio-Bilder je Inserat']
+      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', `${studioInklusive(p.id)} Studio-Bilder je Inserat`]
       : i === 1
-        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', '12 Studio-Bilder je Inserat']
-        : ['Alles aus Paket M', '12 Studio-Bilder je Inserat', 'Für grosse Bestände'],
+        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', `${studioInklusive(p.id)} Studio-Bilder je Inserat`]
+        : ['Alles aus Paket M', `${studioInklusive(p.id)} Studio-Bilder je Inserat`, 'Für grosse Bestände'],
     cta: `${p.name} wählen`,
     ziel: '/dashboard/pricing',
     /*
