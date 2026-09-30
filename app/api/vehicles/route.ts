@@ -2,6 +2,9 @@
 import { createClient } from '../../../lib/supabase/server';
 import { berechneInserat } from '../../../lib/usageBilling';
 import { guthabenPruefen } from '../../../lib/emailAusloeser';
+import {
+  fahrzeugFelder, BASIS_SPALTEN, NEUE_SPALTEN, MOBILE_SPALTEN, ENVKV_SPALTEN,
+} from '../../../lib/vehicleColumns';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,49 +69,25 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    /* Basis-Spalten die immer existieren */
-    const BASE_COLS = [
-      'brand', 'vin', 'first_registration', 'displacement_ccm', 'power_kw',
-      'fuel_type', 'color', 'seats', 'gross_weight_kg', 'km', 'price',
-      'dealer_notes', 'description', 'equipment', 'status', 'background_id',
-    ];
-    /* Neue Spalten aus Migration 004 */
-    const NEW_COLS = ['title', 'year', 'gearbox_type'];
     /*
-     * Pflichtfelder von mobile.de aus Migration 022.
+     * Spaltenlisten und das Aussieben stehen in lib/vehicleColumns.ts.
      *
-     * Eigene Gruppe, weil die Route bei fehlenden Spalten stufenweise
-     * zurueckfaellt: Wer die Migration noch nicht eingespielt hat, legt
-     * das Inserat trotzdem an — nur ohne diese Angaben.
+     * Sie standen hier — und NUR hier. Die PATCH-Route hatte keine und
+     * schrieb den Korb aus Schritt 4 unveraendert in die Tabelle, samt
+     * studio_images und draft_id, die keine Spalten sind.
      */
-    const MOBILE_COLS = [
-      'body_type', 'vat_type', 'damaged', 'metallic', 'warranty',
-      // Migration 023
-      'hu_until', 'previous_owners', 'interior_type', 'interior_color',
-      'doors', 'emission_class', 'drive_type',
-    ];
-    /* Pkw-EnVKV Spalten aus Migration 012 */
-    const ENVKV_COLS = [
-      'vehicle_kind', 'consumption_combined', 'power_consumption_combined',
-      'co2_combined', 'co2_combined_discharged', 'electric_range_km',
-    ];
+    const buildPayload = (cols: readonly string[]) => ({
+      user_id: user.id,
+      ...fahrzeugFelder(body as Record<string, unknown>, cols),
+      // equipment soll auch dann gesetzt sein, wenn keines mitkam:
+      // die Spalte ist ein Array, null waere etwas anderes als leer.
+      equipment: Array.isArray(body.equipment) ? body.equipment : [],
+    });
 
-    const buildPayload = (cols: string[]) => {
-      const obj: Record<string, any> = { user_id: user.id };
-      for (const key of cols) {
-        if (key === 'equipment') {
-          obj.equipment = Array.isArray(body.equipment) ? body.equipment : [];
-        } else if (typeof body[key] === 'boolean') {
-          // Ausdruecklich vor der naechsten Pruefung: Die verwirft leere
-          // Werte, und false zaehlt dort faelschlich als leer. "Unfallfrei"
-          // waere sonst nie gespeichert worden.
-          obj[key] = body[key];
-        } else if (body[key] !== undefined && body[key] !== null && body[key] !== '') {
-          obj[key] = body[key];
-        }
-      }
-      return obj;
-    };
+    const BASE_COLS   = BASIS_SPALTEN;
+    const NEW_COLS    = NEUE_SPALTEN;
+    const MOBILE_COLS = MOBILE_SPALTEN;
+    const ENVKV_COLS  = ENVKV_SPALTEN;
 
     /* Erst mit allen Spalten versuchen */
     const fullPayload = buildPayload([...BASE_COLS, ...NEW_COLS, ...ENVKV_COLS, ...MOBILE_COLS]);
