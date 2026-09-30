@@ -38,8 +38,25 @@ const PLANS = [
   },
 ];
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    /*
+     * Diese Route legt Produkte und Preise im ECHTEN Stripe-Konto an.
+     *
+     * Sie stand hinter nichts weiter als "angemeldet": Jeder Haendler mit
+     * Konto konnte sie aufrufen und acht Produkte samt sechzehn Preisen
+     * im Konto anlegen — bei jedem Aufruf neue, Stripe prueft nicht auf
+     * Dopplungen. Die Preise hier sind ausserdem alt (29/79/199/499 Euro
+     * im Monat); verkauft werden inzwischen Pakete aus lib/preismodell.ts.
+     *
+     * Jetzt braucht es das Einrichtungs-Kennwort aus der Umgebung. Ist
+     * keines gesetzt, ist die Route zu — nicht offen.
+     */
+    const kennwort = process.env.STRIPE_SETUP_TOKEN;
+    if (!kennwort || req.headers.get('x-setup-token') !== kennwort) {
+      return NextResponse.json({ error: 'Nicht verfügbar' }, { status: 404 });
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });

@@ -119,14 +119,18 @@ export async function POST(req: NextRequest) {
 
   const bisher = (profil as { listing_credits: number | null } | null)?.listing_credits ?? 0;
 
+  /*
+   * In der Datenbank addieren, nicht hier: Lesen, rechnen, schreiben
+   * verliert eine Gutschrift, wenn gleichzeitig noch eine laeuft — etwa
+   * wenn parallel ein Credit-Kauf ankommt.
+   */
   const { error: gutschriftFehler } = await dienst
-    .from('profiles')
-    .update({
-      listing_credits: bisher + PROBE.inserate,
-      // Guthaben-Hinweis wieder scharf stellen, wie beim Aufladen auch.
-      low_credit_email_at: null,
-    })
-    .eq('id', nutzerId);
+    .rpc('increment_listing_credits', { uid: nutzerId, amount: PROBE.inserate });
+
+  // Guthaben-Hinweis wieder scharf stellen, wie beim Aufladen auch.
+  if (!gutschriftFehler) {
+    await dienst.from('profiles').update({ low_credit_email_at: null }).eq('id', nutzerId);
+  }
 
   if (gutschriftFehler) {
     console.error('[probelauf] Gutschrift fehlgeschlagen:', gutschriftFehler.message);

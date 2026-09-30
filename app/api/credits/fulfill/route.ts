@@ -33,16 +33,6 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
-  const { data: existing } = await service
-    .from('stripe_fulfillments')
-    .select('id')
-    .eq('id', sessionId)
-    .maybeSingle();
-
-  if (existing) {
-    return NextResponse.json({ ok: true, alreadyFulfilled: true });
-  }
-
   let session: Stripe.Checkout.Session;
   try {
     session = await getStripe().checkout.sessions.retrieve(sessionId, {
@@ -57,10 +47,43 @@ export async function POST(req: NextRequest) {
   }
 
   const userId   = session.metadata?.user_id;
-  const quantity = parseInt(session.metadata?.quantity || '1', 10);
+  // Kaputte oder fehlende Angabe heisst ein Credit, nicht NaN.
+  const gemeldet = parseInt(session.metadata?.quantity || '1', 10);
+  const quantity = Number.isFinite(gemeldet) && gemeldet > 0 ? Math.min(gemeldet, 500) : 1;
 
   if (!userId) {
     return NextResponse.json({ error: 'user_id fehlt in Stripe-Metadata' }, { status: 400 });
+  }
+
+  /*
+   * Gutschreiben darf nur einer — und zwar genau einmal.
+   *
+   * Hier lag der teuerste Fehler des Projekts: Fuer JEDEN Credit-Kauf
+   * schrieben ZWEI Wege gut. Dieser hier, wenn der Browser nach dem
+   * Bezahlen aufs Dashboard zurueckkommt, und der Stripe-Webhook bei
+   * payment_intent.succeeded. Der Kunde zahlte einen Credit und bekam
+   * zwei — jedes zweite Inserat also auf meine Kosten.
+   *
+   * Beide Wege sperren sich jetzt ueber denselben Schluessel: die
+   * Payment-Intent-Nummer. Die kennen beide, die Checkout-Session-Nummer
+   * nur dieser hier. Der Primaerschluessel der Tabelle macht daraus eine
+   * Sperre, die auch zwei gleichzeitige Aufrufe aushaelt — der zweite
+   * Insert scheitert, statt ein zweites Mal gutzuschreiben.
+   */
+  const zahlungId = typeof session.payment_intent === 'string'
+    ? session.payment_intent
+    : session.payment_intent?.id || sessionId;
+
+  const { error: sperrFehler } = await service
+    .from('stripe_fulfillments')
+    .insert({ id: zahlungId, user_id: userId, quantity });
+
+  if (sperrFehler) {
+    // 23505 = unique_violation: schon gutgeschrieben, hier ist nichts zu tun.
+    if (sperrFehler.code === '23505') {
+      return NextResponse.json({ ok: true, alreadyFulfilled: true });
+    }
+    return NextResponse.json({ error: sperrFehler.message }, { status: 500 });
   }
 
   const { data: profile } = await service
@@ -71,24 +94,23 @@ export async function POST(req: NextRequest) {
 
   const current = (profile as { listing_credits: number | null } | null)?.listing_credits ?? 0;
 
+  // Addieren in der Datenbank, nicht hier: zwei Aufrufe gleichzeitig
+  // haetten sich sonst gegenseitig ueberschrieben.
   const { error: updateErr } = await service
-    .from('profiles')
-    .update({
-      listing_credits: current + quantity,
-      /*
-       * Guthaben-Hinweis wieder scharf stellen. Ohne das Zuruecksetzen
-       * bekommt der Haendler die Warnung genau einmal im Leben und steht
-       * beim uebernaechsten Mal ohne Vorwarnung vor der Bezahlseite.
-       */
-      low_credit_email_at: null,
-    })
-    .eq('id', userId);
+    .rpc('increment_listing_credits', { uid: userId, amount: quantity });
 
   if (updateErr) {
+    // Die Sperre wieder aufheben, sonst ist der Credit fuer immer verloren.
+    await service.from('stripe_fulfillments').delete().eq('id', zahlungId);
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
   }
 
-  await service.from('stripe_fulfillments').insert({ id: sessionId, user_id: userId, quantity });
+  /*
+   * Guthaben-Hinweis wieder scharf stellen. Ohne das Zuruecksetzen
+   * bekommt der Haendler die Warnung genau einmal im Leben und steht
+   * beim uebernaechsten Mal ohne Vorwarnung vor der Bezahlseite.
+   */
+  await service.from('profiles').update({ low_credit_email_at: null }).eq('id', userId);
 
   // E-Mail versenden
   const customerEmail =
