@@ -709,6 +709,16 @@ function Step2Inner() {
    * Schlaegt es fehl, kommt das Bild selbst zurueck. Lieber ein Inserat
    * mit Bildern im Speicher des Browsers als eines ohne Bilder.
    */
+  /**
+   * Wie viele Fotos beim Hochladen haengen geblieben sind.
+   *
+   * Vorher fiel das nirgends auf: Ein gescheitertes Foto kam als
+   * Bilddaten zurueck, landete im Sitzungsspeicher, und Schritt 4 warf es
+   * beim Zuordnen stillschweigend weg. Der Haendler sah "30 Fotos" und
+   * hatte am Ende 22 am Inserat.
+   */
+  const nichtGeladen = useRef(0);
+
   const bildHochladen = async (bild: string, name: string): Promise<string> => {
     if (!bild.startsWith('data:')) return bild;
     try {
@@ -722,6 +732,7 @@ function Step2Inner() {
       return url || bild;
     } catch (err) {
       console.warn('[Fotos] Hochladen fehlgeschlagen:', err);
+      nichtGeladen.current += 1;
       return bild;
     }
   };
@@ -739,6 +750,7 @@ function Step2Inner() {
      * dem gespeicherten Inserat. Bisher hatte jedes fertige Fahrzeug in
      * der Datenbank null Bilder — Galerie, PDF und ZIP waren leer.
      */
+    nichtGeladen.current = 0;
     const alle = photos.map(p => p.processed || p.preview);
     setHochladen({ fertig: 0, gesamt: alle.length });
 
@@ -763,6 +775,11 @@ function Step2Inner() {
     }
     // Anzahl der freigestellten Bilder mitgeben — davon haengen die
     // Zusatzposten auf der Rechnung ab.
+    /*
+     * Gescheiterte Hochladungen mitgeben, damit Schritt 4 es sagen kann.
+     * Ohne das sah der Haendler "30 Fotos" und hatte 22 am Inserat.
+     */
+    sessionStorage.setItem('listing_photos_fehler', String(nichtGeladen.current));
     sessionStorage.setItem(
       'listing_studio_count',
       String(photos.filter(p => p.studio && p.processed).length)

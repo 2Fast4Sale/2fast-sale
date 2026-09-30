@@ -805,6 +805,19 @@ function Step4Inner() {
             const bilder = photos
               .filter(p => typeof p === 'string' && p.startsWith('http'))
               .map(p => ({ original: p, processed: p }));
+
+            /*
+             * Teilverlust auch melden. Vorher fiel nur auf, wenn KEIN Foto
+             * durchkam: Schritt 2 gibt hier weiter, wie viele beim
+             * Hochladen haengen geblieben sind.
+             */
+            const fehlende = photos.length - bilder.length;
+            if (fehlende > 0) {
+              setBilderHinweis(
+                `${fehlende} von ${photos.length} Fotos konnten nicht gespeichert werden und fehlen im Inserat. ` +
+                'Öffne es im Dashboard und lade sie dort nach.'
+              );
+            }
             if (bilder.length > 0) {
               const antwort = await fetch(`/api/vehicles/${id}/images`, {
                 method: 'POST',
