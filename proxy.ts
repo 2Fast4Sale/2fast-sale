@@ -12,6 +12,12 @@ const LIMITS: Record<string, { max: number; windowMs: number }> = {
   '/api/generate-description':    { max: 30,  windowMs: 60_000  }, // KI: 30x/min
   '/api/pixelcut':                { max: 40,  windowMs: 60_000  }, // Foto-KI: 40x/min
   '/api/inquiries':               { max: 30,  windowMs: 60_000  }, // Anfragen: 30x/min
+  // Diese beiden verschicken E-Mails an Adressen aus dem Aufruf und
+  // sind absichtlich ohne Anmeldung erreichbar (Kontakt, Paragraf 312k).
+  // Ohne eigenes Limit waeren sie ein Versandwerkzeug fuer fremde Postfaecher.
+  '/api/kontakt':                 { max: 5,   windowMs: 60_000  },
+  '/api/kuendigung':              { max: 5,   windowMs: 60_000  },
+  '/api/upload-image':            { max: 90,  windowMs: 60_000  }, // 30 Fotos je Inserat
   '/api/':                        { max: 120, windowMs: 60_000  }, // API allgemein: 120x/min
 };
 

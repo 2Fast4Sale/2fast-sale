@@ -80,9 +80,14 @@ export async function berechneInserat(args: {
   bezeichnung?: string;
   /** Wie viele Bilder wurden ins Studio gesetzt. Bestimmt die Zusatzposten. */
   studioImages?: number;
+  /**
+   * Entwurfs-Nummer. Ist sie da, wird die Zahl der Studio-Bilder hier
+   * gezaehlt statt geglaubt.
+   */
+  draftId?: string | null;
 }): Promise<BerechnungsErgebnis> {
   const { userId, vehicleId, bezeichnung } = args;
-  const studioImages = Math.max(0, Math.round(args.studioImages ?? 0));
+  let studioImages = Math.max(0, Math.round(args.studioImages ?? 0));
 
   try {
     const supabase = admin();
@@ -95,6 +100,28 @@ export async function berechneInserat(args: {
 
     if (!profile?.usage_billing) {
       return { berechnet: false, grund: 'kein_usage_kunde' };
+    }
+
+    /*
+     * Die Zahl der Studio-Bilder kam aus dem sessionStorage des Browsers.
+     * Wer sie dort auf 0 setzt, zahlt die Bilder ueber dem Kontingent
+     * nicht. Jedes Studio-Bild hinterlaesst in api_costs eine Zeile mit
+     * der Entwurfs-Nummer — das ist der Beleg, und an den kommt der
+     * Browser nicht heran. api_costs darf ohnehin nur der Server lesen,
+     * deshalb passiert das Zaehlen hier und nicht in der Route.
+     */
+    if (args.draftId) {
+      const { count, error: zaehlFehler } = await supabase
+        .from('api_costs')
+        .select('id', { count: 'exact', head: true })
+        .eq('draft_id', args.draftId)
+        .eq('user_id', userId)
+        .in('service', ['gemini_bild', 'photoroom']);
+      if (zaehlFehler) {
+        console.error('[usageBilling] Studio-Bilder nicht zaehlbar:', zaehlFehler.message);
+      } else if (typeof count === 'number') {
+        studioImages = count;
+      }
     }
 
     const posten = berechnePosten(studioImages);

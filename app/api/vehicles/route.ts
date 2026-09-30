@@ -164,11 +164,30 @@ export async function POST(req: Request) {
         }
       }
 
+      /*
+       * Wie viele Studio-Bilder wirklich entstanden sind, zaehlt der
+       * Server — nicht der Browser.
+       *
+       * Die Zahl kam aus sessionStorage. Wer sie dort auf 0 setzt, zahlt
+       * die Zusatzbilder ueber dem Kontingent nicht. Jedes Studio-Bild
+       * hinterlaesst in api_costs eine Zeile mit derselben
+       * Entwurfs-Nummer — das ist der Beleg, und den kann der Browser
+       * nicht anfassen.
+       *
+       * Gemeldete Zahl nur als Rueckfall, wenn nichts zu zaehlen ist
+       * (etwa weil die Entwurfs-Nummer fehlt).
+       */
+      let studioBilder = Number(body.studio_images ?? 0);
+      if (!Number.isFinite(studioBilder) || studioBilder < 0) studioBilder = 0;
+
       await berechneInserat({
         userId:       user.id,
         vehicleId:    data.id,
         bezeichnung:  [body.brand, body.title].find(Boolean) as string | undefined,
-        studioImages: Number(body.studio_images ?? 0),
+        studioImages: studioBilder,
+        // Gezaehlt wird in berechneInserat mit dem Dienstschluessel:
+        // api_costs darf nur der Server lesen.
+        draftId:      (body.draft_id as string | undefined) ?? null,
       });
 
       /*
