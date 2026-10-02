@@ -61,6 +61,25 @@ export function verschluesselungBereit(): boolean {
   return schluessel() !== null;
 }
 
+/**
+ * WARUM es nicht geht — fuer die Oberflaeche.
+ *
+ * "Der Server kann gerade nicht sicher speichern" ist richtig, aber
+ * nutzlos: Die beiden Faelle brauchen verschiedene Handgriffe. Fehlt die
+ * Variable, muss sie gesetzt und neu bereitgestellt werden; hat sie das
+ * falsche Format, muss ein neuer Schluessel erzeugt werden. Ohne diese
+ * Unterscheidung sucht man an der falschen Stelle.
+ *
+ * Verraten wird dabei nichts ueber den Inhalt — nur die Laenge dessen,
+ * was ankam, und die ist bei einem falschen Wert genau die Information,
+ * die fehlt.
+ */
+export function schluesselStand(): { stand: 'ok' | 'fehlt' | 'format'; laenge: number } {
+  const roh = (process.env.PORTAL_SCHLUESSEL || '').trim();
+  if (!roh) return { stand: 'fehlt', laenge: 0 };
+  return { stand: schluessel() ? 'ok' : 'format', laenge: roh.length };
+}
+
 /** Klartext → "v1:iv:tag:cipher", alles base64. */
 export function verschluesseln(klartext: string): string | null {
   const k = schluessel();

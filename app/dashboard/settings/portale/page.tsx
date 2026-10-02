@@ -74,6 +74,7 @@ const TEXTE: Record<Portal, {
 export default function PortalZugaenge() {
   const [zugaenge, setZugaenge] = useState<Anzeige[]>([]);
   const [bereit, setBereit] = useState(true);
+  const [schluessel, setSchluessel] = useState<{ stand: string; laenge: number } | null>(null);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState('');
 
@@ -84,6 +85,7 @@ export default function PortalZugaenge() {
       if (!antwort.ok) throw new Error(d.error || 'Konnte nicht geladen werden.');
       setZugaenge(d.zugaenge || []);
       setBereit(d.bereit !== false);
+      setSchluessel(d.schluessel ?? null);
     } catch (err) {
       setFehler(err instanceof Error ? err.message : 'Konnte nicht geladen werden.');
     } finally {
@@ -120,8 +122,32 @@ export default function PortalZugaenge() {
             border: '1px solid rgba(239,68,68,0.25)', color: '#b91c1c', fontSize: 13, lineHeight: 1.6,
           }}>
             <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 2 }} />
-            Der Server kann Zugangsdaten im Moment nicht sicher speichern. Bitte später
-            noch einmal versuchen — gespeichert wird in diesem Zustand nichts.
+            <span>
+              <strong>Zugangsdaten können gerade nicht sicher gespeichert werden.</strong>
+              {' '}Gespeichert wird in diesem Zustand nichts — lieber eine Meldung als ein
+              Passwort im Klartext in der Datenbank.
+              {/*
+                Die beiden Fälle brauchen verschiedene Handgriffe, deshalb
+                stehen sie hier getrennt da. "Bitte später versuchen" war
+                richtig und nutzlos.
+              */}
+              {schluessel?.stand === 'fehlt' && (
+                <span style={{ display: 'block', marginTop: 7 }}>
+                  Auf dem Server ist <code>PORTAL_SCHLUESSEL</code> nicht gesetzt. Entweder fehlt
+                  die Variable bei Vercel, sie steht in der falschen Umgebung (Production muss
+                  angekreuzt sein), oder es wurde danach nicht neu bereitgestellt — eine neue
+                  Variable gilt erst ab dem nächsten Deployment.
+                </span>
+              )}
+              {schluessel?.stand === 'format' && (
+                <span style={{ display: 'block', marginTop: 7 }}>
+                  <code>PORTAL_SCHLUESSEL</code> ist gesetzt, hat aber das falsche Format:
+                  {' '}{schluessel.laenge} Zeichen angekommen. Gebraucht werden 32 Byte, also
+                  44 Zeichen base64 (endet meist auf <code>=</code>) oder 64 Zeichen hex.
+                  Vermutlich ist beim Kopieren etwas abgeschnitten oder mitgerutscht.
+                </span>
+              )}
+            </span>
           </div>
         )}
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '../../../lib/supabase/server';
 import {
   zugaengeAnzeigen, zugangSpeichern, zugangLoeschen, zugangLesen,
-  pruefungMerken, verschluesselungBereit, PORTAL_NAMEN, type Portal,
+  pruefungMerken, verschluesselungBereit, schluesselStand, PORTAL_NAMEN, type Portal,
 } from '../../../lib/portalZugang';
 
 export const dynamic = 'force-dynamic';
@@ -35,6 +35,8 @@ export async function GET() {
      * statt einen Fehler erst beim Abschicken zu zeigen.
      */
     bereit: verschluesselungBereit(),
+    /* Warum nicht — die beiden Faelle brauchen verschiedene Handgriffe. */
+    schluessel: schluesselStand(),
   });
 }
 
