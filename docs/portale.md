@@ -130,11 +130,41 @@ Wenn dieser Schlüssel verloren geht, müssen alle Händler ihr Passwort
 neu eingeben — das ist der Preis dafür, dass ein Datenbank-Backup allein
 nichts wert ist.
 
-### 5. Die Knöpfe in Schritt 4
+### 5. Die Knöpfe in Schritt 4 — **fertig (2. Oktober)**
 
-Sie stehen heute bewusst als „in Vorbereitung" da, ohne Funktion. Ein
-Knopf, der nichts tut, ist schlimmer als keiner. Sie werden scharf
-gestellt, sobald 2 bis 4 stehen.
+Sie sind nicht mehr gesperrt, tun aber auch nicht sofort das
+Endgültige. Der Ablauf hat zwei Stufen, und das ist Absicht:
+
+1. **Ein Klick prüft.** Die Route baut das Inserat, prüft es gegen die
+   Pflichtfelder des Portals und schickt **nichts**. Das Fenster zeigt
+   entweder „Alle Pflichtangaben sind da" oder die Liste dessen, was
+   fehlt — mit dem Hinweis, dass diese Felder das Portal verlangt und
+   nicht wir.
+2. **Übertragen erst mit dem zweiten Klick**, und der fragt noch
+   einmal nach. Die Rückfrage nennt beide Fälle: Steht der Zugang im
+   Testmodus, landet es in der Testumgebung; steht er im Betrieb, ist
+   das Fahrzeug anschließend öffentlich und kostet die
+   Anzeigengebühr. Ein Inserat auf einem Portal holt man nicht mit
+   einem Klick zurück.
+
+Fehlen die Zugangsdaten, sagt das Fenster das und verlinkt die
+Einstellungen — statt einer Fehlermeldung, die nach kaputter Software
+klingt.
+
+Eine Umrechnung steckt noch darin, die leicht zu übersehen ist:
+Schritt 1 führt die **Leistung in PS**, beide Portale wollen **kW**.
+Ohne die Umrechnung stünde im Inserat ein Golf mit 150 kW statt
+150 PS — also 204 PS. Eine falsche Angabe, für die der Händler haftet.
+
+Auf dem Handy stehen die beiden Knöpfe im Export-Kasten statt in der
+Fußleiste: Dort passen fünf Knöpfe nicht in 375 Pixel, und der
+wichtigste wurde früher aus dem Bild geschoben.
+
+**Auf der Startseite und der Feature-Seite steht weiter „in
+Vorbereitung".** Das bleibt so, bis ein Testinserat wirklich in einer
+Sandbox gelandet ist. Der Code tut seine Arbeit, aber gegen die echte
+Schnittstelle hat ihn noch nie jemand laufen lassen — und was auf der
+Startseite steht, muss gelaufen sein, nicht nur kompiliert.
 
 ## Entwurf: AutoScout24
 

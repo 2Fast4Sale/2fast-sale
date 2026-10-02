@@ -9,7 +9,7 @@ import {
   Send, Loader2, Zap, Tag as TagIcon,
   AlertTriangle, Shield, Image as ImgIcon, Euro,
   ChevronRight, ExternalLink, Star, Smartphone, Monitor,
-  Phone, Check, BarChart2, Lock, FileText,
+  Phone, Check, BarChart2, Lock, FileText, X,
 } from 'lucide-react';
 import { entwurfId, entwurfBeenden } from '../../../../lib/entwurf';
 import { G } from '../gestaltung';
@@ -847,6 +847,161 @@ function Step4Inner() {
     finally { setSaving(false); }
   };
 
+  /* ── Übertragung an die Portale ──────────────────────────────────── */
+
+  /**
+   * Die Fahrzeugdaten in der Form, die die beiden Export-Routen
+   * erwarten.
+   *
+   * Schritt 1 benennt die meisten Felder schon genauso (bodyType,
+   * vatType, huUntil …), deshalb geht das Meiste durch. Zwei Dinge
+   * müssen umgerechnet werden:
+   *
+   *   - Die Leistung. Schritt 1 führt PS, beide Portale wollen kW. Wird
+   *     das vergessen, steht im Inserat ein Golf mit 150 kW statt
+   *     150 PS — also 204 PS. Eine falsche Angabe, für die der Händler
+   *     haftet.
+   *   - Der Preis. Der Händler kann ihn hier noch ändern; dann gilt der
+   *     geänderte, nicht der aus Schritt 1.
+   */
+  const portalFormData = () => ({
+    ...step1,
+    km,
+    price: editPrice || price,
+    fuelType: fuel || (step1.fuelType as string) || '',
+    gearbox: gearbox || (step1.gearbox as string) || '',
+    color: carColor || (step1.color as string) || '',
+    firstRegistration: (step1.firstRegistration as string) || year || '',
+    powerKw: power ? String(Math.round(Number(power) / 1.36)) : '',
+    equipment,
+  });
+
+  type Portal = 'mobile' | 'as24';
+  const PORTAL_NAME: Record<Portal, string> = { mobile: 'mobile.de', as24: 'AutoScout24' };
+
+  interface PortalErgebnis {
+    portal: Portal;
+    /** true, solange nur geprüft wurde — es ist noch nichts rausgegangen. */
+    trockenlauf: boolean;
+    grund?: string;
+    fehlendeAngaben?: string[];
+    fehler?: string;
+    /** Bei Erfolg: Kennung und Adresse des Inserats. */
+    kennung?: string;
+    adUrl?: string | null;
+    dealerUrl?: string;
+    bildFehler?: string[];
+    imagesUploaded?: number;
+    hinweis?: string;
+    nochNichtAktiv?: boolean;
+    /** Zugangsdaten fehlen — dann hilft nur die Einstellungsseite. */
+    keinZugang?: boolean;
+  }
+
+  const [portalOffen, setPortalOffen] = useState<Portal | null>(null);
+  const [portalLaeuft, setPortalLaeuft] = useState(false);
+  const [portalErgebnis, setPortalErgebnis] = useState<PortalErgebnis | null>(null);
+
+  /**
+   * Prüfen oder übertragen.
+   *
+   * `trockenlauf` ist der Normalfall: Ein Klick auf den Portal-Knopf
+   * prüft erst und zeigt, was rausgehen würde. Erst der zweite Klick im
+   * Fenster überträgt wirklich. So steht nie ein Fahrzeug auf einem
+   * Portal, weil jemand den falschen Knopf getroffen hat.
+   */
+  const portalSenden = async (portal: Portal, trockenlauf: boolean) => {
+    setPortalOffen(portal);
+    setPortalLaeuft(true);
+    setPortalErgebnis(null);
+    try {
+      const adresse = portal === 'mobile' ? '/api/mobilede-publish' : '/api/autoscout24-publish';
+      const antwort = await fetch(adresse, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formData: portalFormData(),
+          description: desc,
+          images: photos.filter(p => typeof p === 'string' && p.startsWith('http')),
+          trockenlauf,
+        }),
+      });
+      const d = await antwort.json().catch(() => ({}));
+
+      if (antwort.status === 401) {
+        setPortalErgebnis({ portal, trockenlauf: true, fehler: 'Bitte neu anmelden.' });
+        return;
+      }
+      /*
+       * 409 heisst: Zugangsdaten fehlen. Das ist kein Fehler im Inserat,
+       * sondern eine Einstellung — deshalb mit Link dorthin statt mit
+       * einer Fehlermeldung, die nach kaputter Software klingt.
+       */
+      if (antwort.status === 409) {
+        setPortalErgebnis({
+          portal, trockenlauf: true, keinZugang: true,
+          grund: d.grund || d.error,
+          fehlendeAngaben: d.fehlendeAngaben,
+        });
+        return;
+      }
+      if (d.trockenlauf) {
+        setPortalErgebnis({
+          portal, trockenlauf: true,
+          grund: d.grund,
+          fehlendeAngaben: d.fehlendeAngaben,
+        });
+        return;
+      }
+      if (!antwort.ok) {
+        setPortalErgebnis({
+          portal, trockenlauf: true,
+          fehler: d.error || `Das Portal antwortete mit ${antwort.status}.`,
+          fehlendeAngaben: d.fehlendeAngaben,
+          bildFehler: d.bildFehler,
+        });
+        return;
+      }
+
+      setPortalErgebnis({
+        portal, trockenlauf: false,
+        kennung: d.mobileAdId || d.listingId || '',
+        adUrl: d.adUrl ?? null,
+        dealerUrl: d.dealerUrl,
+        imagesUploaded: d.imagesUploaded,
+        bildFehler: d.bildFehler,
+        hinweis: d.hinweis,
+        nochNichtAktiv: d.nochNichtAktiv,
+      });
+    } catch (err) {
+      setPortalErgebnis({
+        portal, trockenlauf: true,
+        fehler: err instanceof Error ? err.message : 'Die Übertragung ist fehlgeschlagen.',
+      });
+    } finally {
+      setPortalLaeuft(false);
+    }
+  };
+
+  /**
+   * Der zweite Klick — jetzt geht es wirklich raus.
+   *
+   * Mit Rückfrage, und zwar immer: Ein Inserat auf einem Portal ist
+   * öffentlich, kostet den Händler Geld und ist nicht mit einem Klick
+   * zurückgeholt. Ob der Zugang im Testmodus steht, weiss nur der
+   * Server; die Rückfrage nennt deshalb beides.
+   */
+  const portalUebertragen = async (portal: Portal) => {
+    const sicher = confirm(
+      `Inserat an ${PORTAL_NAME[portal]} übertragen?\n\n`
+      + 'Steht dein Zugang im Testmodus, landet es in der Testumgebung und wird nicht '
+      + 'öffentlich. Steht er im Betrieb, ist das Fahrzeug anschließend online und '
+      + `kostet die Anzeigengebühr von ${PORTAL_NAME[portal]}.`
+    );
+    if (!sicher) return;
+    await portalSenden(portal, false);
+  };
+
   /* ── Success ─────────────────────────────────────────────────────────────── */
   if (done) return (
     <div style={{ minHeight: '100vh', background: G.grund, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F, padding: '24px', position: 'relative', overflow: 'hidden' }}>
@@ -1089,13 +1244,35 @@ function Step4Inner() {
           <div style={{ flex: 1 }} />
           <div style={{ padding: '12px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '10px' }}>
             {/*
-              Hier stand "September 2026" als Zusage. Der September ist
-              vorbei, die Schnittstellen sind nicht freigeschaltet — eine
-              Ankuendigung mit Datum wird zur Unwahrheit, sobald das Datum
-              vergeht. Jetzt steht da, was heute gilt.
+              Hier stand "September 2026" als Zusage, danach "in
+              Vorbereitung". Beides ist vorbei: Die Uebertragung
+              funktioniert, sobald der Haendler seinen Portal-Zugang
+              eingetragen hat. Genau das steht jetzt da — und auf dem
+              Handy stehen hier auch die Knoepfe, weil sie in die
+              Fussleiste nicht passen.
             */}
             <div style={{ fontSize: '11px', fontWeight: '800', color: IND, marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '5px' }}><BarChart2 size={11} /> Export</div>
-            <div style={{ fontSize: '11px', color: TS, lineHeight: 1.6 }}>Fotopaket und PDF kannst du sofort herunterladen. Die direkte Verbindung zu Mobile.de und AutoScout24 ist in Vorbereitung.</div>
+            <div style={{ fontSize: '11px', color: TS, lineHeight: 1.6 }}>
+              Fotopaket und PDF kannst du sofort herunterladen. Die Übertragung an
+              Mobile.de und AutoScout24 läuft über deinen eigenen Portal-Zugang —
+              einmal unter{' '}
+              <a href="/dashboard/settings/portale" style={{ color: IND, fontWeight: 700 }}>
+                Einstellungen → Portal-Zugänge
+              </a>{' '}
+              eintragen. Ein Klick prüft zuerst und zeigt, was fehlt.
+            </div>
+            {isMobile && (
+              <div style={{ display: 'flex', gap: '7px', marginTop: '10px' }}>
+                <button onClick={() => portalSenden('mobile', true)} disabled={portalLaeuft}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', background: 'rgba(194,65,12,0.12)', border: '1px solid rgba(194,65,12,0.45)', borderRadius: '9px', color: '#c2410c', fontSize: '12.5px', fontWeight: '700', fontFamily: F, cursor: 'pointer' }}>
+                  <Send size={12} /> Mobile.de
+                </button>
+                <button onClick={() => portalSenden('as24', true)} disabled={portalLaeuft}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', background: 'rgba(0,53,102,0.10)', border: '1px solid rgba(0,53,102,0.40)', borderRadius: '9px', color: '#003566', fontSize: '12.5px', fontWeight: '700', fontFamily: F, cursor: 'pointer' }}>
+                  <ExternalLink size={12} /> AutoScout24
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1357,21 +1534,36 @@ function Step4Inner() {
             eigener Startseite "in Vorbereitung".
           */}
           {/*
-            Die beiden Knoepfe sahen aus wie Veroeffentlichen-Knoepfe und
-            taten genau das: speichern. Ein Haendler haette geklickt und
-            geglaubt, sein Fahrzeug stehe jetzt auf mobile.de. Bis die
-            Schnittstellen freigeschaltet sind, sind sie deshalb wirklich
-            gesperrt und sagen das auch.
+            Die beiden Knoepfe sahen einmal aus wie
+            Veroeffentlichen-Knoepfe und taten nur: speichern. Danach
+            standen sie als "in Vorbereitung" da.
+
+            Jetzt tun sie etwas, aber nicht sofort das Endgueltige: Ein
+            Klick PRUEFT (Trockenlauf) und zeigt, was rausgehen wuerde
+            und was dafuer noch fehlt. Uebertragen wird erst mit dem
+            zweiten Klick im Fenster, und der fragt noch einmal nach. Ein
+            Inserat auf einem Portal ist oeffentlich, kostet Geld und ist
+            nicht mit einem Klick zurueckgeholt.
           */}
           {!isMobile && (
-            <span title="Die Schnittstelle zu mobile.de ist noch nicht freigeschaltet." style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: 'rgba(194,65,12,0.12)', border: '1px dashed rgba(194,65,12,0.45)', color: '#c2410c', borderRadius: '9px', fontSize: '13px', fontWeight: '700', fontFamily: F, cursor: 'not-allowed' }}>
-              <Send size={13} /> Mobile.de · in Vorbereitung
-            </span>
+            <button onClick={() => portalSenden('mobile', true)} disabled={portalLaeuft}
+              title="Prüfen, was an mobile.de übertragen würde"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: 'rgba(194,65,12,0.12)', border: '1px solid rgba(194,65,12,0.45)', color: '#c2410c', borderRadius: '9px', fontSize: '13px', fontWeight: '700', fontFamily: F, cursor: portalLaeuft ? 'wait' : 'pointer' }}>
+              {portalLaeuft && portalOffen === 'mobile'
+                ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Send size={13} />}
+              Mobile.de
+            </button>
           )}
           {!isMobile && (
-            <span title="Die Schnittstelle zu AutoScout24 ist noch nicht freigeschaltet." style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: 'rgba(0,53,102,0.10)', border: '1px dashed rgba(0,53,102,0.40)', color: '#003566', borderRadius: '9px', fontSize: '13px', fontWeight: '700', fontFamily: F, cursor: 'not-allowed' }}>
-              <ExternalLink size={13} /> AutoScout24 · in Vorbereitung
-            </span>
+            <button onClick={() => portalSenden('as24', true)} disabled={portalLaeuft}
+              title="Prüfen, was an AutoScout24 übertragen würde"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 15px', background: 'rgba(0,53,102,0.10)', border: '1px solid rgba(0,53,102,0.40)', color: '#003566', borderRadius: '9px', fontSize: '13px', fontWeight: '700', fontFamily: F, cursor: portalLaeuft ? 'wait' : 'pointer' }}>
+              {portalLaeuft && portalOffen === 'as24'
+                ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                : <ExternalLink size={13} />}
+              AutoScout24
+            </button>
           )}
           <button onClick={() => save('Aktiv')} disabled={saving}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: isMobile ? '12px 14px' : '12px 28px', background: saving ? 'rgba(99,102,241,0.45)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: '10px', fontSize: '14px', fontWeight: '900', cursor: saving ? 'wait' : 'pointer', fontFamily: F, boxShadow: saving ? 'none' : '0 4px 24px rgba(99,102,241,0.45)', letterSpacing: '-0.2px', transition: 'all 0.2s' }}
@@ -1382,6 +1574,146 @@ function Step4Inner() {
           </button>
         </div>
       </div>
+
+      {/* ── Fenster: Ergebnis der Portal-Prüfung bzw. Übertragung ── */}
+      {portalOffen && (
+        <div
+          onClick={() => !portalLaeuft && (setPortalOffen(null), setPortalErgebnis(null))}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(8,14,26,0.6)',
+            backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', padding: '20px',
+          }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: '100%', maxWidth: '560px', maxHeight: '82vh', overflowY: 'auto',
+            background: '#ffffff', borderRadius: '16px', padding: '22px',
+            boxShadow: '0 24px 70px rgba(8,14,26,0.4)', fontFamily: F, color: '#0f172a',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '16px' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: portalOffen === 'mobile' ? '#ff6600' : '#1a77c9' }} />
+              <h3 style={{ fontSize: '17px', fontWeight: '800', margin: 0, flex: 1 }}>
+                {PORTAL_NAME[portalOffen]}
+              </h3>
+              <button onClick={() => { setPortalOffen(null); setPortalErgebnis(null); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {portalLaeuft && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '9px', color: '#475569', fontSize: '14px', padding: '10px 0' }}>
+                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                {portalErgebnis ? 'Wird übertragen …' : 'Wird geprüft …'}
+              </div>
+            )}
+
+            {!portalLaeuft && portalErgebnis && (
+              <>
+                {/* Zugangsdaten fehlen */}
+                {portalErgebnis.keinZugang && (
+                  <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.32)', color: '#92400e', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
+                    <strong>Noch keine Zugangsdaten für {PORTAL_NAME[portalErgebnis.portal]}.</strong><br />
+                    Das Inserat wurde nur geprüft, übertragen wurde nichts. Trag deinen
+                    API-Zugang ein, dann geht es von hier aus raus.
+                    <div style={{ marginTop: '10px' }}>
+                      <a href="/dashboard/settings/portale" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 13px', background: '#fff', border: '1px solid rgba(146,64,14,0.35)', borderRadius: '8px', color: '#92400e', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
+                        Zugangsdaten eintragen <ChevronRight size={13} />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Echter Fehler */}
+                {portalErgebnis.fehler && (
+                  <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', color: '#b91c1c', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
+                    <AlertTriangle size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
+                    {portalErgebnis.fehler}
+                  </div>
+                )}
+
+                {/* Was noch fehlt — die Portale verlangen mehr als unser Formular */}
+                {portalErgebnis.fehlendeAngaben && portalErgebnis.fehlendeAngaben.length > 0 && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>
+                      Dafür fehlen noch {portalErgebnis.fehlendeAngaben.length} Angaben
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13.5px', color: '#334155', lineHeight: 1.7 }}>
+                      {portalErgebnis.fehlendeAngaben.map((f, i) => <li key={i}>{f}</li>)}
+                    </ul>
+                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '8px', lineHeight: 1.6 }}>
+                      Diese Felder verlangt das Portal, nicht wir. Trag sie in Schritt 1 nach —
+                      ohne sie weist {PORTAL_NAME[portalErgebnis.portal]} das Inserat zurück.
+                    </div>
+                  </div>
+                )}
+
+                {/* Geprüft, nichts gesendet */}
+                {portalErgebnis.trockenlauf && !portalErgebnis.fehler && !portalErgebnis.keinZugang && (
+                  <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', fontSize: '13.5px', color: '#334155', lineHeight: 1.6, marginBottom: '14px' }}>
+                    {portalErgebnis.fehlendeAngaben?.length
+                      ? 'Geprüft — übertragen wurde nichts.'
+                      : 'Geprüft: Alle Pflichtangaben sind da. Übertragen wurde noch nichts.'}
+                  </div>
+                )}
+
+                {/* Erfolg */}
+                {!portalErgebnis.trockenlauf && !portalErgebnis.fehler && (
+                  <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.28)', color: '#047857', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
+                    <CheckCircle2 size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
+                    Übertragen{portalErgebnis.kennung ? ` — Inseratsnummer ${portalErgebnis.kennung}` : ''}.
+                    {typeof portalErgebnis.imagesUploaded === 'number' && (
+                      <> {portalErgebnis.imagesUploaded} Fotos mitgeschickt.</>
+                    )}
+                    {portalErgebnis.nochNichtAktiv && portalErgebnis.hinweis && (
+                      <div style={{ marginTop: '8px', color: '#92400e' }}>{portalErgebnis.hinweis}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '11px', flexWrap: 'wrap' }}>
+                      {portalErgebnis.dealerUrl && (
+                        <a href={portalErgebnis.dealerUrl} target="_blank" rel="noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 13px', background: '#fff', border: '1px solid rgba(4,120,87,0.3)', borderRadius: '8px', color: '#047857', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
+                          Im Händlerportal ansehen <ExternalLink size={12} />
+                        </a>
+                      )}
+                      {portalErgebnis.adUrl && (
+                        <a href={portalErgebnis.adUrl} target="_blank" rel="noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 13px', background: '#fff', border: '1px solid rgba(4,120,87,0.3)', borderRadius: '8px', color: '#047857', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
+                          Öffentliche Anzeige <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fotos, die nicht durchkamen */}
+                {portalErgebnis.bildFehler && portalErgebnis.bildFehler.length > 0 && (
+                  <div style={{ marginBottom: '14px', fontSize: '12.5px', color: '#92400e', lineHeight: 1.6 }}>
+                    <strong>{portalErgebnis.bildFehler.length} Fotos kamen nicht durch:</strong>
+                    <ul style={{ margin: '5px 0 0', paddingLeft: '18px' }}>
+                      {portalErgebnis.bildFehler.slice(0, 6).map((f, i) => <li key={i}>{f}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Der zweite Klick */}
+                {portalErgebnis.trockenlauf && !portalErgebnis.keinZugang && !portalErgebnis.fehlendeAngaben?.length && (
+                  <button onClick={() => portalUebertragen(portalErgebnis.portal)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '13px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '14px', fontWeight: '800', cursor: 'pointer', fontFamily: F }}>
+                    <Send size={14} /> Jetzt an {PORTAL_NAME[portalErgebnis.portal]} übertragen
+                  </button>
+                )}
+
+                {!savedId && (
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '12px', lineHeight: 1.6 }}>
+                    Hinweis: Das Inserat ist hier noch nicht gespeichert. Speicher es mit
+                    „Veröffentlichen", damit du es später im Dashboard wiederfindest — die
+                    Übertragung ans Portal ist davon unabhängig.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
