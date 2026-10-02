@@ -39,11 +39,35 @@ export const CAR_DATABASE: CarBrand[] = MOBILE_MARKEN.map(m => ({
 /** Nur die Markennamen als sortierte Liste */
 export const BRAND_NAMES: string[] = CAR_DATABASE.map(b => b.name);
 
-/** Findet den Rohdatensatz zu einem Anzeigenamen. */
+/**
+ * Vergleichsform eines Namens: klein, ohne Satzzeichen, einfache Abstaende.
+ *
+ * Grund: Der Fahrzeugschein schreibt die Marke in Feld D.1 mit
+ * nachgestelltem Komma ("VOLKSWAGEN,"). Der Scan uebernimmt das, und
+ * danach fand markeFinden die Marke nicht mehr — gesendet wurde dann der
+ * Rohwert, und mobile.de antwortete mit invalid-reference-data-value.
+ * Ein Komma darf nicht der Grund sein, warum ein Inserat abgelehnt wird.
+ */
+const vergleichsform = (w: string): string =>
+  (w || '').toLowerCase().replace(/[.,;:!?]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Findet den Rohdatensatz zu einem Anzeigenamen, Hochladewert oder Alias. */
 function markeFinden(marke: string): MobileMarke | undefined {
-  const k = (marke || '').trim().toLowerCase();
+  const k = vergleichsform(marke);
   if (!k) return undefined;
-  return MOBILE_MARKEN.find(m => m.name.toLowerCase() === k || m.wert.toLowerCase() === k);
+  const direkt = MOBILE_MARKEN.find(
+    m => vergleichsform(m.name) === k || vergleichsform(m.wert) === k,
+  );
+  if (direkt) return direkt;
+
+  /*
+   * Erst jetzt die Aliase. Sie standen bisher NUR in splitBrandModel —
+   * wer "Mercedes" im Formular stehen hatte, bekam hier kein Ergebnis,
+   * obwohl die Zerlegung es gekonnt haette.
+   */
+  const ziel = MARKEN_ALIASE[k];
+  if (!ziel) return undefined;
+  return MOBILE_MARKEN.find(m => vergleichsform(m.name) === vergleichsform(ziel));
 }
 
 /** Modelle für eine bestimmte Marke */
@@ -72,16 +96,82 @@ export function searchBrands(query: string): CarBrand[] {
  * Meldung statt mit einem leeren Feld.
  */
 export function mobileMarkenWert(marke: string): string {
-  return markeFinden(marke)?.wert ?? (marke || '').trim().toUpperCase();
+  return mobileMarkenWertOderNull(marke) ?? (marke || '').trim().toUpperCase();
 }
 
-/** Dasselbe für das Feld `model`. */
+/**
+ * Dasselbe für das Feld `model`.
+ *
+ * Zwei Dinge kommen aus dem Fahrzeugschein, die vorher nicht passten:
+ *
+ *   - Feld D.3 wiederholt oft die Marke: "VW GOLF". Gesucht wurde dann
+ *     nach einem Modell namens "vw golf", das es nicht gibt.
+ *   - Verglichen wurde nur der Anzeigename, nicht der Hochladewert.
+ */
 export function mobileModellWert(marke: string, modell: string): string {
+  return mobileModellWertOderNull(marke, modell) ?? (modell || '').trim();
+}
+
+/**
+ * Der Hochladewert, oder `null` wenn mobile.de die Marke nicht kennt.
+ *
+ * Die Routen brauchen diese Unterscheidung: Einen unbekannten Wert
+ * einfach mitzuschicken heisst, dass mobile.de das ganze Inserat mit
+ * invalid-reference-data-value ablehnt — und der Haendler sieht nur
+ * "abgelehnt (400)". Besser: "Marke X ist bei mobile.de unbekannt",
+ * bevor etwas rausgeht.
+ */
+export function mobileMarkenWertOderNull(marke: string): string | null {
+  return markeFinden(marke)?.wert ?? null;
+}
+
+/**
+ * Marke und Modell in sauberer Schreibweise, fuer Titel und Anzeige.
+ *
+ * Grund: Aus dem Fahrzeugschein kommt "VOLKSWAGEN," und "VW GOLF". Als
+ * Ueberschrift eines Inserats steht da dann "VOLKSWAGEN, VW GOLF" — mit
+ * Komma und doppelter Marke. Gefunden heisst hier: Anzeigename aus der
+ * Liste. Nicht gefunden heisst: unveraendert lassen, denn Erfinden ist
+ * schlimmer als eine ungewohnte Schreibweise.
+ */
+export function markeModellAnzeige(marke: string, modell: string): { marke: string; modell: string } {
   const eintrag = markeFinden(marke);
-  const k = (modell || '').trim().toLowerCase();
-  if (!eintrag || !k) return (modell || '').trim();
-  const treffer = eintrag.modelle.find(m => modellName(m).toLowerCase() === k);
-  return treffer ? modellWert(treffer) : (modell || '').trim();
+  const rohModell = (modell || '').trim();
+  if (!eintrag) return { marke: (marke || '').trim(), modell: rohModell };
+
+  const wert = mobileModellWertOderNull(marke, modell);
+  const treffer = wert
+    ? eintrag.modelle.find(m => modellWert(m) === wert)
+    : undefined;
+
+  return {
+    marke: eintrag.name,
+    modell: treffer ? modellName(treffer) : rohModell,
+  };
+}
+
+/** Wie oben, fuer das Modell. */
+export function mobileModellWertOderNull(marke: string, modell: string): string | null {
+  const eintrag = markeFinden(marke);
+  if (!eintrag) return null;
+
+  const kandidaten = [modell];
+  /* "VW GOLF" → auch "GOLF" versuchen: Feld D.3 wiederholt die Marke. */
+  for (const vorsatz of [eintrag.name, eintrag.wert]) {
+    const v = vergleichsform(vorsatz);
+    const m = vergleichsform(modell);
+    if (v && m.startsWith(v + ' ')) kandidaten.push(m.slice(v.length + 1));
+  }
+
+  for (const kandidat of kandidaten) {
+    const k = vergleichsform(kandidat);
+    if (!k) continue;
+    const treffer = eintrag.modelle.find(
+      m => vergleichsform(modellName(m)) === k || vergleichsform(modellWert(m)) === k,
+    );
+    if (treffer) return modellWert(treffer);
+  }
+  return null;
 }
 
 /**

@@ -19,6 +19,13 @@
  */
 
 import { AS24_MARKEN, AS24_REFERENZEN } from './as24Referenzen';
+/*
+ * carDatabase kennt Schreibweisen, die AutoScout24 nicht kennt: "VW"
+ * als Hochladewert, "Mercedes" als Alias, Kommas aus dem Fahrzeugschein.
+ * Die Liste von AutoScout24 enthaelt nur Anzeigenamen — deshalb wird
+ * erst dort normalisiert und dann hier gesucht.
+ */
+import { markeModellAnzeige, mobileMarkenWertOderNull } from './carDatabase';
 
 /**
  * Vergleichsform: klein, ohne Betonungszeichen, ohne Bindestriche.
@@ -31,6 +38,16 @@ const gleichform = (s: string): string =>
   (s || '')
     .normalize('NFD')
     .replace(/\p{Mn}/gu, '')
+    /*
+     * Satzzeichen weg, nicht nur Bindestriche und Abstaende.
+     *
+     * Der Fahrzeugschein schreibt die Marke in Feld D.1 mit
+     * nachgestelltem Komma ("VOLKSWAGEN,"). Ohne diese Zeile findet
+     * as24MarkenId die Marke nicht und das Inserat geht ohne Marke raus
+     * — bei mobile.de hat genau das zu einer Ablehnung gefuehrt, die
+     * nur "invalid-reference-data-value" hiess.
+     */
+    .replace(/[.,;:!?]/g, ' ')
     .replace(/[-\s]+/g, ' ')
     .trim()
     .toLowerCase();
@@ -47,15 +64,48 @@ function referenz(typ: string, name: string): string | undefined {
 export function as24MarkenId(marke: string): number | undefined {
   const k = gleichform(marke);
   if (!k) return undefined;
-  return AS24_MARKEN.find(m => gleichform(m.name) === k)?.id;
+  const direkt = AS24_MARKEN.find(m => gleichform(m.name) === k)?.id;
+  if (direkt !== undefined) return direkt;
+
+  /* "VW" oder "Mercedes" → Anzeigename aus carDatabase, dann erneut. */
+  const anzeige = markeModellAnzeige(marke, '').marke;
+  if (gleichform(anzeige) === k) return undefined;
+  return AS24_MARKEN.find(m => gleichform(m.name) === gleichform(anzeige))?.id;
 }
 
 /** Modell-Kennung, z.B. ("Volkswagen", "Golf") -> 1642 */
 export function as24ModellId(marke: string, modell: string): number | undefined {
   const k = gleichform(modell);
   if (!k) return undefined;
-  const m = AS24_MARKEN.find(x => gleichform(x.name) === gleichform(marke));
-  return m?.modelle.find(([, n]) => gleichform(n) === k)?.[0];
+  const markeAnzeige = markeModellAnzeige(marke, '').marke;
+  const m = AS24_MARKEN.find(
+    x => gleichform(x.name) === gleichform(marke) || gleichform(x.name) === gleichform(markeAnzeige),
+  );
+  if (!m) return undefined;
+
+  const direkt = m.modelle.find(([, n]) => gleichform(n) === k)?.[0];
+  if (direkt !== undefined) return direkt;
+
+  /*
+   * Feld D.3 im Fahrzeugschein wiederholt oft die Marke: "VW GOLF".
+   * Gesucht wird dann nach einem Modell dieses Namens, das es nicht
+   * gibt. Also den Markennamen vorne abschneiden und noch einmal
+   * suchen.
+   */
+  /*
+   * Abgeschnitten wird nur ein erstes Wort, das selbst eine Marke ist.
+   * Pauschal das erste Wort zu streichen waere gefaehrlich: Aus "C 200"
+   * wuerde "200", und das IST ein Mercedes-Modell — ein falsches.
+   */
+  const ersteWort = k.split(' ')[0];
+  const istMarke = Boolean(mobileMarkenWertOderNull(ersteWort))
+    || gleichform(m.name).startsWith(ersteWort);
+  if (istMarke && k.includes(' ')) {
+    const rest = k.slice(k.indexOf(' ') + 1);
+    const treffer = m.modelle.find(([, n]) => gleichform(n) === rest)?.[0];
+    if (treffer !== undefined) return treffer;
+  }
+  return undefined;
 }
 
 /**

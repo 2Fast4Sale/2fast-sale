@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mobileMarkenWert, mobileModellWert } from '../../../lib/carDatabase';
+import { mobileMarkenWertOderNull, mobileModellWertOderNull, markeModellAnzeige } from '../../../lib/carDatabase';
 import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
@@ -70,8 +70,23 @@ function inseratBauen(formData: FormData, description?: string) {
   const inserat: Record<string, unknown> = { vehicleClass: 'Car' };
 
   const marke = (formData.brand || '').trim();
-  if (marke) inserat.make = mobileMarkenWert(marke);
-  else fehlt.push('Marke');
+  /*
+   * Einen Wert, den mobile.de nicht kennt, NICHT mitschicken.
+   *
+   * Vorher ging der Rohwert raus, wenn die Marke nicht in der
+   * Referenzliste stand. mobile.de lehnte dann das ganze Inserat mit
+   * invalid-reference-data-value ab — ohne zu sagen, welches Feld
+   * gemeint ist. Genau das ist beim ersten echten Test passiert: Der
+   * Fahrzeugschein liefert "VOLKSWAGEN," mit Komma und "VW GOLF" als
+   * Modell, beides stand so in der Anfrage.
+   *
+   * Jetzt landet es in der Liste der fehlenden Angaben, und der
+   * Haendler sieht vor dem Senden, welcher Wert nicht passt.
+   */
+  const markeWert = marke ? mobileMarkenWertOderNull(marke) : null;
+  if (markeWert) inserat.make = markeWert;
+  else if (!marke) fehlt.push('Marke');
+  else fehlt.push(`Marke "${marke}" kennt mobile.de nicht — bitte in Schritt 1 aus der Liste wählen`);
 
   /*
    * Fuer die Fahrzeugklasse Car ist model ein Pflichtfeld
@@ -81,8 +96,10 @@ function inseratBauen(formData: FormData, description?: string) {
    * das Wort "MODELL" als Modellnamen.
    */
   const modell = (formData.model || '').trim();
-  if (modell) inserat.model = mobileModellWert(marke, modell);
-  else fehlt.push('Modell');
+  const modellWert = modell ? mobileModellWertOderNull(marke, modell) : null;
+  if (modellWert) inserat.model = modellWert;
+  else if (!modell) fehlt.push('Modell');
+  else if (markeWert) fehlt.push(`Modell "${modell}" kennt mobile.de bei ${marke} nicht — bitte in Schritt 1 aus der Liste wählen`);
 
   /*
    * modelDescription ist zugleich die Ueberschrift des Inserats.
@@ -90,7 +107,9 @@ function inseratBauen(formData: FormData, description?: string) {
    * Adresse duerfen darin stehen -- sonst lehnt mobile.de ab
    * (modeldescription-contains-phone / -email / -url).
    */
-  const titel = [marke, modell].filter(Boolean).join(' ').trim();
+  /* Saubere Schreibweise: aus "VOLKSWAGEN," + "VW GOLF" wird "Volkswagen Golf". */
+  const anzeige = markeModellAnzeige(marke, modell);
+  const titel = [anzeige.marke, anzeige.modell].filter(Boolean).join(' ').trim();
   if (titel) inserat.modelDescription = titel.slice(0, 48);
 
   const kategorie = mobileKategorie(formData.bodyType || '');
