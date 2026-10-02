@@ -163,17 +163,35 @@ export const PROBE = {
 } as const;
 
 /**
- * Was ein Studio-Bild wirklich kostet, in Cent — brutto.
+ * Was ein fertiges Studio-Foto kostet, in Cent — brutto.
  *
- * Aus der Google-Rechnung September 2026: 7,99 € Google Cloud plus
- * 1,60 € Umsatzsteuer, bezahlt also 9,59 € bei rund 62 Bildern. Das
- * sind ungefähr 15 Cent je Bild. Die Umsatzsteuer zählt mit, weil als
- * Kleinunternehmer nach § 19 UStG kein Vorsteuerabzug möglich ist.
+ * ── Exakt gemessen am 2. Oktober 2026 ───────────────────────────────
  *
- * Dieselbe Zahl steht als Listenpreis in lib/apiCosts.ts
- * (IMAGE_PRICES_USD_PER_CALL.gemini_bild plus UST_FAKTOR). Hier liegt
- * sie noch einmal, weil apiCosts den Supabase-Client mitbringt und
- * preismodell in Seiten im Browser benutzt wird.
+ * EIN Aufruf von gemini-3.1-flash-image meldet in usageMetadata:
+ * 537 Tokens Eingabe (die zwei Bilder sind 516 davon), 1416 Tokens
+ * Ausgabe, darunter 1120 für das Bild selbst in 1K. Zum Listenpreis
+ * (Eingabe 0,50 USD je 1M, Bildausgabe 60,00 USD je 1M) sind das
+ * 0,085 USD = 7,8 Cent netto = **9,4 Cent brutto**. Die Preisliste
+ * nennt für ein 1K-Bild 0,067 USD, das ist derselbe Wert ohne die
+ * Text-Tokens der Antwort.
+ *
+ * Ein FERTIGES Foto braucht aber oft zwei Aufrufe: einen zweiten
+ * Anlauf, wenn die Ähnlichkeitsprüfung das erste Ergebnis verwirft,
+ * und den Verfeinerungslauf für Scheiben und Spiegelungen. Deshalb
+ * stehen hier 15 Cent und nicht 9,4 — das deckt den normalen Fall mit
+ * zwei Aufrufen.
+ *
+ * Das erklärt auch die Google-Rechnung für September: 9,59 € brutto
+ * bei 25 Fotos, die über die Website liefen, plus meinen Testläufen
+ * über die Skripte. Pro Foto rund zwei Bilder.
+ *
+ * Die Umsatzsteuer zählt mit, weil als Kleinunternehmer nach § 19 UStG
+ * kein Vorsteuerabzug möglich ist.
+ *
+ * Der Listenpreis je AUFRUF steht in lib/apiCosts.ts (0,067 USD plus
+ * UST_FAKTOR). Hier liegt der Wert je FOTO noch einmal, weil apiCosts
+ * den Supabase-Client mitbringt und preismodell in Seiten im Browser
+ * benutzt wird.
  */
 export const KOSTEN_STUDIO_BILD_CENT = 15;
 
@@ -227,53 +245,19 @@ export const PAKETE: readonly Paket[] = [
   { id: 'l', name: 'Paket L', preisCent: 255000, inserate: 550 },  /* 4,64 je Inserat */
 ];
 
-/**
- * Zusatz-Studio-Bilder, je Inserat wählbar.
+/*
+ * Hier standen BILDPAKETE: Stufen von +10, +25 und +45 Bildern zu 24,
+ * 22 und 20 Cent je Bild, mit einer Tabelle auf jeder Paketkarte.
  *
- * 15 Bilder sind in jedem Inserat und in jedem Paket enthalten. Wer mehr
- * braucht, nimmt eine Stufe dazu — der Preis je Bild sinkt mit der
- * Menge, so wie bei den Paketen auch.
+ * Weg, weil der Einzelpreis auf 14 Cent gesenkt wurde. Jede Stufe waere
+ * damit teurer als die Bilder, die sie ersetzt — eine Tabelle, die nur
+ * noch zeigt, dass man sie nicht nehmen soll. Ein Preis, ein Satz:
+ * fuenfzehn Bilder enthalten, jedes weitere 14 Cent.
  *
- * Die Stufen stehen bewusst ÜBER den Kosten von 15 Cent je Bild: 24, 22
- * und 20 Cent. Ein Zusatzbild soll sich auch dann tragen, wenn der Preis
- * des Bildes bei Google wieder steigt — und das ist in den letzten zwei
- * Monaten das Vierfache gewesen. Unter 20 Cent gehen die Stufen deshalb
- * nicht, auch nicht bei der grössten.
- *
- * Und sie liegen unter dem Einzelpreis von 25 Cent — sonst wäre die
- * Stufe eine Falle: ein "Paket", das teurer ist als das, was es ersetzt.
- *
- * Die Obergrenze liegt bei 60 Fotos je Inserat (mobile.de nimmt rund 56),
- * deshalb endet die grösste Stufe bei 45 zusätzlichen.
+ * Wenn Stufen wiederkommen sollen, muessen sie UNTER dem Einzelpreis
+ * liegen und ueber den Kosten von 15,5 Cent — bei 14 Cent Einzelpreis
+ * gibt es diesen Bereich nicht.
  */
-export interface Bildpaket {
-  /** Zusätzliche Studio-Bilder je Inserat. */
-  bilder: number;
-  /** Aufpreis je Inserat, in Cent. */
-  preisCent: number;
-}
-
-export const BILDPAKETE: readonly Bildpaket[] = [
-  { bilder: 10, preisCent: 240 },  /* 24 Cent je Bild */
-  { bilder: 25, preisCent: 550 },  /* 22 Cent je Bild */
-  { bilder: 45, preisCent: 900 },  /* 20 Cent je Bild */
-];
-
-/** Preis je Bild in einer Stufe, in Cent — für die Tabelle auf der Preisseite. */
-export function bildpaketJeBildCent(p: Bildpaket): number {
-  return Math.round(p.preisCent / p.bilder);
-}
-
-/**
- * Die billigste Stufe, die so viele Zusatzbilder abdeckt.
- *
- * `null` heisst: Es braucht keine — das Kontingent reicht. Mehr als die
- * grösste Stufe gibt es nicht; dann bleibt der Einzelpreis je Bild.
- */
-export function passendeStufe(zusatzBilder: number): Bildpaket | null {
-  if (zusatzBilder <= 0) return null;
-  return BILDPAKETE.find(p => p.bilder >= zusatzBilder) ?? null;
-}
 
 export { STUDIO_INKLUSIVE, PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';
 import { PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';
@@ -306,11 +290,7 @@ export function studioExtraCent(bilderProInserat: number[], paketId?: Paket['id'
  * als das Einzelne, das sie ersetzt.
  */
 export function studioZusatzCent(zusatzBilder: number): number {
-  const extra = Math.max(0, Math.round(zusatzBilder));
-  if (extra === 0) return 0;
-  const einzeln = extra * PREIS_EXTRA_BILD_CENT;
-  const stufe = passendeStufe(extra);
-  return stufe ? Math.min(einzeln, stufe.preisCent) : einzeln;
+  return Math.max(0, Math.round(zusatzBilder)) * PREIS_EXTRA_BILD_CENT;
 }
 
 export interface Monatsposten {

@@ -10,7 +10,7 @@ import {
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
-import { studioZusatzCent, BILDPAKETE, bildpaketJeBildCent } from '../../../../lib/preismodell';
+import { studioZusatzCent } from '../../../../lib/preismodell';
 import { G } from '../gestaltung';
 import { useDauerText } from '../../../../lib/sitzungsspeicher';
 import { entwurfId } from '../../../../lib/entwurf';
@@ -1193,9 +1193,8 @@ function Step2Inner() {
                 ) : (
                   <div style={{ marginTop: '6px', color: TS }}>
                     {studioInklusive(paketId)} Studio-Bilder sind im Inseratspreis enthalten.
-                    {' '}Weitere kosten {PREIS_EXTRA_BILD_CENT} Cent einzeln —
-                    {' '}in Stufen guenstiger:{' '}
-                    {BILDPAKETE.map(b => `+${b.bilder} fuer ${centAlsEuro(b.preisCent)} (${bildpaketJeBildCent(b)} ct)`).join(' · ')}
+                    {' '}Jedes weitere kostet {PREIS_EXTRA_BILD_CENT} Cent. Gewöhnliche Fotos
+                    {' '}ohne Studio-Hintergrund kosten nichts.
                   </div>
                 )}
               </div>

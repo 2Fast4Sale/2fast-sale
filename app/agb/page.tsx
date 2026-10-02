@@ -1,5 +1,5 @@
 ﻿import Link from 'next/link';
-import { PREIS_PRO_INSERAT_CENT, GRUNDGEBUEHR_CENT, BILDPAKETE, euro } from '../../lib/preismodell';
+import { PREIS_PRO_INSERAT_CENT, GRUNDGEBUEHR_CENT, euro } from '../../lib/preismodell';
 import { studioInklusive, PREIS_EXTRA_BILD_CENT, centAlsEuro } from '../../lib/studioQuota';
 
 export const metadata = {
@@ -86,10 +86,9 @@ export default function AGBPage() {
             nicht automatisch; nicht genutzte Inserate bleiben erhalten, solange das Konto besteht.
           </p>
           <p style={body}>
-            Je Inserat sind {studioInklusive(null)} Studio-Bilder enthalten. Darüber hinaus erzeugte
-            Bilder werden einzeln berechnet ({PREIS_EXTRA_BILD_CENT} Cent) oder, wenn das günstiger
-            ist, als Stufe ({BILDPAKETE.map(x => `+${x.bilder} für ${centAlsEuro(x.preisCent)}`).join(", ")}).
-            Gewöhnliche Fotos ohne Studio-Hintergrund sind unbegrenzt und kosten nichts. Optionale Zusatzleistungen, etwa der Abruf von
+            Je Inserat sind {studioInklusive(null)} Studio-Bilder enthalten. Jedes weitere kostet
+            {' '}{PREIS_EXTRA_BILD_CENT} Cent. Gewöhnliche Fotos ohne Studio-Hintergrund sind
+            unbegrenzt und kosten nichts. Optionale Zusatzleistungen, etwa der Abruf von
             Ausstattungsdaten über die Fahrgestellnummer, werden gesondert ausgewiesen.
           </p>
           <p style={body}>

@@ -43,24 +43,53 @@ vorher, rund 15, 25 und 38 Prozent):
 | Paket M, 150 Inserate | 845 € | 5,63 € | 121 im Monat | 3,31 € |
 | Paket L, 550 Inserate | 2.550 € | 4,64 € | 378 im Monat | 2,32 € |
 
-**Mehr Studio-Bilder in Stufen** — je Inserat waehlbar, und es wird
-immer der fuer den Haendler guenstigere Weg berechnet (einzeln oder
-Stufe):
+**Was die Gemini-API genau kostet** — gemessen am einzelnen Aufruf, nicht
+an der Monatsrechnung geteilt durch eine geschaetzte Bildzahl. Ein Aufruf
+von `gemini-3.1-flash-image` meldet in `usageMetadata`:
 
-| zusaetzlich | Aufpreis | je Bild | Einkauf | bleibt |
+| | Tokens | Preis je 1M | macht |
+|---|---|---|---|
+| Eingabe (Text + 2 Bilder) | 537 | 0,50 USD | 0,0003 USD |
+| Ausgabe (Bild 1K = 1120 Tokens) | 1416 | 60,00 USD | 0,0850 USD |
+| **Summe je Aufruf** | | | **0,085 USD = 7,8 ct netto = 9,4 ct brutto** |
+
+Die Preisliste nennt fuer ein 1K-Bild 0,067 USD; das ist derselbe Wert
+ohne die Text-Tokens der Antwort. Zurueck kommt ein Bild mit 1264x848.
+
+**Ein fertiges Foto braucht aber oft zwei Aufrufe:** einen zweiten Anlauf,
+wenn die Aehnlichkeitspruefung das erste Ergebnis verwirft, und den
+Verfeinerungslauf fuer Scheiben und Spiegelungen. Darum rechne mit
+**15 Cent je fertigem Studio-Foto**, nicht mit 9,4.
+
+Genau hier lag auch die Luecke zwischen `api_costs` und der
+Google-Rechnung: Gebucht wurden nur die Bilder, die ANKAMEN — ein
+verworfener Anlauf stand trotzdem auf der Rechnung. Seit dem 2. Oktober
+bucht die Route jedes erzeugte Bild einzeln (Rueckruf `bildGebucht`).
+
+**Ein weiteres Studio-Bild kostet 14 Cent.** Fabians Entscheidung vom
+2. Oktober. Das liegt unter dem Einkauf von 15,5 Cent — jedes Zusatzbild
+kostet also rund 1,5 Cent, getragen aus dem Grundpreis:
+
+| Studio-Bilder | Umsatz | Einkauf | Stripe | bleibt |
 |---|---|---|---|---|
-| einzeln | 25 ct | 25 ct | 15,5 ct | 9,5 ct |
-| +10 (25 gesamt) | 2,40 € | 24 ct | 1,55 € | 0,85 € |
-| +25 (40 gesamt) | 5,50 € | 22 ct | 3,87 € | 1,63 € |
-| +45 (60 gesamt) | 9,00 € | 20 ct | 6,96 € | 2,04 € |
+| 15 (enthalten) | 7,50 € | 2,32 € | 0,36 € | 4,82 € |
+| 20 | 8,20 € | 3,07 € | 0,37 € | 4,76 € |
+| 25 | 8,90 € | 3,82 € | 0,38 € | 4,70 € |
+| 40 | 11,00 € | 6,07 € | 0,42 € | 4,51 € |
+| 60 (Obergrenze) | 13,80 € | 9,07 € | 0,46 € | 4,27 € |
 
-Unter 20 Cent geht keine Stufe. Der Bildpreis bei Google hat sich
-zwischen Juli und September vervierfacht; eine Stufe, die bei 18 Cent
-liegt, waere beim naechsten Sprung ein Verlust.
+Es bleibt also bei jeder Menge rund 4,50 € je Inserat — das Modell ist
+gegen Vielnutzer robust. Selbst tragen wuerde sich ein Zusatzbild ab
+16 Cent. Wenn der Bildpreis bei Google wieder steigt (zwischen Juli und
+September hat er sich vervierfacht), muss die Zahl mitgehen:
+`NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT` setzen, kein neuer Code.
+
+Die vorher geplanten Stufen (+10/+25/+45 zu 24/22/20 Cent) sind damit
+weg: Jede waere teurer als die Bilder, die sie ersetzt.
 
 **Der Probelauf bleibt bei 5 € fuer zwei Inserate.** Mit zwoelf
 Studio-Bildern je Inserat sind das 3,74 € Einkauf plus 0,33 € Stripe —
-es bleiben 0,93 €. Vorher rechnete  mit 23 Cent je
+es bleiben 0,93 €. Vorher rechnete `probeDeckung()` mit 23 Cent je
 Inserat und meldete 4,21 €; die 23 Cent stammten aus der Zeit, in der
 ein Bild zwei Cent kosten sollte.
 

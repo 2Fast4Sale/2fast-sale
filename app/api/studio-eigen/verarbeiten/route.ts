@@ -297,23 +297,36 @@ export async function POST(req: NextRequest) {
      * Der eigene Weg unten bleibt als Rueckfall, wenn Gemini zweimal
      * kein Bild liefert. Ohne ihn bekaeme der Haendler gar nichts.
      */
+    /*
+     * Jedes Bild buchen, das Google berechnet — auch ein verworfenes.
+     * Der Rueckruf laeuft in diesem Request und ist damit auch dann
+     * richtig, wenn Schritt 2 drei Fotos gleichzeitig schickt.
+     */
+    const bildGebucht = async (anzahl: number) => {
+      await logApiCost({
+        userId: await currentUserId(),
+        draftId: draftId ?? null,
+        service: 'gemini_bild',
+        operation: 'studio-bild',
+        unitsIn: anzahl,
+        costMicros: imageCostMicros('gemini_bild', anzahl),
+      });
+    };
+
     if (geminiWeg && halle) {
+
       const quelle = roh.length > 0 ? roh : vorab;
       if (quelle && quelle.length > 0) {
-        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null);
+        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null, bildGebucht);
         if (!ki) {
           console.info('[verarbeiten] erster Gemini-Versuch nicht verwendbar (' + letzterGrund + '), zweiter Anlauf');
-          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null);
+          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null, bildGebucht);
         }
         if (ki) {
-          await logApiCost({
-            userId: await currentUserId(),
-            draftId: draftId ?? null,
-            service: 'gemini_bild',
-            operation: 'studio-komplett',
-            unitsIn: 1,
-            costMicros: imageCostMicros('gemini_bild'),
-          });
+          /*
+           * Keine Buchung mehr an dieser Stelle: bildGebucht hat jedes
+           * erzeugte Bild einzeln gebucht, auch die verworfenen.
+           */
           return NextResponse.json({
             result: `data:image/jpeg;base64,${ki.bild.toString('base64')}`,
             kennzeichenErsetzt: true,
@@ -570,7 +583,7 @@ export async function POST(req: NextRequest) {
     let fahrzeugGeaendert = 0;
     if (geminiWeg) {
       const vorherBild = ergebnis.bild;
-      let fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
+      let fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null, bildGebucht);
       /*
        * Ein zweiter Versuch, wenn das erste Ergebnis verworfen wurde.
        *
@@ -582,17 +595,8 @@ export async function POST(req: NextRequest) {
        */
       if (!fein) {
         console.info('[verarbeiten] erster Versuch verworfen (' + letzterGrund + '), zweiter Anlauf');
-        fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null);
-        if (fein) {
-          await logApiCost({
-            userId: await currentUserId(),
-            draftId: draftId ?? null,
-            service: 'gemini_bild',
-            operation: 'studio-verfeinern-2',
-            unitsIn: 1,
-            costMicros: imageCostMicros('gemini_bild'),
-          });
-        }
+        fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null, bildGebucht);
+
       }
       /*
        * Kein Gemini-Bild: Dann hat auch niemand das Kennzeichen
@@ -630,16 +634,8 @@ export async function POST(req: NextRequest) {
        */
       if (fein && fahrzeugGeaendert < 1.5) {
         console.warn('[verarbeiten] Scheiben kaum veraendert (' + fahrzeugGeaendert + '%), zweiter Anlauf');
-        const zweiter = await studioVerfeinernMitGemini(fein.bild, firma ?? null);
+        const zweiter = await studioVerfeinernMitGemini(fein.bild, firma ?? null, bildGebucht);
         if (zweiter) {
-          await logApiCost({
-            userId: await currentUserId(),
-            draftId: draftId ?? null,
-            service: 'gemini_bild',
-            operation: 'studio-verfeinern-2',
-            unitsIn: 1,
-            costMicros: imageCostMicros('gemini_bild'),
-          });
           try {
             const em2 = await sharp(ergebnis.fahrzeugEbene.bild).metadata();
             const breit2 = Math.max(8, Math.min(em2.width ?? 0, ergebnis.breite - ergebnis.fahrzeugEbene.left));
@@ -724,14 +720,6 @@ export async function POST(req: NextRequest) {
         }
       }
       if (fein) {
-        await logApiCost({
-          userId: await currentUserId(),
-          draftId: draftId ?? null,
-          service: 'gemini_bild',
-          operation: 'studio-verfeinern',
-          unitsIn: 1,
-          costMicros: imageCostMicros('gemini_bild'),
-        });
         ergebnis = { ...ergebnis, bild: fein.bild };
         verfeinert = Number(fein.aehnlich.toFixed(3));
         geaendert = Number(fein.geaendert.toFixed(1));

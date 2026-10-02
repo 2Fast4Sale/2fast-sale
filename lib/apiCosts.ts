@@ -60,23 +60,32 @@ const IMAGE_PRICES_USD_PER_CALL: Record<string, number> = {
   // Preis eintragen, sobald der Vertrag steht.
   piranha:   0.00,
   /*
-   * Gemini 3.1 Flash Lite Image ("Nano Banana 2 Lite"), Stand 20.09.2026:
-   * 0,034 USD je Bild in 1K-Aufloesung. Damit malt die KI das ganze
-   * Studiobild, nicht nur den Schatten.
-   */
-  /*
-   * GEMESSEN, nicht geschaetzt.
+   * GEMESSEN am 2. Oktober 2026, nicht geschaetzt — und diesmal am
+   * einzelnen Aufruf, nicht an der Monatsrechnung geteilt durch eine
+   * geschaetzte Bildzahl.
    *
-   * Hier standen 0,034 USD — das war der Preis des kleinen Modells.
-   * Seit Nano Banana 2 (gemini-3.1-flash-image) die Bilder macht, stimmt
-   * er nicht mehr: Vom 22. bis 28. September wurden rund 9,37 EUR
-   * verbraucht, bei etwa 74 Bildern. Das sind rund 0,13 EUR je Bild,
-   * also knapp das Vierfache.
+   * Ein echter Aufruf von gemini-3.1-flash-image mit Fahrzeug- und
+   * Raumbild meldete in usageMetadata zurueck:
    *
-   * Diese Zahl entscheidet ueber den Verkaufspreis: Bei zwoelf Fotos
-   * kostet ein Inserat damit rund 1,55 EUR statt 40 Cent.
+   *   Eingabe   537 Tokens (davon 516 die zwei Bilder)
+   *   Ausgabe  1416 Tokens (davon 1120 das Bild selbst, 1K)
+   *
+   * Preisliste (ai.google.dev/gemini-api/docs/pricing): Eingabe 0,50
+   * USD je 1M, Bildausgabe 60,00 USD je 1M. Ein Bild in 1K sind 1120
+   * Tokens und damit 0,067 USD — genau der Wert, den die Preisliste als
+   * "equivalent to $0.067 per image" nennt. Mit allen Ausgabe-Tokens
+   * gerechnet 0,085 USD.
+   *
+   * Hier stehen 0,067: der Preis JE ERZEUGTES BILD. Ein fertiges Foto
+   * braucht oft zwei (zweiter Anlauf nach einer verworfenen Antwort,
+   * Verfeinerungslauf) — deshalb bucht die Route die gezaehlte Zahl
+   * ueber geminiErzeugteBilder(), nicht pauschal eins.
+   *
+   * Vorher standen hier 0,14 "gemessen" — das war die Monatsrechnung
+   * geteilt durch die vermuteten Bilder und enthielt damit die
+   * Doppelaufrufe. Beides zusammen haette doppelt gezaehlt.
    */
-  gemini_bild: 0.14,
+  gemini_bild: 0.067,
 };
 
 /**

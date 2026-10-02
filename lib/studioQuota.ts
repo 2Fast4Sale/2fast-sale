@@ -63,28 +63,37 @@ export const STUDIO_INKLUSIVE_JE_PAKET: Record<'kein' | Paket['id'], number> = {
 /**
  * Preis je Studio-Bild über dem Kontingent, in Cent.
  *
- * Zwölf Cent, nicht die früheren vier. Die vier waren mit "ein Bild
- * kostet rund 2,6 Cent" begründet — bei den tatsächlichen 10 Cent
- * Einkauf verlor jedes Zusatzbild sechs Cent, ausgerechnet bei einer
- * Leistung, die extra berechnet wird.
+ * ── Die Geschichte dieser Zahl, weil sie dreimal falsch war ──────────
  *
- * Der Grundsatz bleibt derselbe: Zusatzbilder sollen sich tragen und
- * nichts verdienen. Zehn Cent Einkauf plus zwei für Speicher und
- * Auslieferung.
- */
-/*
- * 25 Cent statt 12.
+ * Vier Cent: begründet mit "ein Bild kostet rund 2,6 Cent". Der Einkauf
+ * lag bei zehn — jedes Zusatzbild verlor sechs Cent.
  *
- * Die zwoelf waren gegen PhotoRoom gerechnet. Seit Gemini die Bilder
- * macht, liegt der Einkauf nach der Abrechnung vom 22. bis 28. September
- * zwischen 6 und 13 Cent je Bild — bei zwoelf Cent Verkaufspreis waere
- * jedes zusaetzliche Studio-Bild im schlechtesten Fall ein Minus.
+ * Zwölf Cent: gegen PhotoRoom gerechnet, kurz bevor Gemini die Bilder
+ * machte. Deren Preis lag zwischen 6 und 13 Cent, im schlechtesten Fall
+ * also wieder ein Minus.
  *
- * 25 Cent decken auch den teuren Fall und lassen etwas uebrig. Wer es
- * anders will, setzt PREIS_EXTRA_BILD_CENT.
+ * 25 Cent: deckte jeden Fall und verdiente mit. Zusammen mit den
+ * Stufen (24/22/20 Cent) war es aber eine Tabelle, die niemand lesen
+ * wollte, um ein paar Fotos mehr zu bekommen.
+ *
+ * ── Jetzt 14 Cent, flach ────────────────────────────────────────────
+ *
+ * Fabians Entscheidung vom 2. Oktober 2026: ein weiteres Bild kostet
+ * 14 Cent. Eine Zahl, ein Satz, keine Stufen.
+ *
+ * Das liegt BEWUSST unter dem Einkauf von 15,5 Cent brutto (Google-
+ * Rechnung September: 7,99 € netto plus 1,60 € Umsatzsteuer, kein
+ * Vorsteuerabzug nach § 19 UStG). Jedes Zusatzbild kostet damit rund
+ * 1,5 Cent — getragen wird das aus dem Grundpreis: Ein Inserat mit 40
+ * Studio-Bildern bringt 7,50 + 25 x 0,14 = 11,00 € bei 6,25 € Einkauf.
+ *
+ * Die Grenze, ab der es sich selbst trägt, liegt bei 16 Cent. Wenn der
+ * Bildpreis bei Google wieder steigt — zwischen Juli und September hat
+ * er sich vervierfacht —, muss diese Zahl mitgehen. Dafür braucht es
+ * keinen neuen Code: NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT setzen.
  */
 export const PREIS_EXTRA_BILD_CENT = Number(
-  process.env.NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT || process.env.PREIS_EXTRA_BILD_CENT || '25'
+  process.env.NEXT_PUBLIC_PREIS_EXTRA_BILD_CENT || process.env.PREIS_EXTRA_BILD_CENT || '14'
 );
 
 /** Kontingent für ein Paket. `null` heisst: kein Paket gebucht. */

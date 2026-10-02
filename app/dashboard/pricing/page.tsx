@@ -5,8 +5,7 @@ import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../lib/supabase/client';
 import {
-  PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, paketLohntAb, euro,
-  BILDPAKETE, bildpaketJeBildCent, studioZusatzCent,
+  PAKETE, GRUNDGEBUEHR_CENT, PREIS_PRO_INSERAT_CENT, paketLohntAb, euro, studioZusatzCent,
 } from '../../../lib/preismodell';
 import { studioInklusive, PREIS_EXTRA_BILD_CENT, centAlsEuro } from '../../../lib/studioQuota';
 import {
@@ -85,7 +84,7 @@ const PLANS = [
 const FAQS = [
   { q: 'Was kostet ein Inserat ohne Paket?', a: `${euro(GRUNDGEBUEHR_CENT)} € Grundgebühr im Monat plus ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat. Ab ${paketLohntAb('s')} Inseraten im Monat ist Paket S günstiger, ab ${paketLohntAb('m')} Paket M, ab ${paketLohntAb('l')} Paket L.` },
   { q: 'Was passiert über dem Kontingent?', a: `Es läuft mit ${euro(PREIS_PRO_INSERAT_CENT)} € je Inserat weiter — nichts wird blockiert. Sobald sich das nächstgrößere Paket lohnt, weisen wir dich darauf hin.` },
-  { q: 'Was sind Studio-Bilder?', a: `Fotos, die freigestellt und vor einen Studio-Hintergrund gesetzt werden. Das brauchen nur die Außenansichten — Cockpit, Motorraum oder Serviceheft lädst du normal hoch, die zählen nicht aufs Kontingent und kosten nichts. Fünfzehn sind in jedem Inserat enthalten, in jedem Paket. Wer mehr braucht, nimmt eine Stufe dazu: ${BILDPAKETE.map(b => `+${b.bilder} für ${centAlsEuro(b.preisCent)}`).join(", ")} — einzeln kostet ein weiteres Bild ${PREIS_EXTRA_BILD_CENT} Cent.` },
+  { q: 'Was sind Studio-Bilder?', a: `Fotos, die freigestellt und vor einen Studio-Hintergrund gesetzt werden. Das brauchen nur die Außenansichten — Cockpit, Motorraum oder Serviceheft lädst du normal hoch, die zählen nicht aufs Kontingent und kosten nichts. Fünfzehn sind in jedem Inserat enthalten, in jedem Paket. Jedes weitere kostet ${PREIS_EXTRA_BILD_CENT} Cent — gewöhnliche Fotos ohne Studio-Hintergrund kosten nichts.` },
   { q: 'Unterschied Privatperson und Händler?', a: `Als Privatperson zahlst du ${euro(PREIS_PRO_INSERAT_CENT)} € pro Inserat — einmalig, kein Abo. Für ein bis zwei Verkäufe im Jahr ist das richtig. Wer regelmäßig verkauft, fährt mit Grundgebühr oder Paket günstiger.` },
   { q: 'Wie lange gilt ein Inserat-Credit?', a: 'Gekaufte Credits verfallen nicht. Du kannst sie jederzeit einlösen, auch Monate später.' },
   { q: 'Kann ich jederzeit kündigen?', a: 'Ja — monatliche Kündigung zum Ende des Abrechnungszeitraums. Keine Mindestlaufzeit.' },
@@ -171,36 +170,6 @@ function BilderRechner({ inklusive, farbe }: { inklusive: number; farbe: string 
         {inklusive} enthalten · jedes weitere {PREIS_EXTRA_BILD_CENT} Cent
       </div>
 
-      {/*
-        Die Stufen zum Anklicken.
-
-        Wer mehr Bilder braucht, soll nicht den Knopf fünfundzwanzig Mal
-        drücken müssen — und er soll sehen, dass es mit der Menge
-        günstiger wird. Ein Klick setzt den Regler auf das Kontingent
-        plus Stufe.
-      */}
-      <table style={{ width: '100%', marginTop: 9, borderCollapse: 'collapse', fontSize: 11.5 }}>
-        <tbody>
-          {BILDPAKETE.map(stufe => {
-            const gewaehlt = anzahl === inklusive + stufe.bilder;
-            return (
-              <tr key={stufe.bilder}
-                onClick={() => setAnzahl(inklusive + stufe.bilder)}
-                style={{ cursor: 'pointer', background: gewaehlt ? '#f1f3f7' : 'transparent' }}>
-                <td style={{ padding: '4px 6px', color: '#334155', fontWeight: gewaehlt ? 800 : 600, borderTop: '1px solid #f1f5f9' }}>
-                  {inklusive + stufe.bilder} Bilder
-                </td>
-                <td style={{ padding: '4px 6px', color: '#475569', textAlign: 'right', borderTop: '1px solid #f1f5f9' }}>
-                  {bildpaketJeBildCent(stufe)} ct je Bild
-                </td>
-                <td style={{ padding: '4px 6px', color: farbe, fontWeight: 800, textAlign: 'right', whiteSpace: 'nowrap', borderTop: '1px solid #f1f5f9' }}>
-                  + {centAlsEuro(stufe.preisCent)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </div>
   );
 }

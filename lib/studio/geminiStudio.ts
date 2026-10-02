@@ -203,6 +203,8 @@ export async function studioBildMitGemini(
   zielHoehe: number,
   /** Name fuers Haendlerschild. Leer: nur ein dunkles Schild ohne Text. */
   firma?: string | null,
+  /** Wird nach jedem Bild aufgerufen, das Google berechnet hat. */
+  gezaehlt?: Bildzaehler,
 ): Promise<StudioErgebnis | null> {
   const key = process.env.GEMINI_API_KEY;
   letzterGrund = '';
@@ -256,6 +258,9 @@ export async function studioBildMitGemini(
       return null;
     }
 
+    /* Ab hier hat Google geantwortet und damit ein Bild berechnet —
+       das wird abgerechnet, auch wenn die Pruefung es gleich verwirft. */
+    await gezaehlt?.(1);
     const daten = await antwort.json();
     const teile: Array<{ inlineData?: { data?: string } }> = daten?.candidates?.[0]?.content?.parts ?? [];
     const bildTeil = teile.find((t) => t.inlineData?.data);
@@ -362,6 +367,22 @@ const verfeinernText = (firma?: string | null) =>
  */
 export let letzterGrund = '';
 
+/**
+ * Rueckmeldung: "Google hat gerade ein Bild erzeugt."
+ *
+ * Abgerechnet wird je erzeugtes Bild, nicht je fertiges Foto. Ein
+ * fertiges Foto braucht oft zwei bis drei: einen zweiten Anlauf, wenn die
+ * Pruefung das erste Ergebnis verwirft, und den Verfeinerungslauf. Die
+ * Route buchte nur die Bilder, die ANKAMEN — die verworfenen stehen
+ * trotzdem auf der Google-Rechnung. Genau das war die Luecke zwischen
+ * api_costs und der Monatsrechnung.
+ *
+ * Bewusst ein Rueckruf und kein modulweiter Zaehler: Schritt 2 schickt
+ * drei Fotos gleichzeitig durch, und die liefen in derselben Instanz —
+ * ein gemeinsamer Zaehler haette die Aufrufe untereinander vertauscht.
+ */
+export type Bildzaehler = (anzahl: number) => void | Promise<void>;
+
 /** Welches Modell tatsaechlich gefragt wurde — zur Anzeige im Browser. */
 export const GENUTZTES_MODELL = MODELL;
 
@@ -390,6 +411,8 @@ export async function studioVerfeinernMitGemini(
   komponiert: Buffer,
   /** Name fuers Haendlerschild, nur zur Information fuer das Modell. */
   firma?: string | null,
+  /** Wird nach jedem Bild aufgerufen, das Google berechnet hat. */
+  gezaehlt?: Bildzaehler,
 ): Promise<StudioErgebnis | null> {
   letzterGrund = '';
   const key = process.env.GEMINI_API_KEY;
@@ -422,6 +445,9 @@ export async function studioVerfeinernMitGemini(
       return null;
     }
 
+    /* Ab hier hat Google geantwortet und damit ein Bild berechnet —
+       das wird abgerechnet, auch wenn die Pruefung es gleich verwirft. */
+    await gezaehlt?.(1);
     const daten = await antwort.json();
     const teile = daten?.candidates?.[0]?.content?.parts ?? [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
