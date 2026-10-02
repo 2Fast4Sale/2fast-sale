@@ -619,6 +619,39 @@ function AutoScoutListing({
 }
 
 /* ─── Main ───────────────────────────────────────────────────────────────── */
+/**
+ * Die Antwort eines Portals lesbar machen.
+ *
+ * mobile.de antwortet auf eine abgelehnte Anzeige mit einer Liste von
+ * Fehlern, jeder mit einem Schluessel und einer Meldung. Rohes JSON ins
+ * Fenster zu werfen waere richtig und unlesbar; nur "abgelehnt (400)"
+ * zu zeigen ist lesbar und nutzlos. Also: die Meldungen heraussuchen,
+ * und nur wenn das nicht geht, das JSON zeigen.
+ */
+function portalAntwortLesbar(details: unknown): string {
+  if (typeof details === 'string') return details.slice(0, 1500);
+  const d = details as Record<string, unknown> | null;
+  if (!d || typeof d !== 'object') return String(details).slice(0, 1500);
+
+  const liste = Array.isArray(d.errors) ? d.errors
+    : Array.isArray(d.error) ? d.error
+    : null;
+
+  if (liste) {
+    const zeilen = liste.map((e: unknown) => {
+      if (typeof e === 'string') return '• ' + e;
+      const f = e as Record<string, unknown>;
+      const schluessel = [f.key, f.field, f.path].find(Boolean);
+      const meldung = [f.message, f.description, f.detail, f.code].find(Boolean);
+      return '• ' + [schluessel, meldung].filter(Boolean).join(': ');
+    });
+    if (zeilen.length) return zeilen.join('\n').slice(0, 1500);
+  }
+
+  try { return JSON.stringify(d, null, 2).slice(0, 1500); }
+  catch { return String(details).slice(0, 1500); }
+}
+
 function Step4Inner() {
   const searchParams = useSearchParams();
   const router       = useRouter();
@@ -894,6 +927,15 @@ function Step4Inner() {
     imagesUploaded?: number;
     hinweis?: string;
     nochNichtAktiv?: boolean;
+    /**
+     * Was das Portal WÖRTLICH geantwortet hat.
+     *
+     * "mobile.de hat abgelehnt (400)" allein ist unbrauchbar: 400 heisst
+     * "eine Angabe passt nicht", und welche steht nur in der Antwort.
+     * Ohne diese Zeilen raet man, und jedes Raten kostet einen weiteren
+     * Versuch.
+     */
+    details?: unknown;
     /** Zugangsdaten fehlen — dann hilft nur die Einstellungsseite. */
     keinZugang?: boolean;
   }
@@ -959,6 +1001,7 @@ function Step4Inner() {
           fehler: d.error || `Das Portal antwortete mit ${antwort.status}.`,
           fehlendeAngaben: d.fehlendeAngaben,
           bildFehler: d.bildFehler,
+          details: d.details,
         });
         return;
       }
@@ -1628,6 +1671,18 @@ function Step4Inner() {
                   <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', color: '#b91c1c', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
                     <AlertTriangle size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
                     {portalErgebnis.fehler}
+                  </div>
+                )}
+
+                {/* Die Antwort des Portals im Wortlaut */}
+                {portalErgebnis.details != null && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>
+                      Antwort von {PORTAL_NAME[portalErgebnis.portal]}
+                    </div>
+                    <pre style={{ margin: 0, padding: '11px 13px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '12px', lineHeight: 1.55, color: '#334155', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, Menlo, monospace', maxHeight: '240px', overflowY: 'auto' }}>
+                      {portalAntwortLesbar(portalErgebnis.details)}
+                    </pre>
                   </div>
                 )}
 
