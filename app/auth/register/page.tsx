@@ -218,7 +218,7 @@ export default function RegisterPage() {
             <div>
               <label style={labelStyle}>Passwort *</label>
               <div style={{ position: 'relative' }}>
-                <input type={showPw ? 'text' : 'password'} style={{ ...inputStyle, paddingRight: '52px' }} placeholder="Mindestens 6 Zeichen" value={form.password} onChange={set('password')}
+                <input type={showPw ? 'text' : 'password'} style={{ ...inputStyle, paddingRight: '52px' }} placeholder="Mindestens 8 Zeichen" value={form.password} onChange={set('password')}
                   onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.5)')}
                   onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')} />
                 <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
