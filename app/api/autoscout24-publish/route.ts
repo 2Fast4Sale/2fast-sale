@@ -9,6 +9,8 @@ import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
 import { as24Envkv } from '../../../lib/as24Envkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
+import { createClient } from '../../../lib/supabase/server';
+import { zugangLesen } from '../../../lib/portalZugang';
 
 export const dynamic = 'force-dynamic';
 
@@ -215,12 +217,28 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
 }
 
 export async function POST(req: NextRequest) {
-  const username = process.env.AS24_API_USERNAME;
-  const password = process.env.AS24_API_PASSWORD;
-  const customerId = process.env.AS24_CUSTOMER_ID;
+  /*
+   * Zugangsdaten des HAENDLERS, nicht meine. Vorher kamen sie aus der
+   * Umgebung — damit waere jedes Inserat in meinem Konto gelandet.
+   */
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
 
-  const { formData, description, images, testmodus, trockenlauf } = await req.json();
+  const { formData, description, images, testmodus: testmodusWunsch, trockenlauf } = await req.json();
   const { nutzlast, fehlt } = nutzlastBauen(formData || {}, description);
+
+  const zugang = await zugangLesen(user.id, 'as24');
+  const username = zugang?.benutzer ?? null;
+  const password = zugang?.geheim ?? null;
+  const customerId = zugang?.kontoNummer ?? null;
+  /*
+   * Testmodus: Der gespeicherte Zugang entscheidet. Ein Aufrufer darf
+   * ihn EINSCHALTEN, aber nicht ausschalten — sonst genuegt ein
+   * veraenderter Aufruf aus dem Browser, um aus einem Testzugang ein
+   * oeffentliches Inserat zu machen.
+   */
+  const testmodus = Boolean(testmodusWunsch) || Boolean(zugang?.testmodus);
 
   /*
    * Trockenlauf: zeigen, was rausginge, ohne etwas zu senden.
@@ -230,16 +248,18 @@ export async function POST(req: NextRequest) {
    * dann sieht man wenigstens, ob die Uebersetzung stimmt, bevor
    * AutoScout24 den Zugang freischaltet.
    */
-  if (trockenlauf || !username || !password || !customerId) {
+  if (trockenlauf || !password || !customerId) {
     return NextResponse.json({
       trockenlauf: true,
-      grund: trockenlauf ? 'angefordert' : 'AS24_API_USERNAME/PASSWORD/CUSTOMER_ID nicht gesetzt',
+      grund: trockenlauf ? 'angefordert'
+        : !zugang ? 'Fuer AutoScout24 sind keine Zugangsdaten gespeichert (Einstellungen → Portale)'
+        : 'Die gespeicherten Zugangsdaten sind unvollstaendig',
       fehlendeAngaben: fehlt,
       wuerdeSenden: {
         ...nutzlast,
         publication: { status: 'Active', channels: [{ id: 'AS24' }] },
       },
-    }, { status: trockenlauf ? 200 : 503 });
+    }, { status: trockenlauf ? 200 : 409 });
   }
 
   if (fehlt.length > 0) {
@@ -249,7 +269,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const authHeader = 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+  const authHeader = 'Basic ' + Buffer.from(`${username ?? ''}:${password}`).toString('base64');
   const kopf: Record<string, string> = {
     Authorization: authHeader,
     'Content-Type': 'application/json',

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Building2, Key, Shield, ChevronRight, Crown, Receipt,
-  Loader2, Trash2, User, LogOut, CheckCircle2, AlertCircle,
+  Loader2, Trash2, User, LogOut, CheckCircle2, AlertCircle, PlugZap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -125,6 +125,7 @@ export default function SettingsPage() {
       title: 'Händler & KI',
       items: [
         { href: '/dashboard/settings/dealer', icon: <Building2 size={18} color="#6366f1" />, iconBg: 'rgba(99,102,241,0.1)', title: 'Händler-Profil', desc: 'Firmenname, Kontaktdaten, Adresse, KI-Einstellungen' },
+        { href: '/dashboard/settings/portale', icon: <PlugZap size={18} color="#0ea5e9" />, iconBg: 'rgba(14,165,233,0.1)', title: 'Portal-Zugänge', desc: 'Zugangsdaten für mobile.de und AutoScout24 — damit das Inserat in dein Konto geht' },
       ],
     },
     {

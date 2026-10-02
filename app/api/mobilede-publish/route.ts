@@ -9,22 +9,23 @@ import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
+import { createClient } from '../../../lib/supabase/server';
+import { zugangLesen } from '../../../lib/portalZugang';
 
 export const dynamic = 'force-dynamic';
 
 /*
  * Produktiv oder Sandbox.
  *
- * MOBILEDE_SANDBOX=true schaltet auf die Testumgebung. Dort angelegte
- * Inserate sind nie oeffentlich sichtbar und kosten nichts.
+ * Entschieden wird das jetzt am Zugang des Haendlers (Feld testmodus),
+ * nicht mehr an einer Umgebungsvariablen: Auf demselben Server koennen
+ * ein Haendler im Testmodus und ein anderer im Betrieb sein.
  *
- * Die Adresse lautet services.sandbox.mobile.de. Im Schnellstart der
- * eigenen Dokumentation steht sandbox.services.mobile.de — diesen
- * Rechner gibt es nicht, er loest nicht einmal auf.
+ * Die Sandbox-Adresse lautet services.sandbox.mobile.de. Im
+ * Schnellstart der eigenen Dokumentation steht
+ * sandbox.services.mobile.de — diesen Rechner gibt es nicht, er loest
+ * nicht einmal auf.
  */
-const BASIS = process.env.MOBILEDE_SANDBOX === 'true'
-  ? 'https://services.sandbox.mobile.de/seller-api'
-  : 'https://services.mobile.de/seller-api';
 
 /** Erstzulassung im Format yyyyMM, wie mobile.de es erwartet. */
 function erstzulassung(roh: string): string {
@@ -239,22 +240,47 @@ function inseratBauen(formData: FormData, description?: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const username = process.env.MOBILEDE_API_USERNAME;
-  const password = process.env.MOBILEDE_API_PASSWORD;
-  const sellerId = process.env.MOBILEDE_SELLER_ID;
+  /*
+   * Zugangsdaten des HAENDLERS, nicht meine.
+   *
+   * Vorher kamen sie aus der Umgebung — das ist mein Konto. Jedes
+   * Inserat waere damit in meinem Namen eingestellt worden: beim
+   * Haendler kaeme nichts an, und bei mir stuenden fremde Fahrzeuge.
+   * zugangLesen faellt nur im Testmodus auf die Umgebung zurueck.
+   */
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
 
   const { formData, description, images, trockenlauf } = await req.json();
   const { inserat, fehlt } = inseratBauen(formData || {}, description);
 
+  const zugang = await zugangLesen(user.id, 'mobile');
+
   /* Ohne Zugangsdaten zeigen, was rausginge, statt nur zu meckern. */
-  if (trockenlauf || !username || !password || !sellerId) {
+  if (trockenlauf || !zugang || !zugang.geheim || !zugang.kontoNummer) {
     return NextResponse.json({
       trockenlauf: true,
-      grund: trockenlauf ? 'angefordert' : 'MOBILEDE_API_USERNAME/PASSWORD/SELLER_ID nicht gesetzt',
+      grund: trockenlauf ? 'angefordert'
+        : !zugang ? 'Fuer mobile.de sind keine Zugangsdaten gespeichert (Einstellungen → Portale)'
+        : 'Die gespeicherten Zugangsdaten sind unvollstaendig',
       fehlendeAngaben: fehlt,
       wuerdeSenden: inserat,
-    }, { status: trockenlauf ? 200 : 503 });
+    }, { status: trockenlauf ? 200 : 409 });
   }
+
+  const username = zugang.benutzer ?? '';
+  const password = zugang.geheim;
+  const sellerId = zugang.kontoNummer;
+  /*
+   * Testmodus gewinnt ueber die Umgebungsvariable: Wer seinen Zugang
+   * als Testzugang gespeichert hat, darf nicht aus Versehen ein
+   * oeffentliches Inserat anlegen, nur weil auf dem Server
+   * MOBILEDE_SANDBOX nicht gesetzt ist.
+   */
+  const basis = zugang.testmodus
+    ? 'https://services.sandbox.mobile.de/seller-api'
+    : 'https://services.mobile.de/seller-api';
 
   if (fehlt.length > 0) {
     return NextResponse.json(
@@ -302,7 +328,7 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const antwort = await fetch(`${BASIS}/images`, {
+      const antwort = await fetch(`${basis}/images`, {
         method: 'POST',
         headers: { ...kopf, 'Content-Type': 'image/jpeg' },
         body: new Uint8Array(jpeg),
@@ -326,7 +352,7 @@ export async function POST(req: NextRequest) {
    * zweiten Versuch mit 303 und verweist auf das bereits angelegte
    * Inserat, statt ein zweites zu erzeugen.
    */
-  const antwort = await fetch(`${BASIS}/sellers/${sellerId}/ads`, {
+  const antwort = await fetch(`${basis}/sellers/${sellerId}/ads`, {
     method: 'POST',
     headers: {
       ...kopf,
