@@ -19,6 +19,23 @@ const MICROS = 1_000_000;
 const USD_TO_EUR = 0.92;
 
 /**
+ * Umsatzsteuer auf die Lieferantenrechnungen.
+ *
+ * Grund aus der Google-Rechnung fuer September 2026: 7,99 EUR Google
+ * Cloud, darauf 1,60 EUR Umsatzsteuer — bezahlt wurden also 9,59 EUR,
+ * zwanzig Prozent mehr als der Listenpreis.
+ *
+ * Als Kleinunternehmer nach § 19 UStG kann ich die Vorsteuer NICHT
+ * abziehen. Die Steuer ist damit echter Aufwand und gehoert in jede
+ * Kostenrechnung. Alle Listenpreise unten sind netto; dieser Faktor
+ * macht daraus, was vom Konto geht.
+ *
+ * Pruefen, wenn sich der Satz aendert: Der Wert stammt aus der
+ * PDF-Rechnung, nicht aus einer Annahme ueber den Steuersatz.
+ */
+const UST_FAKTOR = 1.20;
+
+/**
  * LLM-Preise pro 1 Mio Tokens in USD (Listenpreis Anthropic).
  * Quelle: Anthropic Preisliste — bei Modellwechsel hier mitpflegen.
  */
@@ -136,15 +153,15 @@ export function llmCostMicros(model: string, inputTokens: number, outputTokens: 
   const p = LLM_PRICES_USD_PER_MTOK[model];
   if (!p) return 0;
   const usd = (inputTokens / 1_000_000) * p.input + (outputTokens / 1_000_000) * p.output;
-  return Math.round(usd * USD_TO_EUR * MICROS);
+  return Math.round(usd * USD_TO_EUR * UST_FAKTOR * MICROS);
 }
 
-/** Kosten eines Bildaufrufs in Mikro-Euro. */
+/** Kosten eines Bildaufrufs in Mikro-Euro — brutto, so wie bezahlt. */
 export function imageCostMicros(service: CostService, calls = 1): number {
   const eur = IMAGE_PRICES_EUR_PER_CALL[service];
-  if (eur !== undefined) return Math.round(eur * calls * MICROS);
+  if (eur !== undefined) return Math.round(eur * calls * UST_FAKTOR * MICROS);
   const usd = (IMAGE_PRICES_USD_PER_CALL[service] ?? 0) * calls;
-  return Math.round(usd * USD_TO_EUR * MICROS);
+  return Math.round(usd * USD_TO_EUR * UST_FAKTOR * MICROS);
 }
 
 interface LogInput {

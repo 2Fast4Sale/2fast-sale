@@ -151,15 +151,54 @@ export const PROBE = {
 } as const;
 
 /**
+ * Was ein Studio-Bild wirklich kostet, in Cent — brutto.
+ *
+ * Aus der Google-Rechnung September 2026: 7,99 € Google Cloud plus
+ * 1,60 € Umsatzsteuer, bezahlt also 9,59 € bei rund 62 Bildern. Das
+ * sind ungefähr 15 Cent je Bild. Die Umsatzsteuer zählt mit, weil als
+ * Kleinunternehmer nach § 19 UStG kein Vorsteuerabzug möglich ist.
+ *
+ * Dieselbe Zahl steht als Listenpreis in lib/apiCosts.ts
+ * (IMAGE_PRICES_USD_PER_CALL.gemini_bild plus UST_FAKTOR). Hier liegt
+ * sie noch einmal, weil apiCosts den Supabase-Client mitbringt und
+ * preismodell in Seiten im Browser benutzt wird.
+ */
+export const KOSTEN_STUDIO_BILD_CENT = 15;
+
+/**
+ * Text und Erkennung je Inserat, in Cent — brutto.
+ *
+ * Gemessen über api_costs: 114 Claude-Aufrufe für 1,56 € netto, also
+ * rund 1,4 Cent je Aufruf. Ein Inserat braucht vier bis fünf
+ * (Fahrzeugschein, Ausstattung, Titel, Beschreibung) — macht 6 Cent
+ * netto, mit Steuer gerundet 7.
+ */
+export const KOSTEN_TEXT_JE_INSERAT_CENT = 7;
+
+/**
+ * Was ein Inserat an Einkauf kostet, in Cent.
+ *
+ * Die Zahl der Studio-Bilder ist der Haupttreiber: acht Bilder ohne
+ * Paket sind 1,20 €, zwölf im Probelauf 1,80 €. Deshalb steht sie als
+ * Parameter da und nicht als Annahme im Text.
+ */
+export function kostenJeInseratCent(studioBilder = 8): number {
+  return Math.round(studioBilder * KOSTEN_STUDIO_BILD_CENT + KOSTEN_TEXT_JE_INSERAT_CENT);
+}
+
+/**
  * Deckt der Probelauf seine Kosten?
  *
- * Zwei Inserate zu je rund 0,23 € gemessener API-Kosten, dazu die
- * Stripe-Gebühr auf eine Einzelzahlung. Der Rest ist Werbebudget —
+ * Hier stand als Vorgabe 23 Cent je Inserat. Das war die Rechnung aus
+ * der Zeit, in der ein Studio-Bild zwei Cent kostete — es kostet fünfzehn.
+ * Zwei Inserate mit je zwölf Bildern sind also rund 3,74 €, nicht 46
+ * Cent: Die Funktion meldete einen Überschuss von 4,21 €, wo in
+ * Wahrheit knapp 90 Cent übrig bleiben. Der Rest ist Werbebudget —
  * bewusst, aber es soll kein Minus sein.
  */
-export function probeDeckung(kostenJeInseratCent = 23): number {
+export function probeDeckung(kostenJeInserat = kostenJeInseratCent(PROBE.studioBilder)): number {
   const stripe = Math.round(PROBE.preisCent * 0.015 + 25);
-  return PROBE.preisCent - PROBE.inserate * kostenJeInseratCent - stripe;
+  return PROBE.preisCent - PROBE.inserate * kostenJeInserat - stripe;
 }
 
 /*
