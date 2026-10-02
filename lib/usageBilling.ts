@@ -53,11 +53,9 @@ export function berechnePosten(studioImages: number): {
   const extraImages = Math.max(0, Math.round(studioImages) - STUDIO_INKLUSIVE);
   const baseCents   = PREIS_PRO_INSERAT_CENT;
   /*
-   * Ueber studioZusatzCent, nicht Anzahl mal Einzelpreis: Ab zehn
-   * zusaetzlichen Bildern greift eine Stufe aus BILDPAKETE, und die ist
-   * guenstiger. Rechnete die Rechnung weiter einzeln, stuende dort ein
-   * hoeherer Betrag als in der Anzeige in Schritt 2 — und zwar der
-   * hoehere zugunsten des Haendlers falsch, also der, den er merkt.
+   * Ueber studioZusatzCent und nicht mit einer eigenen Multiplikation:
+   * Anzeige in Schritt 2 und Rechnung muessen dieselbe Zahl nennen. Als
+   * es hier eine zweite Rechenstelle gab, liefen sie auseinander.
    */
   const extraCents  = studioZusatzCent(extraImages);
   return { extraImages, baseCents, extraCents, summeCent: baseCents + extraCents };

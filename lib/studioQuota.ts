@@ -49,9 +49,8 @@ import type { Paket } from './preismodell';
  * Inserat bleiben nach Stripe 4,75 EUR, beim kleinsten Paket (6,40 je
  * Inserat) noch 4,01 EUR.
  *
- * Wer mehr will, waehlt eine Stufe aus BILDPAKETE dazu (10, 25 oder 45
- * zusaetzliche). Gewoehnliche Fotos bleiben unbegrenzt bis zur
- * Obergrenze von 60 und kosten nichts.
+ * Wer mehr will, zahlt 14 Cent je weiteres Bild. Gewoehnliche Fotos
+ * bleiben unbegrenzt bis zur Obergrenze von 60 und kosten nichts.
  */
 export const STUDIO_INKLUSIVE_JE_PAKET: Record<'kein' | Paket['id'], number> = {
   kein: 15,

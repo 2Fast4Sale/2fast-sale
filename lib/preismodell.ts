@@ -48,8 +48,8 @@
  * wird. Ein vollstaendiges Inserat mit 35 bis 40 Fotos ist damit
  * drin — nur eben nicht vierzig Mal Studio.
  *
- * Wer wirklich mehr Studio-Bilder will, waehlt in Schritt 2 eine Stufe
- * aus BILDPAKETE dazu.
+ * Wer wirklich mehr Studio-Bilder will, bekommt sie fuer 14 Cent je Bild
+ * (PREIS_EXTRA_BILD_CENT).
  */
 export const PREIS_PRO_INSERAT_CENT = 750;
 
@@ -281,13 +281,11 @@ export function studioExtraCent(bilderProInserat: number[], paketId?: Paket['id'
 /**
  * Was zusätzliche Studio-Bilder in EINEM Inserat kosten, in Cent.
  *
- * Gerechnet wird immer der für den Händler günstigere Weg: einzeln zum
- * Einzelpreis, oder die passende Stufe aus BILDPAKETE. Wer 12 zusätzliche
- * Bilder macht, zahlt nicht 12 x 25 = 3,00 €, sondern die Stufe mit 25
- * Bildern für 2,50 € — und hat dreizehn übrig, die er auch nutzen kann.
- *
- * Andersherum wäre es eine Falle: eine Stufe anzubieten, die teurer ist
- * als das Einzelne, das sie ersetzt.
+ * Anzahl mal Einzelpreis — seit der Einzelpreis bei 14 Cent liegt, gibt es
+ * keine Stufen mehr, die darunter liegen könnten (siehe den Hinweis bei
+ * den Paketen). Die Funktion bleibt als eine Stelle, an der dieser Preis
+ * gerechnet wird: Anzeige in Schritt 2 und Rechnung in usageBilling
+ * benutzen sie beide.
  */
 export function studioZusatzCent(zusatzBilder: number): number {
   return Math.max(0, Math.round(zusatzBilder)) * PREIS_EXTRA_BILD_CENT;
