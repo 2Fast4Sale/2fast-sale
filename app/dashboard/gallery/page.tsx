@@ -293,24 +293,49 @@ export default function InseratePage() {
   const deleteVehicle = async (id: string) => {
     if (!confirm('Fahrzeug wirklich löschen?')) return;
     setUpdatingId(id);
-    await fetch(`/api/vehicles/${id}`, { method: 'DELETE' });
-    setVehicles(prev => prev.filter(v => v.id !== id));
-    setOpenMenu(null);
-    setUpdatingId(null);
-    toast('Inserat gelöscht', 'success');
+    /*
+     * Antwort ansehen. Vorher wurde die Karte in jedem Fall aus der Liste
+     * genommen und "Inserat gelöscht" gemeldet — auch wenn der Server
+     * abgelehnt hat. Nach dem naechsten Laden war das Fahrzeug wieder da.
+     */
+    try {
+      const antwort = await fetch(`/api/vehicles/${id}`, { method: 'DELETE' });
+      if (!antwort.ok) throw new Error(String(antwort.status));
+      setVehicles(prev => prev.filter(v => v.id !== id));
+      toast('Inserat gelöscht', 'success');
+    } catch {
+      toast('Löschen fehlgeschlagen — das Inserat ist noch da.', 'error');
+    } finally {
+      setOpenMenu(null);
+      setUpdatingId(null);
+    }
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
     setUpdatingId(id);
-    await fetch(`/api/vehicles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
-    setVehicles(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
-    setOpenMenu(null);
-    setUpdatingId(null);
-    toast(`Status geändert → ${newStatus}`, 'success');
+    // Auch hier: ohne Pruefung stand der neue Status nur in der Anzeige.
+    try {
+      const antwort = await fetch(`/api/vehicles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+      if (!antwort.ok) throw new Error(String(antwort.status));
+      setVehicles(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
+      toast(`Status geändert → ${newStatus}`, 'success');
+    } catch {
+      toast('Status konnte nicht geändert werden.', 'error');
+    } finally {
+      setOpenMenu(null);
+      setUpdatingId(null);
+    }
   };
 
   const duplicateVehicle = async (car: Vehicle) => {
     setOpenMenu(null);
+    /*
+     * Ein Duplikat ist ein neues Inserat und verbraucht deshalb einen
+     * Credit — das stand nirgends. Wer "Duplizieren" nur zum Nachsehen
+     * anklickte, hatte hinterher einen Credit weniger, ohne gefragt
+     * worden zu sein.
+     */
+    if (!confirm('Das Duplikat ist ein neues Inserat und verbraucht einen Inserat-Credit. Fortfahren?')) return;
     toast('Inserat wird dupliziert...', 'info');
     try {
       const res = await fetch('/api/vehicles', {
@@ -324,6 +349,10 @@ export default function InseratePage() {
           status: 'Entwurf',
         }),
       });
+      if (res.status === 402) {
+        toast('Keine Inserat-Credits mehr — bitte zuerst aufladen.', 'error');
+        return;
+      }
       if (!res.ok) throw new Error();
       toast('Inserat dupliziert – als Entwurf gespeichert', 'success');
       fetchVehicles();
