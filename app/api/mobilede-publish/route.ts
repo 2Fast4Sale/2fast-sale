@@ -8,6 +8,7 @@ import {
 import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
+import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
 
 export const dynamic = 'force-dynamic';
 
@@ -274,25 +275,37 @@ export async function POST(req: NextRequest) {
    * hier uebersprungen und gemeldet, statt den ganzen Aufruf
    * scheitern zu lassen.
    */
+  /*
+   * mobile.de nimmt nur JPG und hoechstens 2 MB je Bild.
+   *
+   * Die Fotos kommen als Adressen aus dem Speicher (seit Schritt 2 sie
+   * dort ablegt) oder als Data-URL aus einer alten Sitzung. bildHolen
+   * nimmt beides; alsJpeg wandelt um und drueckt notfalls die Qualitaet,
+   * statt das Bild weglassen zu muessen.
+   *
+   * Vorher wurde ausschliesslich Base64 erwartet und jedes zu grosse
+   * Bild uebersprungen — mit Adressen waere JEDES Foto als "konnte
+   * nicht gelesen werden" gemeldet und das Inserat ohne Fotos angelegt.
+   */
   const GRENZE = 2 * 1024 * 1024;
   const bildVerweise: Array<{ ref: string }> = [];
   const bildFehler: string[] = [];
 
-  for (const [i, bild] of (((images as string[]) || [])).entries()) {
+  for (const [i, bild] of (((images as unknown[]) || [])).entries()) {
     try {
-      if (/^data:image\/png/i.test(bild)) {
-        bildFehler.push(`Bild ${i + 1}: PNG, mobile.de nimmt nur JPG`);
+      const geholt = await bildHolen(bild);
+      if (!geholt) { bildFehler.push(`Bild ${i + 1}: nicht ladbar`); continue; }
+
+      const jpeg = await alsJpeg(geholt, GRENZE);
+      if (!jpeg) {
+        bildFehler.push(`Bild ${i + 1}: passt auch verkleinert nicht unter 2 MB`);
         continue;
       }
-      const rumpf = Buffer.from(bild.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-      if (rumpf.length > GRENZE) {
-        bildFehler.push(`Bild ${i + 1}: ${Math.round(rumpf.length / 1024)} KB, Grenze sind 2048 KB`);
-        continue;
-      }
+
       const antwort = await fetch(`${BASIS}/images`, {
         method: 'POST',
         headers: { ...kopf, 'Content-Type': 'image/jpeg' },
-        body: rumpf,
+        body: new Uint8Array(jpeg),
       });
       if (antwort.ok) {
         const daten = await antwort.json();

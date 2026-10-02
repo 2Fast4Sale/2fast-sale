@@ -8,6 +8,7 @@ import { istAusgewiesen, laenderCode, farbnameSauber, monatJahr } from '../../..
 import { as24Ausstattung } from '../../../lib/ausstattungAnwenden';
 import { as24Envkv } from '../../../lib/as24Envkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
+import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
 
 export const dynamic = 'force-dynamic';
 
@@ -263,24 +264,42 @@ export async function POST(req: NextRequest) {
    * Anfragen statt zwei, und zwischendurch stand ein Inserat ohne
    * Bilder in der Liste.
    */
+  /*
+   * Die Fotos kommen als Adressen aus dem Speicher (seit Schritt 2 sie
+   * dort ablegt) oder als Data-URL aus einer alten Sitzung. bildHolen
+   * nimmt beides — vorher wurde nur Base64 erwartet, und mit Adressen
+   * waere das Inserat ohne ein einziges Foto rausgegangen.
+   *
+   * Umgewandelt wird nach JPEG mit hoechstens 4 MB. AutoScout24 nennt
+   * keine so enge Grenze wie mobile.de, aber ein 12-MB-PNG durch eine
+   * Mobilfunkleitung zu schicken ist auch ohne Grenze eine schlechte
+   * Idee.
+   */
   const imageIds: string[] = [];
-  for (const bild of ((images as string[]) || []).slice(0, 30)) {
+  const bildFehler: string[] = [];
+  for (const [i, bild] of ((images as unknown[]) || []).slice(0, 30).entries()) {
     try {
-      const typ = /^data:image\/png/i.test(bild) ? 'image/png' : 'image/jpeg';
-      const rumpf = Buffer.from(bild.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-      const kopfBild: Record<string, string> = { Authorization: authHeader, 'Content-Type': typ };
+      const geholt = await bildHolen(bild);
+      if (!geholt) { bildFehler.push(`Bild ${i + 1}: nicht ladbar`); continue; }
+      const jpeg = await alsJpeg(geholt, 4 * 1024 * 1024);
+      if (!jpeg) { bildFehler.push(`Bild ${i + 1}: nicht umwandelbar`); continue; }
+
+      const kopfBild: Record<string, string> = { Authorization: authHeader, 'Content-Type': 'image/jpeg' };
       if (testmodus) kopfBild['X-Testmode'] = 'true';
       const antwort = await fetch(`${BASE_URL}/customers/${customerId}/images`, {
-        method: 'POST', headers: kopfBild, body: rumpf,
+        method: 'POST', headers: kopfBild, body: new Uint8Array(jpeg),
       });
       if (antwort.ok) {
         const daten = await antwort.json();
         if (daten.id) imageIds.push(daten.id);
       } else {
-        console.error('Bild abgelehnt:', antwort.status, await antwort.text());
+        const text = await antwort.text();
+        console.error('Bild abgelehnt:', antwort.status, text.slice(0, 200));
+        bildFehler.push(`Bild ${i + 1}: abgelehnt (${antwort.status})`);
       }
     } catch (fehler) {
       console.error('Bild konnte nicht hochgeladen werden:', fehler);
+      bildFehler.push(`Bild ${i + 1}: Fehler beim Hochladen`);
     }
   }
   if (imageIds.length > 0) nutzlast.images = imageIds.map(id => ({ id }));
@@ -336,5 +355,8 @@ export async function POST(req: NextRequest) {
     as24Url: testmodus ? null : `https://www.autoscout24.de/angebote/-${inserat.id}`,
     dealerUrl: `https://autoscout24.com/account/listings/${inserat.id}`,
     imagesUploaded: imageIds.length,
+    // Welche Fotos nicht durchkamen — vorher stand das nur im Log des
+    // Servers, und der Haendler sah ein Inserat mit halb so vielen Bildern.
+    bildFehler,
   });
 }
