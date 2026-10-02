@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { mobileMarkenWertOderNull, mobileModellWertOderNull, markeModellAnzeige } from '../../../lib/carDatabase';
 import {
   mobileKategorie, mobileKraftstoff, mobileGetriebe, mobileFarbe,
@@ -255,6 +256,21 @@ function inseratBauen(formData: FormData, description?: string) {
   return { inserat, fehlt };
 }
 
+/**
+ * Eine gleichbleibende Kennung aus dem Inhalt.
+ *
+ * Format wie eine UUID, weil mobile.de das erwartet. Erzeugt wird sie
+ * aus einem SHA-256 ueber die uebergebenen Teile: gleiche Teile,
+ * gleiche Kennung — ueber Neuladen, Serverneustart und zwei
+ * gleichzeitige Anfragen hinweg.
+ */
+function stabileKennung(teile: string[]): string {
+  const h = createHash('sha256').update(teile.join('|')).digest('hex');
+  /* Version 5 und die Variantenbits setzen, damit es eine gueltige UUID ist. */
+  const v = (Number.parseInt(h[16], 16) & 0x3 | 0x8).toString(16);
+  return [h.slice(0, 8), h.slice(8, 12), '5' + h.slice(13, 16), v + h.slice(17, 20), h.slice(20, 32)].join('-');
+}
+
 export async function POST(req: NextRequest) {
   /*
    * Zugangsdaten des HAENDLERS, nicht meine.
@@ -268,7 +284,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
 
-  const { formData, description, images, trockenlauf } = await req.json();
+  const { formData, description, images, trockenlauf, draftId } = await req.json();
   const { inserat, fehlt } = inseratBauen(formData || {}, description);
 
   const zugang = await zugangLesen(user.id, 'mobile');
@@ -367,13 +383,35 @@ export async function POST(req: NextRequest) {
    * entstanden ist. Mit derselben Kennung antwortet mobile.de beim
    * zweiten Versuch mit 303 und verweist auf das bereits angelegte
    * Inserat, statt ein zweites zu erzeugen.
+   *
+   * ── Und genau das tat sie nicht ──────────────────────────────────
+   *
+   * Hier stand crypto.randomUUID(): bei jedem Aufruf eine neue Kennung.
+   * Damit war die Sicherung wirkungslos — beim zweiten Uebertragen
+   * desselben Fahrzeugs legte mobile.de ein ZWEITES Inserat an (im Test
+   * erst 48569658647072, dann 48571216900640 fuer denselben Golf). Im
+   * Betrieb heisst das: zwei identische Anzeigen, zwei Mal
+   * Anzeigengebuehr, und der Haendler muss eine von Hand loeschen.
+   *
+   * Die Kennung kommt jetzt aus dem Inhalt: Entwurfsnummer, Verkaeufer
+   * und die Angaben, die das Fahrzeug ausmachen. Derselbe Entwurf
+   * ergibt dieselbe Kennung — auch nach einem Neuladen der Seite, denn
+   * die Entwurfsnummer liegt im Sitzungsspeicher und nicht im
+   * Arbeitsspeicher dieser Funktion.
    */
+  const anfrageKennung = stabileKennung([
+    String(draftId ?? ''),
+    sellerId,
+    String(inserat.make ?? ''), String(inserat.model ?? ''),
+    String(inserat.vin ?? ''), String(inserat.mileage ?? ''),
+    String(inserat.firstRegistration ?? ''),
+  ]);
   const antwort = await fetch(`${basis}/sellers/${sellerId}/ads`, {
     method: 'POST',
     headers: {
       ...kopf,
       'Content-Type': 'application/vnd.de.mobile.api+json',
-      'X-Mobile-Insertion-Request-Id': crypto.randomUUID(),
+      'X-Mobile-Insertion-Request-Id': anfrageKennung,
     },
     body: JSON.stringify(inserat),
   });

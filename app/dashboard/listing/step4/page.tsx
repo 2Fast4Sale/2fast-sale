@@ -919,6 +919,12 @@ function Step4Inner() {
     grund?: string;
     fehlendeAngaben?: string[];
     fehler?: string;
+    /**
+     * mobile.de hat mit 303 geantwortet: Dieses Inserat gab es schon,
+     * es wurde kein zweites angelegt. Das ist ein Erfolg und muss sich
+     * auch so lesen — sonst drueckt der Haendler noch einmal.
+     */
+    bereitsVorhanden?: boolean;
     /** Lief es in der Testumgebung des Portals? */
     testmodusGelaufen?: boolean;
     /** Bei Erfolg: Kennung und Adresse des Inserats. */
@@ -995,6 +1001,12 @@ function Step4Inner() {
           description: desc,
           images: photos.filter(p => typeof p === 'string' && p.startsWith('http')),
           trockenlauf,
+          /*
+           * Die Entwurfsnummer macht das Uebertragen wiederholbar: Aus ihr
+           * baut die Route die Kennung, mit der mobile.de ein zweites
+           * Inserat verweigert. Ohne sie legt jeder Klick ein neues an.
+           */
+          draftId: entwurfId(),
         }),
       });
       const d = await antwort.json().catch(() => ({}));
@@ -1038,6 +1050,7 @@ function Step4Inner() {
       setPortalErgebnis({
         portal, trockenlauf: false,
         testmodusGelaufen: Boolean(d.testmodus),
+        bereitsVorhanden: Boolean(d.bereitsVorhanden),
         kennung: d.mobileAdId || d.listingId || '',
         adUrl: d.adUrl ?? null,
         dealerUrl: d.dealerUrl,
@@ -1752,9 +1765,11 @@ function Step4Inner() {
                 {!portalErgebnis.trockenlauf && !portalErgebnis.fehler && (
                   <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.28)', color: '#047857', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
                     <CheckCircle2 size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
-                    {portalErgebnis.testmodusGelaufen
-                      ? 'In die Testumgebung übertragen'
-                      : 'Übertragen'}
+                    {portalErgebnis.bereitsVorhanden
+                      ? 'Dieses Inserat gab es dort schon — es wurde kein zweites angelegt'
+                      : portalErgebnis.testmodusGelaufen
+                        ? 'In die Testumgebung übertragen'
+                        : 'Übertragen'}
                     {portalErgebnis.kennung ? ` — Inseratsnummer ${portalErgebnis.kennung}` : ''}.
                     {typeof portalErgebnis.imagesUploaded === 'number' && (
                       <> {portalErgebnis.imagesUploaded} Fotos mitgeschickt.</>
