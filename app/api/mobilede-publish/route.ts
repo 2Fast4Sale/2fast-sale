@@ -11,6 +11,7 @@ import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
 import { createClient } from '../../../lib/supabase/server';
 import { zugangLesen } from '../../../lib/portalZugang';
+import { alsYyyyMM } from '../../../lib/erstzulassung';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,18 +28,14 @@ export const dynamic = 'force-dynamic';
  * nicht einmal auf.
  */
 
-/** Erstzulassung im Format yyyyMM, wie mobile.de es erwartet. */
-function erstzulassung(roh: string): string {
-  const s = (roh || '').trim();
-  const ddmmyyyy = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (ddmmyyyy) return `${ddmmyyyy[3]}${ddmmyyyy[2].padStart(2, '0')}`;
-  const mmyyyy = s.match(/^(\d{1,2})\.(\d{4})$/);
-  if (mmyyyy) return `${mmyyyy[2]}${mmyyyy[1].padStart(2, '0')}`;
-  const yyyymm = s.match(/^(\d{4})-(\d{2})$/);
-  if (yyyymm) return `${yyyymm[1]}${yyyymm[2]}`;
-  if (/^\d{6}$/.test(s)) return s;
-  return '';
-}
+/*
+ * Die Erstzulassung liest lib/erstzulassung.ts.
+ *
+ * Hier stand eine eigene Fassung, die nur den Punkt als Trenner kannte.
+ * Beim ersten echten Test meldete mobile.de "Erstzulassung fehlt",
+ * obwohl im Formular 11/2016 stand — mit Schraegstrich, so wie es
+ * jeder abtippt und wie es der Scan liefert.
+ */
 
 const zahl = (roh: unknown): number =>
   parseFloat(String(roh ?? '').replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
@@ -110,7 +107,7 @@ function inseratBauen(formData: FormData, description?: string) {
 
   /* Neu- oder Gebrauchtwagen. Ohne Erstzulassung gilt es als neu. */
   const km = ganzzahl(formData.km);
-  const erst = erstzulassung(formData.firstRegistration || '');
+  const erst = alsYyyyMM(formData.firstRegistration);
   inserat.condition = !erst && km <= 1000 ? 'NEW' : 'USED';
   if (erst) inserat.firstRegistration = erst;
   else if (inserat.condition === 'USED') fehlt.push('Erstzulassung');

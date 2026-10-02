@@ -11,6 +11,7 @@ import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
 import { createClient } from '../../../lib/supabase/server';
 import { zugangLesen } from '../../../lib/portalZugang';
+import { alsYyyyBindestrichMM } from '../../../lib/erstzulassung';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,17 +21,11 @@ const BASE_URL = 'https://listing-creation.api.autoscout24.com';
  * Wandelt "03.2019", "3.2019", "2019-03" oder "201903" in "2019-03".
  * Alles andere gilt als nicht angegeben.
  */
-function erstzulassung(roh: string): string {
-  const s = (roh || '').trim();
-  const ddmmyyyy = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}`;
-  const mmyyyy = s.match(/^(\d{1,2})\.(\d{4})$/);
-  if (mmyyyy) return `${mmyyyy[2]}-${mmyyyy[1].padStart(2, '0')}`;
-  const yyyymm = s.match(/^(\d{4})-(\d{2})$/);
-  if (yyyymm) return `${yyyymm[1]}-${yyyymm[2]}`;
-  if (/^\d{6}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4)}`;
-  return '';
-}
+/*
+ * Die Erstzulassung liest lib/erstzulassung.ts — dieselbe Funktion wie
+ * bei mobile.de. Hier lag eine zweite Kopie, die denselben Fehler hatte:
+ * 11/2016 mit Schraegstrich wurde nicht erkannt.
+ */
 
 const zahl = (roh: unknown): number =>
   parseFloat(String(roh ?? '').replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
@@ -74,7 +69,7 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
 
   /* Neu- oder Gebrauchtwagen. Ohne Erstzulassung gilt es als neu. */
   const km = ganzzahl(formData.km);
-  const erst = erstzulassung(formData.firstRegistration || '');
+  const erst = alsYyyyBindestrichMM(formData.firstRegistration);
   nutzlast.offerType = !erst && km <= 1000 ? 'N' : 'U';
   if (erst) nutzlast.firstRegistrationDate = erst;
   else if (nutzlast.offerType === 'U') fehlt.push('Erstzulassung');

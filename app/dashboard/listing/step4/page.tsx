@@ -1635,14 +1635,21 @@ function Step4Inner() {
                 {portalErgebnis.fehlendeAngaben && portalErgebnis.fehlendeAngaben.length > 0 && (
                   <div style={{ marginBottom: '14px' }}>
                     <div style={{ fontSize: '12px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>
-                      Dafür fehlen noch {portalErgebnis.fehlendeAngaben.length} Angaben
+                      {/* Eine Angabe ist keine "Angaben". */}
+                      {portalErgebnis.fehlendeAngaben.length === 1
+                        ? 'Dafür fehlt noch eine Angabe'
+                        : `Dafür fehlen noch ${portalErgebnis.fehlendeAngaben.length} Angaben`}
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13.5px', color: '#334155', lineHeight: 1.7 }}>
                       {portalErgebnis.fehlendeAngaben.map((f, i) => <li key={i}>{f}</li>)}
                     </ul>
                     <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '8px', lineHeight: 1.6 }}>
-                      Diese Felder verlangt das Portal, nicht wir. Trag sie in Schritt 1 nach —
-                      ohne sie weist {PORTAL_NAME[portalErgebnis.portal]} das Inserat zurück.
+                      {portalErgebnis.fehlendeAngaben.length === 1 ? 'Dieses Feld' : 'Diese Felder'}
+                      {' '}verlangt das Portal, nicht wir. Trag
+                      {portalErgebnis.fehlendeAngaben.length === 1 ? ' es ' : ' sie '}
+                      in Schritt 1 nach — ohne
+                      {portalErgebnis.fehlendeAngaben.length === 1 ? ' das Feld ' : ' sie '}
+                      weist {PORTAL_NAME[portalErgebnis.portal]} das Inserat zurück.
                     </div>
                   </div>
                 )}
