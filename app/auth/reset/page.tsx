@@ -40,6 +40,27 @@ function ResetForm() {
       return;
     }
 
+    /*
+     * Neuere Supabase-Projekte schicken den Link mit ?code=... (PKCE),
+     * nicht mit einem Hash voller Tokens. Dieser Fall fehlte: Dann traf
+     * weder der Zweig oben noch PASSWORD_RECOVERY zu, und die Seite
+     * blieb fuer immer beim Ladebalken stehen — ein Passwort liess sich
+     * nicht neu setzen.
+     */
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code)
+        .then(({ error }) => {
+          if (error) {
+            setError('Link ungültig oder abgelaufen. Bitte neuen Link anfordern.');
+          } else {
+            setSessionReady(true);
+          }
+          window.history.replaceState(null, '', window.location.pathname);
+        });
+      return;
+    }
+
     // Kein Token im Hash — auf AUTH_STATE_CHANGE warten
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {

@@ -51,25 +51,51 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
   const credits = searchParams.get('credits_added');
+  const sitzung = searchParams.get('session_id');
   const [countdown, setCountdown] = useState(5);
   const [show, setShow] = useState(false);
 
+  /*
+   * Die Kennung der Zahlung muss mit aufs Dashboard.
+   *
+   * Dort — und nur dort — wird /api/credits/fulfill aufgerufen, und das
+   * ist der Weg, auf dem die RECHNUNG verschickt wird. Diese Seite leitete
+   * auf "/dashboard" ohne Parameter weiter: Die Credits kamen trotzdem an
+   * (der Stripe-Webhook schreibt sie gut), aber es ging nie eine Rechnung
+   * raus. Aufgefallen waere das niemandem, weil das Guthaben stimmt.
+   */
   useEffect(() => {
     setTimeout(() => setShow(true), 100);
+    const ziel = new URLSearchParams();
+    if (sitzung) ziel.set('session_id', sitzung);
+    if (credits) ziel.set('credits_added', credits);
+    if (plan)    ziel.set('plan', plan);
+    const adresse = ziel.toString() ? `/dashboard?${ziel.toString()}` : '/dashboard';
+
     const interval = setInterval(() => {
       setCountdown(c => {
         if (c <= 1) {
           clearInterval(interval);
-          router.push('/dashboard');
+          router.push(adresse);
           return 0;
         }
         return c - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, sitzung, credits, plan]);
 
   const isCredit = !!credits;
+
+  /* Dieselbe Adresse wie beim automatischen Weiterleiten — damit die
+     Rechnung auch dann rausgeht, wenn der Kunde selbst klickt. */
+  const dashboardAdresse = (() => {
+    const z = new URLSearchParams();
+    if (sitzung) z.set('session_id', sitzung);
+    if (credits) z.set('credits_added', credits);
+    if (plan)    z.set('plan', plan);
+    return z.toString() ? `/dashboard?${z.toString()}` : '/dashboard';
+  })();
 
   return (
     <div style={{
@@ -139,7 +165,7 @@ function SuccessContent() {
 
         {/* Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <Link href="/dashboard" style={{
+          <Link href={dashboardAdresse} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             padding: '14px', borderRadius: '12px',
             background: 'linear-gradient(135deg, #6366f1, #4f46e5)',

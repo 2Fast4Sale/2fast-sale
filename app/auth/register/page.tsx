@@ -53,7 +53,9 @@ export default function RegisterPage() {
       return;
     }
     if (form.password !== form.confirm) { setError('Passwörter stimmen nicht überein.'); return; }
-    if (form.password.length < 6) { setError('Passwort muss mindestens 6 Zeichen haben.'); return; }
+    // Acht Zeichen, wie beim Zurücksetzen auch — sechs hier und acht dort
+    // heisst: Wer sein Passwort erneuert, muss es laenger machen als beim Anlegen.
+    if (form.password.length < 8) { setError('Passwort muss mindestens 8 Zeichen haben.'); return; }
     if (!agreed) { setError('Bitte stimme den AGB zu.'); return; }
 
     setLoading(true);
@@ -62,6 +64,16 @@ export default function RegisterPage() {
       email: form.email,
       password: form.password,
       options: {
+        /*
+         * Wohin der Bestaetigungslink fuehrt.
+         *
+         * Fehlte. Dann nimmt Supabase die "Site URL" aus seinen
+         * Projekteinstellungen — steht dort noch localhost, zeigt der Link
+         * in jeder Bestaetigungsmail auf einen Rechner, den der neue
+         * Kunde nicht hat. /auth/callback tauscht den Code gegen eine
+         * Sitzung und verschickt die Begruessung.
+         */
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           full_name: form.name,
           // Privatkonten bekommen keine Firma — auch nicht als leeren String,
