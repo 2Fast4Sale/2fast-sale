@@ -105,10 +105,10 @@ const PLAENE = [
      * Startseite etwas versprechen lassen, was das Produkt nicht gibt.
      */
     merkmale: i === 0
-      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', `${studioInklusive(p.id)} Studio-Bilder je Inserat`]
+      ? ['Alles ohne Paket', 'Eigener Showroom als Hintergrund', `${studioInklusive(p.id)} Studio-Bilder je Inserat, mehr zubuchbar`]
       : i === 1
-        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', `${studioInklusive(p.id)} Studio-Bilder je Inserat`]
-        : ['Alles aus Paket M', `${studioInklusive(p.id)} Studio-Bilder je Inserat`, 'Für grosse Bestände'],
+        ? ['Alles aus Paket S', 'Firmen-Wasserzeichen', `${studioInklusive(p.id)} Studio-Bilder je Inserat, mehr zubuchbar`]
+        : ['Alles aus Paket M', `${studioInklusive(p.id)} Studio-Bilder je Inserat, mehr zubuchbar`, 'Für grosse Bestände'],
     cta: `${p.name} wählen`,
     ziel: '/dashboard/pricing',
     /*

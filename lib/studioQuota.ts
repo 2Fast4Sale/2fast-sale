@@ -36,12 +36,28 @@ import type { Paket } from './preismodell';
  * verschenken hiesse, fuer Ansichten zu zahlen, die es gar nicht gibt.
  * Der Vorteil eines groesseren Pakets liegt im Preis je Inserat, nicht
  * in mehr Fotos vom selben Auto.
+ *
+ * ── Jetzt 15, und in jedem Paket gleich ───────────────────────────────
+ *
+ * Die Staffelung 8/10/12/12 war fuer den Haendler nicht nachvollziehbar:
+ * Er sieht bei jedem Fahrzeug eine andere Zahl und muss nachrechnen, was
+ * noch frei ist. Fuenfzehn sind genug fuer jede Aussenansicht, die ein
+ * Auto hat, und sie gelten ueberall — das ist ein Satz, den man sich
+ * merken kann.
+ *
+ * Fuenfzehn kosten 15 x 0,1546 = 2,32 EUR brutto. Bei 7,50 EUR je
+ * Inserat bleiben nach Stripe 4,75 EUR, beim kleinsten Paket (6,40 je
+ * Inserat) noch 4,01 EUR.
+ *
+ * Wer mehr will, waehlt eine Stufe aus BILDPAKETE dazu (10, 25 oder 45
+ * zusaetzliche). Gewoehnliche Fotos bleiben unbegrenzt bis zur
+ * Obergrenze von 60 und kosten nichts.
  */
 export const STUDIO_INKLUSIVE_JE_PAKET: Record<'kein' | Paket['id'], number> = {
-  kein: 8,
-  s:    10,
-  m:    12,
-  l:    12,
+  kein: 15,
+  s:    15,
+  m:    15,
+  l:    15,
 };
 
 /**

@@ -26,20 +26,32 @@
 /**
  * Preis je Inserat ohne Paket, in Cent.
  *
- * 10 EUR statt 3,50.
+ * 7,50 EUR mit 15 Studio-Bildern — nicht 10 EUR mit 40.
  *
- * Die 3,50 stammten aus einer Zeit, in der ein Studio-Bild 2 Cent kosten
- * sollte. Gemessen ueber die Gemini-Abrechnung vom 22. bis 28. September
- * kostet ein Bild 6 bis 13 Cent; bei zehn Aussenansichten sind das 0,60
- * bis 1,30 EUR allein an Bildern, dazu Text, Scan und Rechenzeit.
+ * Die Wahl lag zwischen beidem. Gerechnet mit den gemessenen 15 Cent
+ * brutto je Studio-Bild:
  *
- * Wichtiger ist aber, was der Haendler bekommt: dreissig Fotos, davon
- * zehn im Studio, ausgelesener Fahrzeugschein, erkannte Ausstattung,
- * fertige Beschreibung und der Export zu den Boersen. Das ist eine
- * Dienstleistung, keine Bildbearbeitung — wer sie von Hand macht,
- * braucht eine halbe Stunde.
+ *   10,00 EUR, 40 Bilder → 6,18 Bilder + 0,07 Text + 0,40 Stripe = 3,35 uebrig
+ *    7,50 EUR, 15 Bilder → 2,32 Bilder + 0,07 Text + 0,36 Stripe = 4,75 uebrig
+ *
+ * Der niedrigere Preis bringt also MEHR, und das ist kein Rechentrick:
+ * Vierzig Studio-Bilder gibt es bei einem Auto gar nicht. Ein Fahrzeug
+ * hat zehn bis fuenfzehn sinnvolle Aussenansichten; Cockpit, Tacho,
+ * Motorraum, Serviceheft und Reifenprofil gehoeren NICHT vor einen
+ * Studio-Hintergrund — dort sieht er falsch aus. Vierzig Bilder zu
+ * versprechen hiesse, fuer Ansichten zu zahlen, die kein Haendler
+ * braucht.
+ *
+ * Was der Haendler stattdessen bekommt: 15 Studio-Bilder und dazu
+ * beliebig viele gewoehnliche Fotos bis zur Obergrenze von 60 (so viele
+ * nimmt mobile.de). Die kosten nichts, weil an ihnen nichts gerechnet
+ * wird. Ein vollstaendiges Inserat mit 35 bis 40 Fotos ist damit
+ * drin — nur eben nicht vierzig Mal Studio.
+ *
+ * Wer wirklich mehr Studio-Bilder will, waehlt in Schritt 2 eine Stufe
+ * aus BILDPAKETE dazu.
  */
-export const PREIS_PRO_INSERAT_CENT = 1000;
+export const PREIS_PRO_INSERAT_CENT = 750;
 
 /**
  * Umsatzsteuersatz auf unseren Rechnungen, in Prozent.
@@ -210,10 +222,58 @@ export function probeDeckung(kostenJeInserat = kostenJeInseratCent(PROBE.studioB
  * derselbe wie vorher: rund 15, 25 und 38 Prozent.
  */
 export const PAKETE: readonly Paket[] = [
-  { id: 's', name: 'Paket S', preisCent: 42500,  inserate: 50 },   /* 8,50 je Inserat */
-  { id: 'm', name: 'Paket M', preisCent: 112500, inserate: 150 },  /* 7,50 je Inserat */
-  { id: 'l', name: 'Paket L', preisCent: 341000, inserate: 550 },  /* 6,20 je Inserat */
+  { id: 's', name: 'Paket S', preisCent: 32000,  inserate: 50 },   /* 6,40 je Inserat */
+  { id: 'm', name: 'Paket M', preisCent: 84500,  inserate: 150 },  /* 5,63 je Inserat */
+  { id: 'l', name: 'Paket L', preisCent: 255000, inserate: 550 },  /* 4,64 je Inserat */
 ];
+
+/**
+ * Zusatz-Studio-Bilder, je Inserat wählbar.
+ *
+ * 15 Bilder sind in jedem Inserat und in jedem Paket enthalten. Wer mehr
+ * braucht, nimmt eine Stufe dazu — der Preis je Bild sinkt mit der
+ * Menge, so wie bei den Paketen auch.
+ *
+ * Die Stufen stehen bewusst ÜBER den Kosten von 15 Cent je Bild: 24, 22
+ * und 20 Cent. Ein Zusatzbild soll sich auch dann tragen, wenn der Preis
+ * des Bildes bei Google wieder steigt — und das ist in den letzten zwei
+ * Monaten das Vierfache gewesen. Unter 20 Cent gehen die Stufen deshalb
+ * nicht, auch nicht bei der grössten.
+ *
+ * Und sie liegen unter dem Einzelpreis von 25 Cent — sonst wäre die
+ * Stufe eine Falle: ein "Paket", das teurer ist als das, was es ersetzt.
+ *
+ * Die Obergrenze liegt bei 60 Fotos je Inserat (mobile.de nimmt rund 56),
+ * deshalb endet die grösste Stufe bei 45 zusätzlichen.
+ */
+export interface Bildpaket {
+  /** Zusätzliche Studio-Bilder je Inserat. */
+  bilder: number;
+  /** Aufpreis je Inserat, in Cent. */
+  preisCent: number;
+}
+
+export const BILDPAKETE: readonly Bildpaket[] = [
+  { bilder: 10, preisCent: 240 },  /* 24 Cent je Bild */
+  { bilder: 25, preisCent: 550 },  /* 22 Cent je Bild */
+  { bilder: 45, preisCent: 900 },  /* 20 Cent je Bild */
+];
+
+/** Preis je Bild in einer Stufe, in Cent — für die Tabelle auf der Preisseite. */
+export function bildpaketJeBildCent(p: Bildpaket): number {
+  return Math.round(p.preisCent / p.bilder);
+}
+
+/**
+ * Die billigste Stufe, die so viele Zusatzbilder abdeckt.
+ *
+ * `null` heisst: Es braucht keine — das Kontingent reicht. Mehr als die
+ * grösste Stufe gibt es nicht; dann bleibt der Einzelpreis je Bild.
+ */
+export function passendeStufe(zusatzBilder: number): Bildpaket | null {
+  if (zusatzBilder <= 0) return null;
+  return BILDPAKETE.find(p => p.bilder >= zusatzBilder) ?? null;
+}
 
 export { STUDIO_INKLUSIVE, PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';
 import { PREIS_EXTRA_BILD_CENT, studioInklusive } from './studioQuota';
@@ -230,8 +290,27 @@ export function studioExtraCent(bilderProInserat: number[], paketId?: Paket['id'
   const kontingent = studioInklusive(paketId);
   return bilderProInserat.reduce((summe, n) => {
     const extra = Math.max(0, Math.round(n) - kontingent);
-    return summe + extra * PREIS_EXTRA_BILD_CENT;
+    return summe + studioZusatzCent(extra);
   }, 0);
+}
+
+/**
+ * Was zusätzliche Studio-Bilder in EINEM Inserat kosten, in Cent.
+ *
+ * Gerechnet wird immer der für den Händler günstigere Weg: einzeln zum
+ * Einzelpreis, oder die passende Stufe aus BILDPAKETE. Wer 12 zusätzliche
+ * Bilder macht, zahlt nicht 12 x 25 = 3,00 €, sondern die Stufe mit 25
+ * Bildern für 2,50 € — und hat dreizehn übrig, die er auch nutzen kann.
+ *
+ * Andersherum wäre es eine Falle: eine Stufe anzubieten, die teurer ist
+ * als das Einzelne, das sie ersetzt.
+ */
+export function studioZusatzCent(zusatzBilder: number): number {
+  const extra = Math.max(0, Math.round(zusatzBilder));
+  if (extra === 0) return 0;
+  const einzeln = extra * PREIS_EXTRA_BILD_CENT;
+  const stufe = passendeStufe(extra);
+  return stufe ? Math.min(einzeln, stufe.preisCent) : einzeln;
 }
 
 export interface Monatsposten {

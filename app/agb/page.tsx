@@ -1,4 +1,6 @@
 ﻿import Link from 'next/link';
+import { PREIS_PRO_INSERAT_CENT, GRUNDGEBUEHR_CENT, BILDPAKETE, euro } from '../../lib/preismodell';
+import { studioInklusive, PREIS_EXTRA_BILD_CENT, centAlsEuro } from '../../lib/studioQuota';
 
 export const metadata = {
   title: 'AGB | 2Fast4Sale',
@@ -70,8 +72,9 @@ export default function AGBPage() {
           <h2 style={h2style}>§ 4 Preise und Abrechnung</h2>
           <p style={body}>
             Die Nutzung wird nach tatsächlich erstellten Inseraten abgerechnet. Ein Inserat kostet
-            10,00 €. Hinzu kommt eine monatliche Grundgebühr von 50 €, die bereits erste Leistungen
-            wie Speicherplatz und Export enthält.
+            {' '}{euro(PREIS_PRO_INSERAT_CENT)} € und enthält {studioInklusive(null)} Studio-Bilder. Hinzu kommt eine
+            monatliche Grundgebühr von {euro(GRUNDGEBUEHR_CENT)} €, die bereits erste Leistungen wie
+            Speicherplatz und Export enthält.
           </p>
           <p style={body}>
             Zum Kennenlernen gibt es den Probelauf: 5 € für zwei vollständige Inserate, ohne
@@ -83,8 +86,10 @@ export default function AGBPage() {
             nicht automatisch; nicht genutzte Inserate bleiben erhalten, solange das Konto besteht.
           </p>
           <p style={body}>
-            Je Inserat sind Studio-Bilder in einem festen Kontingent enthalten. Darüber hinaus
-            erzeugte Bilder werden einzeln berechnet. Optionale Zusatzleistungen, etwa der Abruf von
+            Je Inserat sind {studioInklusive(null)} Studio-Bilder enthalten. Darüber hinaus erzeugte
+            Bilder werden einzeln berechnet ({PREIS_EXTRA_BILD_CENT} Cent) oder, wenn das günstiger
+            ist, als Stufe ({BILDPAKETE.map(x => `+${x.bilder} für ${centAlsEuro(x.preisCent)}`).join(", ")}).
+            Gewöhnliche Fotos ohne Studio-Hintergrund sind unbegrenzt und kosten nichts. Optionale Zusatzleistungen, etwa der Abruf von
             Ausstattungsdaten über die Fahrgestellnummer, werden gesondert ausgewiesen.
           </p>
           <p style={body}>

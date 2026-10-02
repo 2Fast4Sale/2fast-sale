@@ -29,7 +29,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
  * abgedeckt; berechnet wird hier nur, was darueber hinausgeht.
  */
 export { PREIS_PRO_INSERAT_CENT } from './preismodell';
-import { PREIS_PRO_INSERAT_CENT } from './preismodell';
+import { PREIS_PRO_INSERAT_CENT, studioZusatzCent } from './preismodell';
 
 /*
  * Kontingent und Zusatzpreis kommen aus lib/studioQuota — dasselbe Modul, das
@@ -52,7 +52,14 @@ export function berechnePosten(studioImages: number): {
 } {
   const extraImages = Math.max(0, Math.round(studioImages) - STUDIO_INKLUSIVE);
   const baseCents   = PREIS_PRO_INSERAT_CENT;
-  const extraCents  = extraImages * PREIS_EXTRA_BILD_CENT;
+  /*
+   * Ueber studioZusatzCent, nicht Anzahl mal Einzelpreis: Ab zehn
+   * zusaetzlichen Bildern greift eine Stufe aus BILDPAKETE, und die ist
+   * guenstiger. Rechnete die Rechnung weiter einzeln, stuende dort ein
+   * hoeherer Betrag als in der Anzeige in Schritt 2 — und zwar der
+   * hoehere zugunsten des Haendlers falsch, also der, den er merkt.
+   */
+  const extraCents  = studioZusatzCent(extraImages);
   return { extraImages, baseCents, extraCents, summeCent: baseCents + extraCents };
 }
 

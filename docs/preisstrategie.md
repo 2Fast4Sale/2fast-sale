@@ -6,6 +6,71 @@ verlinkt.
 
 ---
 
+## 0. Nachtrag vom 2. Oktober 2026 — das gilt jetzt
+
+Zwei Dinge haben sich gegenueber dem Text unten geaendert, und beide
+aendern die Zahlen in jeder folgenden Tabelle.
+
+**Die Umsatzsteuer zaehlt mit.** Die Google-Rechnung fuer September:
+7,99 € netto plus 1,60 € Umsatzsteuer, bezahlt also 9,59 €. Als
+Kleinunternehmer nach § 19 UStG gibt es keinen Vorsteuerabzug — die
+Steuer ist Aufwand. Ein Studio-Bild kostet damit **15,5 Cent**, nicht
+10 bis 13. Unten steht ueberall der Nettopreis; rechne 20 Prozent drauf.
+
+**Der Preis ist 7,50 € mit 15 Studio-Bildern, nicht 10 € mit 40.**
+Gerechnet:
+
+| Modell | Einkauf | Stripe | bleibt |
+|---|---|---|---|
+| 10,00 € mit 40 Studio-Bildern | 6,25 € | 0,40 € | 3,35 € |
+| 7,50 € mit 15 Studio-Bildern | 2,39 € | 0,36 € | **4,75 €** |
+
+Der niedrigere Preis bringt mehr, und das ist kein Trick: Vierzig
+Studio-Bilder gibt es bei einem Auto nicht. Ein Fahrzeug hat zehn bis
+fuenfzehn sinnvolle Aussenansichten. Cockpit, Tacho, Motorraum,
+Serviceheft und Reifenprofil gehoeren nicht vor einen
+Studio-Hintergrund — dort sieht er falsch aus. Ein vollstaendiges
+Inserat mit 35 bis 40 Fotos ist weiter drin: Gewoehnliche Fotos sind
+unbegrenzt bis zur Obergrenze von 60 und kosten nichts, weil an ihnen
+nichts gerechnet wird.
+
+**Die Pakete sind mitgewandert** (derselbe Abstand zum Einzelpreis wie
+vorher, rund 15, 25 und 38 Prozent):
+
+| | Preis | je Inserat | lohnt ab | bleibt je Inserat |
+|---|---|---|---|---|
+| Paket S, 50 Inserate | 320 € | 6,40 € | 37 im Monat | 4,08 € |
+| Paket M, 150 Inserate | 845 € | 5,63 € | 121 im Monat | 3,31 € |
+| Paket L, 550 Inserate | 2.550 € | 4,64 € | 378 im Monat | 2,32 € |
+
+**Mehr Studio-Bilder in Stufen** — je Inserat waehlbar, und es wird
+immer der fuer den Haendler guenstigere Weg berechnet (einzeln oder
+Stufe):
+
+| zusaetzlich | Aufpreis | je Bild | Einkauf | bleibt |
+|---|---|---|---|---|
+| einzeln | 25 ct | 25 ct | 15,5 ct | 9,5 ct |
+| +10 (25 gesamt) | 2,40 € | 24 ct | 1,55 € | 0,85 € |
+| +25 (40 gesamt) | 5,50 € | 22 ct | 3,87 € | 1,63 € |
+| +45 (60 gesamt) | 9,00 € | 20 ct | 6,96 € | 2,04 € |
+
+Unter 20 Cent geht keine Stufe. Der Bildpreis bei Google hat sich
+zwischen Juli und September vervierfacht; eine Stufe, die bei 18 Cent
+liegt, waere beim naechsten Sprung ein Verlust.
+
+**Der Probelauf bleibt bei 5 € fuer zwei Inserate.** Mit zwoelf
+Studio-Bildern je Inserat sind das 3,74 € Einkauf plus 0,33 € Stripe —
+es bleiben 0,93 €. Vorher rechnete  mit 23 Cent je
+Inserat und meldete 4,21 €; die 23 Cent stammten aus der Zeit, in der
+ein Bild zwei Cent kosten sollte.
+
+**Offen und deine Entscheidung:** Die 50 € Grundgebuehr werden nirgends
+abgebucht, und das Monatskontingent der Pakete wird nicht geprueft —
+ein Paket gibt derzeit unbegrenzt Inserate. Beides steht aber auf der
+Preisseite.
+
+---
+
 ## 1. Was deine Arbeit dich wirklich kostet
 
 Gemessen an der Gemini-Abrechnung vom 22. bis 28. September: 9,37 € für
