@@ -92,17 +92,43 @@ einen großen Unterschied, welche es ist:
 Zugangsdaten gespeichert werden müssen — und das ist der einzige größere
 Umbau, der noch aussteht (siehe Punkt 4).
 
-### 4. Zugangsdaten je Händler (Code, noch offen)
+### 4. Zugangsdaten je Händler — **fertig (2. Oktober)**
 
-Heute kommen die Zugangsdaten aus der Umgebung:
-`MOBILEDE_API_USERNAME`, `MOBILEDE_API_PASSWORD`, `MOBILEDE_SELLER_ID`,
-dazu die AutoScout24-Entsprechungen. Das ist **mein** Konto. Damit würde
-jedes Inserat in meinem Namen eingestellt, nicht im Namen des Händlers.
+Die Zugangsdaten kamen aus der Umgebung: `MOBILEDE_API_USERNAME` und so
+weiter. Das ist mein Konto — jedes Inserat wäre in meinem Namen
+eingestellt worden, beim Händler wäre nichts angekommen.
 
-Nötig ist je Händler ein Satz Zugangsdaten am Profil, verschlüsselt
-gespeichert, und die Routen nehmen ihn statt der Umgebung. Das baue ich,
-sobald aus Punkt 3 klar ist, welche Form es wird — vorher wäre es
-geraten.
+Jetzt gibt jeder Händler seinen Zugang selbst ein, unter
+**Einstellungen → Portal-Zugänge**:
+
+- Tabelle `portal_zugaenge` (Migration 025), je Händler und Portal eine
+  Zeile mit Benutzer, Geheimnis, Kontonummer (sellerId beziehungsweise
+  customerId) und Testmodus.
+- Das Geheimnis steht verschlüsselt (AES-256-GCM). Der Schlüssel liegt
+  in `PORTAL_SCHLUESSEL`; ohne ihn wird **nicht** gespeichert.
+- Die Tabelle hat absichtlich **keine RLS-Richtlinie**: Dort liegen
+  fremde Passwörter, und der Browser hat damit nichts zu tun. Alles
+  läuft über `/api/portal-zugang`, und die Route gibt das Geheimnis nie
+  zurück — nur, ob eines gesetzt ist.
+- „Verbindung prüfen" fragt beim Portal etwas Harmloses ab, das aber
+  Anmeldung und Kontonummer braucht. 401 heißt falsches Passwort,
+  403/404 heißt: Anmeldung stimmt, Kontonummer gehört nicht dazu.
+- Voreinstellung ist der **Testmodus**. Der gespeicherte Testmodus
+  gewinnt: Ein Aufruf darf ihn einschalten, aber nicht ausschalten.
+- Rückfall auf meine Zugangsdaten aus der Umgebung passiert nur noch im
+  Testmodus. Ohne eigenen Zugang bleibt der Export ein Trockenlauf.
+
+Was du dafür einmal tun musst: In den Vercel-Einstellungen
+`PORTAL_SCHLUESSEL` setzen und Migration 025 in Supabase einspielen.
+Den Schlüssel erzeugst du selbst, er darf durch keine Hand gehen:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Wenn dieser Schlüssel verloren geht, müssen alle Händler ihr Passwort
+neu eingeben — das ist der Preis dafür, dass ein Datenbank-Backup allein
+nichts wert ist.
 
 ### 5. Die Knöpfe in Schritt 4
 
