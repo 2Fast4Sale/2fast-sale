@@ -113,7 +113,7 @@ export default function RegisterPage() {
     display: 'block', marginBottom: '8px',
   };
 
-  const pwStrength = form.password.length === 0 ? 0 : form.password.length < 6 ? 1 : form.password.length < 10 ? 2 : 3;
+  const pwStrength = form.password.length === 0 ? 0 : form.password.length < 8 ? 1 : form.password.length < 10 ? 2 : 3;
   const pwColors = ['transparent', '#ef4444', '#f59e0b', '#10b981'];
   const pwLabels = ['', 'Schwach', 'Mittel', 'Stark'];
 
