@@ -51,7 +51,15 @@ const TEXTE: Record<Portal, {
     name: 'mobile.de',
     farbe: '#ff6600',
     nummerName: 'Verkäufernummer (sellerId)',
-    nummerHinweis: 'Steht im Händlerportal unter deinen Zugangsdaten. Nur Zahlen.',
+    /*
+     * mobile.de nennt in seinen Mails beide Nummern direkt nebeneinander:
+     * eine Kundennummer (Kd-Nr.) und eine Seller-ID, und sie sehen gleich
+     * aus — vierstellig, dicht beieinander. Gebraucht wird die SELLER-ID;
+     * mit der Kundennummer antwortet die Schnittstelle mit 404, was wie
+     * ein Tippfehler aussieht und keiner ist.
+     */
+    nummerHinweis: 'Die Seller-ID, NICHT die Kundennummer (Kd-Nr.) — mobile.de nennt beide, '
+      + 'und mit der Kundennummer antwortet die Schnittstelle mit 404.',
     benutzerHinweis: 'Der API-Benutzer, nicht dein Login für die Website.',
   },
   as24: {
