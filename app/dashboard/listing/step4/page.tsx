@@ -960,6 +960,18 @@ function Step4Inner() {
    * Link dorthin endete bei mobile.de mit "Zugriff verweigert, 403".
    */
   const [nachlese, setNachlese] = useState<Record<string, unknown>[] | null>(null);
+  /**
+   * Die Antwort von mobile.de im Rohzustand.
+   *
+   * Meine Tabelle zeigt vierzehn Felder, die ich fuer wichtig halte —
+   * das ist MEINE Auswahl. Wer wissen will, wie das Inserat dort
+   * wirklich aussieht, muss alles sehen koennen, auch die Felder, an
+   * die ich nicht gedacht habe. Und er muss sehen, was LEER ist: Eine
+   * echte Anzeige hat Ausstattungsliste, Verbrauch und Schadstoffklasse
+   * — fehlt davon etwas, steht es hier nicht drin.
+   */
+  const [nachleseRoh, setNachleseRoh] = useState<unknown>(null);
+  const [rohOffen, setRohOffen] = useState(false);
   const [nachleseFehler, setNachleseFehler] = useState('');
   const [nachleseLaeuft, setNachleseLaeuft] = useState(false);
 
@@ -972,6 +984,8 @@ function Step4Inner() {
       const d = await antwort.json().catch(() => ({}));
       if (!antwort.ok) throw new Error(d.error || `Fehler ${antwort.status}`);
       setNachlese(d.inserate || []);
+      setNachleseRoh(d.roh ?? null);
+      setRohOffen(false);
     } catch (err) {
       setNachleseFehler(err instanceof Error ? err.message : 'Nachlesen fehlgeschlagen.');
     } finally {
@@ -1851,6 +1865,20 @@ function Step4Inner() {
                         </tbody>
                       </table>
                     ))}
+
+                    {nachleseRoh != null && (
+                      <>
+                        <button onClick={() => setRohOffen(o => !o)}
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#4f46e5', fontSize: '12.5px', fontWeight: 700, fontFamily: F }}>
+                          {rohOffen ? 'Alle Felder ausblenden' : 'Alle Felder anzeigen, wie mobile.de sie gespeichert hat'}
+                        </button>
+                        {rohOffen && (
+                          <pre style={{ margin: '8px 0 0', padding: '11px 13px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '9px', fontSize: '11.5px', lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'ui-monospace, Menlo, monospace', maxHeight: '320px', overflowY: 'auto' }}>
+                            {JSON.stringify(nachleseRoh, null, 2)}
+                          </pre>
+                        )}
+                      </>
+                    )}
                   </div>
                 )}
 
