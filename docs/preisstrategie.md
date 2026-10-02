@@ -200,33 +200,48 @@ nur zwei Kunden abschreckt, hat sie sich nie gelohnt.
 
 ## 4. Wann sich DAT rechnet
 
-Angebot von Herrn Weiermann: 950 € einmalig für den Workshop, dann
-200 € Partnerschaft plus 154 € Lizenz — zusammen **354 € im Monat**.
+Angebot von Herrn Weiermann, wie im Gespräch genannt: 950 € einmalig
+für den Workshop, dann 200 € Partnerschaft plus 154 € Lizenz —
+zusammen **354 € im Monat**, dazu im ersten Jahr die 950 €.
 
-Bei 10 € je Inserat und 10 Studio-Bildern bleiben dir 8,54 € je
-Inserat. Damit:
+**Nachtrag 2. Oktober 2026:** Diese Rechnung stand hier gegen 10 € je
+Inserat und 8,54 € Rohertrag. Der Preis ist jetzt 7,50 € mit 15
+Studio-Bildern, es bleiben 4,82 € je Inserat. Damit verschiebt sich die
+Schwelle deutlich:
 
-| Inserate im Monat | Ergebnis mit DAT |
-|---|---|
-| 10 | −219 € |
-| 20 | −133 € |
-| 40 | **+38 €** |
-| 60 | +208 € |
-| 100 | +550 € |
+| Inserate im Monat | Rohertrag | minus 354 € DAT |
+|---|---|---|
+| 10 | 48 € | −306 € |
+| 25 | 121 € | −234 € |
+| 50 | 241 € | −113 € |
+| **74** | **357 €** | **+3 €** |
+| 100 | 482 € | +128 € |
+| 150 | 723 € | +369 € |
 
-**Die Schwelle liegt bei 40 Inseraten im Monat.** Darunter zahlt die
-Partnerschaft drauf, darüber trägt sie sich.
+Die Schwelle liegt jetzt bei **74 Inseraten im Monat**, nicht mehr bei
+40. Im ersten Jahr mit dem Workshop (950 € auf zwölf Monate = 79 €)
+sind es **90 Inserate im Monat**.
 
-Bis dahin: Fahrzeugschein auslesen, Ausstattung aus den Fotos, Datenblatt
-fotografieren. Das kostet dich 6 Cent statt 354 € im Monat.
+Anders gerechnet, wenn nur der VIN-Aufpreis die Partnerschaft tragen
+soll: 2,90 € je Abruf gegen 354 € im Monat sind **123 VIN-Abrufe im
+Monat**. Beide Zahlen sagen dasselbe — das ist nichts für den Anfang.
 
-**Was du trotzdem tun solltest:** Herrn Weiermann nach den
-Schnittstellenpartnern aus seinem Punkt 1 fragen. Wer Datenpunkte je
-Abruf verkauft, kostet dich nur bei echter Nutzung — das passt zu einem
-Modell, das je Inserat abrechnet, und hat keine Schwelle bei 40.
+Bis dahin: Fahrzeugschein auslesen, Ausstattung aus den Fotos,
+Datenblatt des Händlers abfotografieren. Das kostet rund 7 Cent je
+Inserat statt 354 € im Monat.
+
+**Die eine Frage, die alles entscheidet** (Punkt 1 aus Weiermanns
+Mail): Gibt es Schnittstellenpartner, die Ausstattungsdaten JE ABRUF
+abrechnen? Wer je Abruf verkauft, kostet nur bei echter Nutzung, passt
+genau zu einem Modell, das je Inserat abrechnet, und hat keine
+Schwelle. Zweite Frage: Darf die Abfrage im Auftrag des Händlers
+laufen, oder verlangt DAT von jedem Händler einen eigenen Vertrag?
+Davon hängt ab, ob das Ganze für Kunden überhaupt benutzbar ist — kein
+Händler meldet sich für ein Inserat extra bei DAT an.
+
+Der Entwurf der Antwort liegt in `docs/dat-antwort.md`.
 
 ---
-
 ## 5. Was noch zu tun ist, nach Wirkung sortiert
 
 **Erstens: Die ersten drei Händler.** Ohne Kunden ist jede Zahl hier
