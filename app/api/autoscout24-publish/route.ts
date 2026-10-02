@@ -368,7 +368,12 @@ export async function POST(req: NextRequest) {
       : undefined,
     testmodus: Boolean(testmodus),
     as24Url: testmodus ? null : `https://www.autoscout24.de/angebote/-${inserat.id}`,
-    dealerUrl: `https://autoscout24.com/account/listings/${inserat.id}`,
+    /*
+     * Auch der Haendlerportal-Link nur im Betrieb: Ein Testinserat ist
+     * dort nicht zu finden, und ein Link, der ins Leere fuehrt, sieht aus
+     * wie ein Fehler in der Uebertragung.
+     */
+    dealerUrl: testmodus ? null : `https://autoscout24.com/account/listings/${inserat.id}`,
     imagesUploaded: imageIds.length,
     // Welche Fotos nicht durchkamen — vorher stand das nur im Log des
     // Servers, und der Haendler sah ein Inserat mit halb so vielen Bildern.

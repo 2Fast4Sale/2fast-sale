@@ -391,11 +391,29 @@ export async function POST(req: NextRequest) {
   const ort = antwort.headers.get('Location') || '';
   const mobileAdId = ort.split('/').pop() || '';
 
+  /*
+   * Im Testmodus KEINE Links ins Produktivportal.
+   *
+   * Beim ersten erfolgreichen Testinserat standen im Erfolgsfenster
+   * "Im Haendlerportal ansehen" und "Oeffentliche Anzeige" — beide zeigten
+   * auf portal.mobile.de und suchen.mobile.de. Das Inserat liegt aber in
+   * der Sandbox: Beide Links fuehren ins Leere, und der zweite behauptet
+   * ausserdem, das Fahrzeug sei oeffentlich zu sehen. Es ist nicht.
+   */
   return NextResponse.json({
     mobileAdId,
     bereitsVorhanden: antwort.status === 303,
-    adUrl: `https://suchen.mobile.de/fahrzeuge/details.html?id=${mobileAdId}`,
-    dealerUrl: `https://portal.mobile.de/insertions/${mobileAdId}`,
+    testmodus: zugang.testmodus,
+    adUrl: zugang.testmodus
+      ? null
+      : `https://suchen.mobile.de/fahrzeuge/details.html?id=${mobileAdId}`,
+    dealerUrl: zugang.testmodus
+      ? null
+      : `https://portal.mobile.de/insertions/${mobileAdId}`,
+    hinweis: zugang.testmodus
+      ? 'Testinserat — es liegt in der Sandbox von mobile.de, ist nicht öffentlich '
+        + 'und kostet nichts. Öffentliche Links gibt es dafür nicht.'
+      : undefined,
     imagesUploaded: bildVerweise.length,
     bildFehler,
   });

@@ -919,6 +919,8 @@ function Step4Inner() {
     grund?: string;
     fehlendeAngaben?: string[];
     fehler?: string;
+    /** Lief es in der Testumgebung des Portals? */
+    testmodusGelaufen?: boolean;
     /** Bei Erfolg: Kennung und Adresse des Inserats. */
     kennung?: string;
     adUrl?: string | null;
@@ -1008,6 +1010,7 @@ function Step4Inner() {
 
       setPortalErgebnis({
         portal, trockenlauf: false,
+        testmodusGelaufen: Boolean(d.testmodus),
         kennung: d.mobileAdId || d.listingId || '',
         adUrl: d.adUrl ?? null,
         dealerUrl: d.dealerUrl,
@@ -1722,11 +1725,14 @@ function Step4Inner() {
                 {!portalErgebnis.trockenlauf && !portalErgebnis.fehler && (
                   <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.28)', color: '#047857', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
                     <CheckCircle2 size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
-                    Übertragen{portalErgebnis.kennung ? ` — Inseratsnummer ${portalErgebnis.kennung}` : ''}.
+                    {portalErgebnis.testmodusGelaufen
+                      ? 'In die Testumgebung übertragen'
+                      : 'Übertragen'}
+                    {portalErgebnis.kennung ? ` — Inseratsnummer ${portalErgebnis.kennung}` : ''}.
                     {typeof portalErgebnis.imagesUploaded === 'number' && (
                       <> {portalErgebnis.imagesUploaded} Fotos mitgeschickt.</>
                     )}
-                    {portalErgebnis.nochNichtAktiv && portalErgebnis.hinweis && (
+                    {portalErgebnis.hinweis && (
                       <div style={{ marginTop: '8px', color: '#92400e' }}>{portalErgebnis.hinweis}</div>
                     )}
                     <div style={{ display: 'flex', gap: '8px', marginTop: '11px', flexWrap: 'wrap' }}>
