@@ -945,6 +945,33 @@ function Step4Inner() {
   const [portalOffen, setPortalOffen] = useState<Portal | null>(null);
   const [portalLaeuft, setPortalLaeuft] = useState(false);
   const [portalErgebnis, setPortalErgebnis] = useState<PortalErgebnis | null>(null);
+  /**
+   * Was mobile.de nach dem Übertragen wirklich gespeichert hat.
+   *
+   * Ein Inserat, das angenommen wird, kann trotzdem falsche Angaben
+   * enthalten — eine Marke, die wie Unsinn aussieht, drei statt zwölf
+   * Fotos. Und im Testmodus gibt es kein Portal zum Nachsehen: Der
+   * Link dorthin endete bei mobile.de mit "Zugriff verweigert, 403".
+   */
+  const [nachlese, setNachlese] = useState<Record<string, unknown>[] | null>(null);
+  const [nachleseFehler, setNachleseFehler] = useState('');
+  const [nachleseLaeuft, setNachleseLaeuft] = useState(false);
+
+  const nachlesen = async (kennung?: string) => {
+    setNachleseLaeuft(true);
+    setNachleseFehler('');
+    setNachlese(null);
+    try {
+      const antwort = await fetch('/api/mobilede-ads' + (kennung ? `?id=${encodeURIComponent(kennung)}` : ''));
+      const d = await antwort.json().catch(() => ({}));
+      if (!antwort.ok) throw new Error(d.error || `Fehler ${antwort.status}`);
+      setNachlese(d.inserate || []);
+    } catch (err) {
+      setNachleseFehler(err instanceof Error ? err.message : 'Nachlesen fehlgeschlagen.');
+    } finally {
+      setNachleseLaeuft(false);
+    }
+  };
 
   /**
    * Prüfen oder übertragen.
@@ -1736,6 +1763,17 @@ function Step4Inner() {
                       <div style={{ marginTop: '8px', color: '#92400e' }}>{portalErgebnis.hinweis}</div>
                     )}
                     <div style={{ display: 'flex', gap: '8px', marginTop: '11px', flexWrap: 'wrap' }}>
+                      {/*
+                        Nachlesen statt Vertrauen: Die Angaben kommen aus dem
+                        Konto zurueck, nicht aus unserer eigenen Anfrage.
+                      */}
+                      {portalErgebnis.portal === 'mobile' && (
+                        <button onClick={() => nachlesen(portalErgebnis.kennung)} disabled={nachleseLaeuft}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 13px', background: '#fff', border: '1px solid rgba(4,120,87,0.3)', borderRadius: '8px', color: '#047857', fontSize: '13px', fontWeight: '700', cursor: nachleseLaeuft ? 'wait' : 'pointer', fontFamily: F }}>
+                          {nachleseLaeuft ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={12} />}
+                          Bei mobile.de nachlesen
+                        </button>
+                      )}
                       {portalErgebnis.dealerUrl && (
                         <a href={portalErgebnis.dealerUrl} target="_blank" rel="noreferrer"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 13px', background: '#fff', border: '1px solid rgba(4,120,87,0.3)', borderRadius: '8px', color: '#047857', fontSize: '13px', fontWeight: '700', textDecoration: 'none' }}>
@@ -1768,6 +1806,37 @@ function Step4Inner() {
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '13px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '14px', fontWeight: '800', cursor: 'pointer', fontFamily: F }}>
                     <Send size={14} /> Jetzt an {PORTAL_NAME[portalErgebnis.portal]} übertragen
                   </button>
+                )}
+
+                {nachleseFehler && (
+                  <div style={{ marginBottom: '14px', fontSize: '13px', color: '#b91c1c' }}>
+                    {nachleseFehler}
+                  </div>
+                )}
+
+                {nachlese && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>
+                      So steht es bei mobile.de im Konto
+                    </div>
+                    {nachlese.length === 0 && (
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>Keine Inserate gefunden.</div>
+                    )}
+                    {nachlese.map((z, i) => (
+                      <table key={i} style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', marginBottom: '8px' }}>
+                        <tbody>
+                          {Object.entries(z)
+                            .filter(([, w]) => w !== undefined && w !== null && w !== '')
+                            .map(([feld, wert]) => (
+                            <tr key={feld}>
+                              <td style={{ padding: '3px 6px', color: '#64748b', width: '40%', borderTop: '1px solid #f1f5f9', verticalAlign: 'top' }}>{feld}</td>
+                              <td style={{ padding: '3px 6px', color: '#0f172a', fontWeight: 600, borderTop: '1px solid #f1f5f9', wordBreak: 'break-word' }}>{String(wert)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ))}
+                  </div>
                 )}
 
                 {!savedId && (
