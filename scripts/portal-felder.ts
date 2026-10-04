@@ -111,12 +111,13 @@ for (const [marke, modell] of FAHRZEUGE) {
   if (aMo === undefined) luecken.push(`Modell "${modell}" (${marke}) → AutoScout24 kennt es nicht`);
 }
 
-console.log('\n── Laendercode ───────────────────────────────────────────────');
-for (const land of ['Deutschland', 'Österreich', 'Schweiz', 'EU-Fahrzeug']) {
-  const c = laenderCode(land);
-  console.log(`  ${land.padEnd(20)} ${c ?? 'FEHLT'}`);
-  if (!c) luecken.push(`Land "${land}" → kein Code`);
-}
+/*
+ * Die Länder stehen oben in LISTEN und kommen von dort aus dem Formular.
+ * Hier stand einmal eine eigene Liste mit "EU-Fahrzeug" darin — das
+ * bietet das Formular gar nicht an, und die Prüfung meldete prompt eine
+ * Lücke, die keine war. Eine erfundene Eingabe findet keinen Fehler,
+ * sie erfindet einen.
+ */
 
 console.log('\n── Tueren ────────────────────────────────────────────────────');
 for (const n of [2, 3, 4, 5, 6, 7]) {
