@@ -925,6 +925,10 @@ function Step4Inner() {
      * auch so lesen — sonst drueckt der Haendler noch einmal.
      */
     bereitsVorhanden?: boolean;
+    /** Angekreuzte Merkmale, die das Portal nicht als Ausstattung kennt. */
+    nichtUebertragen?: string[];
+    /** Felder, die aus der Ausstattung ergaenzt wurden. */
+    ergaenzt?: Record<string, string>;
     /** Lief es in der Testumgebung des Portals? */
     testmodusGelaufen?: boolean;
     /** Bei Erfolg: Kennung und Adresse des Inserats. */
@@ -1039,6 +1043,8 @@ function Step4Inner() {
           portal, trockenlauf: true, keinZugang: true,
           grund: d.grund || d.error,
           fehlendeAngaben: d.fehlendeAngaben,
+          nichtUebertragen: d.nichtUebertragen,
+          ergaenzt: d.ergaenzt,
         });
         return;
       }
@@ -1047,6 +1053,8 @@ function Step4Inner() {
           portal, trockenlauf: true,
           grund: d.grund,
           fehlendeAngaben: d.fehlendeAngaben,
+          nichtUebertragen: d.nichtUebertragen,
+          ergaenzt: d.ergaenzt,
         });
         return;
       }
@@ -1055,6 +1063,8 @@ function Step4Inner() {
           portal, trockenlauf: true,
           fehler: d.error || `Das Portal antwortete mit ${antwort.status}.`,
           fehlendeAngaben: d.fehlendeAngaben,
+          nichtUebertragen: d.nichtUebertragen,
+          ergaenzt: d.ergaenzt,
           bildFehler: d.bildFehler,
           details: d.details,
         });
@@ -1065,6 +1075,8 @@ function Step4Inner() {
         portal, trockenlauf: false,
         testmodusGelaufen: Boolean(d.testmodus),
         bereitsVorhanden: Boolean(d.bereitsVorhanden),
+        nichtUebertragen: d.nichtUebertragen,
+        ergaenzt: d.ergaenzt,
         kennung: d.mobileAdId || d.listingId || '',
         adUrl: d.adUrl ?? null,
         dealerUrl: d.dealerUrl,
@@ -1728,6 +1740,41 @@ function Step4Inner() {
                   <div style={{ padding: '13px 15px', borderRadius: '10px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', color: '#b91c1c', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '14px' }}>
                     <AlertTriangle size={14} style={{ verticalAlign: '-2px', marginRight: '6px' }} />
                     {portalErgebnis.fehler}
+                  </div>
+                )}
+
+                {/*
+                  Was aus der Ausstattung ein anderes Feld gefuellt hat.
+                  Stillschweigend waere es eine Aenderung an seinen Daten,
+                  von der der Haendler nichts weiss.
+                */}
+                {portalErgebnis.ergaenzt && Object.keys(portalErgebnis.ergaenzt).length > 0 && (
+                  <div style={{ marginBottom: '14px', padding: '11px 13px', borderRadius: '9px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', fontSize: '12.5px', color: '#334155', lineHeight: 1.6 }}>
+                    <strong>Aus der Ausstattung ergänzt:</strong>{' '}
+                    {Object.entries(portalErgebnis.ergaenzt).map(([f, w]) => `${f} = ${w}`).join(' · ')}
+                    <div style={{ color: '#64748b', marginTop: 4 }}>
+                      Diese Felder waren leer. Steht im Formular etwas anderes, gewinnt das Formular.
+                    </div>
+                  </div>
+                )}
+
+                {/*
+                  Merkmale ohne Entsprechung. Sie stehen im Beschreibungstext,
+                  aber nicht als Filtermerkmal — und genau das muss dastehen,
+                  sonst sieht es aus, als waeren sie uebertragen worden.
+                */}
+                {portalErgebnis.nichtUebertragen && portalErgebnis.nichtUebertragen.length > 0 && (
+                  <div style={{ marginBottom: '14px', fontSize: '12.5px', color: '#92400e', lineHeight: 1.6 }}>
+                    <strong>
+                      {portalErgebnis.nichtUebertragen.length === 1
+                        ? 'Ein Merkmal kennt das Portal nicht als Ausstattung:'
+                        : `${portalErgebnis.nichtUebertragen.length} Merkmale kennt das Portal nicht als Ausstattung:`}
+                    </strong>{' '}
+                    {portalErgebnis.nichtUebertragen.join(' · ')}
+                    <div style={{ color: '#64748b', marginTop: 4 }}>
+                      Sie stehen in der Beschreibung, aber nicht als Filtermerkmal — Käufer finden
+                      das Fahrzeug darüber nicht.
+                    </div>
                   </div>
                 )}
 

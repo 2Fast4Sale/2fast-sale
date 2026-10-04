@@ -160,6 +160,17 @@ export const EQUIPMENT_DB: EquipmentCategory[] = [
     label: 'Exterieur & Räder',
     icon: '🚗',
     items: [
+      /*
+       * Leichtmetallfelgen ohne Groesse.
+       *
+       * Die Liste kannte nur 17 bis 21 Zoll. Die Fotoerkennung meldet
+       * aber schlicht "Alufelgen" — sie kann die Groesse nicht sehen, und
+       * sie soll sie auch nicht raten. Ohne diesen Eintrag passte das
+       * Merkmal auf keine Zuordnung und erreichte kein Portal: Im Inserat
+       * stand es in der Beschreibung, im Filter "Alufelgen" tauchte das
+       * Fahrzeug nicht auf.
+       */
+      { id: 'alu',              label: 'Leichtmetallfelgen',                     aliases: ['alufelgen', 'alloy wheels', 'leichtmetallraeder', 'alu felgen'] },
       { id: 'alu_17',           label: '17-Zoll-Leichtmetallfelgen',             aliases: ['17 zoll alufelgen', '17" alloy wheels', '17 alu'] },
       { id: 'alu_18',           label: '18-Zoll-Leichtmetallfelgen',             aliases: ['18 zoll alufelgen', '18" alloy wheels', '18 alu'] },
       { id: 'alu_19',           label: '19-Zoll-Leichtmetallfelgen',             aliases: ['19 zoll alufelgen', '19" alloy wheels', '19 alu'] },
@@ -209,13 +220,36 @@ export const ALL_EQUIPMENT: EquipmentItem[] = EQUIPMENT_DB.flatMap(cat => cat.it
  */
 export function normalizeEquipment(raw: string): string {
   const q = raw.toLowerCase().trim();
+  if (!q) return raw;
+
+  /* Exakter Treffer auf den Anzeigenamen geht immer vor. */
+  const direkt = ALL_EQUIPMENT.find(i => i.label.toLowerCase() === q);
+  if (direkt) return direkt.label;
+
+  /*
+   * Unter den Aliasen gewinnt der LAENGSTE Treffer.
+   *
+   * Sonst entscheidet die Reihenfolge in der Liste: "18 Zoll Alufelgen"
+   * enthaelt sowohl "alufelgen" (allgemein) als auch "18 zoll alufelgen"
+   * (genau), und der allgemeine Eintrag steht oben — die Groessenangabe
+   * waere verloren gegangen.
+   *
+   * Verglichen wird nur in eine Richtung: Die Eingabe muss den Alias
+   * enthalten, nicht umgekehrt. Andersherum passte "Alufelgen" auf
+   * "17 zoll alufelgen" und erfand eine Groesse — in einem Inserat, fuer
+   * das der Haendler haftet.
+   */
+  let bester: { label: string; laenge: number } | null = null;
   for (const item of ALL_EQUIPMENT) {
-    if (item.label.toLowerCase() === q) return item.label;
-    if (item.aliases.some(a => a.toLowerCase() === q || q.includes(a.toLowerCase()) || a.toLowerCase().includes(q))) {
-      return item.label;
+    for (const alias of item.aliases) {
+      const a = alias.toLowerCase();
+      if (!a) continue;
+      if (a === q || q.includes(a)) {
+        if (!bester || a.length > bester.laenge) bester = { label: item.label, laenge: a.length };
+      }
     }
   }
-  return raw; // Kein Match → Original behalten
+  return bester ? bester.label : raw; // Kein Match → Original behalten
 }
 
 /**

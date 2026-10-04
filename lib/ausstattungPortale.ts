@@ -415,6 +415,10 @@ export const PORTAL_ZIELE: PortalZiel[] = [
   { id: 'dachhimmel_schwarz', },
   /* Veloursfußmatten */
   { id: 'fussmatten', },
+  /* Leichtmetallfelgen, ohne Groesse */
+  { id: 'alu',
+    as24: '15', /* Alloy wheels */
+    mobile: { art: 'schalter', feld: 'alloyWheels' }, },
   /* 17-Zoll-Leichtmetallfelgen */
   { id: 'alu_17',
     as24: '15', /* Alloy wheels */

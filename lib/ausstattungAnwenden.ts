@@ -17,16 +17,26 @@
  * kennt.
  */
 
-import { ALL_EQUIPMENT } from './equipmentDatabase';
+import { ALL_EQUIPMENT, normalizeEquipment } from './equipmentDatabase';
 import { PORTAL_ZIELE, type PortalZiel } from './ausstattungPortale';
 import { MOBILE_WERTE } from './mobileWerte';
 
 const NACH_LABEL = new Map(ALL_EQUIPMENT.map(e => [e.label.toLowerCase(), e.id]));
 const NACH_ID = new Map<string, PortalZiel>(PORTAL_ZIELE.map(z => [z.id, z]));
 
-/** Angezeigte Bezeichnung -> Zuordnung, oder undefined. */
+/**
+ * Angezeigte Bezeichnung -> Zuordnung, oder undefined.
+ *
+ * Erst normalisieren. Verglichen wurde vorher nur der Anzeigename, und
+ * der steht selten genau so da: Die Fotoerkennung meldet "Alufelgen",
+ * die Liste fuehrt "Leichtmetallfelgen", der Haendler tippt "Alu
+ * Felgen". Alle drei meinen dasselbe und keines davon erreichte ein
+ * Portal.
+ */
 function ziel(label: string): PortalZiel | undefined {
-  const id = NACH_LABEL.get((label || '').trim().toLowerCase());
+  const roh = (label || '').trim().toLowerCase();
+  const id = NACH_LABEL.get(roh)
+    ?? NACH_LABEL.get(normalizeEquipment(label).trim().toLowerCase());
   return id ? NACH_ID.get(id) : undefined;
 }
 
@@ -106,4 +116,74 @@ export function mobileAusstattung(labels: string[]): Record<string, unknown> {
   for (const [feld, wert] of Object.entries(auswahl)) felder[feld] = wert;
 
   return felder;
+}
+
+/* ────────────────── Merkmale, die woanders hingehoeren ────────────────── */
+
+/**
+ * Angekreuzte Merkmale, die KEIN Portal als Ausstattung kennt.
+ *
+ * Gebraucht fuer eine ehrliche Auskunft vor dem Uebertragen: Der
+ * Haendler kreuzt "7 Sitze" und "Automatikgetriebe" an und darf
+ * erwarten, dass beides im Inserat landet. Als Ausstattungsmerkmal tut
+ * es das nicht — die Portale fuehren das in eigenen Feldern oder gar
+ * nicht. Still uebergehen waere das Schlimmste: Es sieht aus, als waere
+ * es uebertragen worden.
+ */
+export function ohnePortalEntsprechung(labels: string[]): string[] {
+  return (labels || []).filter(l => {
+    const z = ziel(l);
+    return !z?.mobile && !z?.as24;
+  });
+}
+
+/**
+ * Merkmale, die in Wahrheit ein anderes Feld fuellen.
+ *
+ * "Automatikgetriebe" ist keine Ausstattung, sondern das Getriebe.
+ * "7 Sitze" ist die Sitzzahl, "Allradantrieb" die Antriebsart,
+ * "Lederausstattung" die Polsterung. Beide Portale fuehren dafuer
+ * eigene Felder, und wer dort nichts stehen hat, verliert die Angabe —
+ * obwohl der Haendler sie gemacht hat.
+ *
+ * Gefuellt wird NUR, was leer ist. Steht im Formular "Manuell" und in
+ * der Ausstattung "Automatikgetriebe", gewinnt das Formular: Es ist die
+ * genauere Angabe, und widersprechen darf sich ein Inserat nicht.
+ */
+export function ausAusstattungErgaenzen(
+  labels: string[],
+  vorhanden: Record<string, unknown>,
+): Record<string, string> {
+  const ergaenzt: Record<string, string> = {};
+  const hat = (feld: string) => {
+    const w = vorhanden[feld];
+    return w !== undefined && w !== null && String(w).trim() !== '';
+  };
+  const setz = (feld: string, wert: string) => {
+    if (!hat(feld) && !ergaenzt[feld]) ergaenzt[feld] = wert;
+  };
+
+  for (const roh of labels || []) {
+    const l = (roh || '').toLowerCase();
+
+    if (l.includes('automatikgetriebe')) setz('gearbox', 'Automatik');
+    else if (l.includes('schaltgetriebe')) setz('gearbox', 'Manuell');
+
+    if (l.includes('allradantrieb')) setz('driveType', 'Allrad');
+    else if (l.includes('hinterradantrieb')) setz('driveType', 'Heckantrieb');
+    else if (l.includes('frontantrieb')) setz('driveType', 'Frontantrieb');
+
+    const sitze = l.match(/^(\d)\s*sitze$/);
+    if (sitze) setz('seats', sitze[1]);
+
+    if (l.includes('lederausstattung')) setz('interiorType', 'Leder');
+    else if (l.includes('kunstleder') || l.includes('alcantara')) setz('interiorType', 'Alcantara');
+    else if (l.includes('stoffausstattung')) setz('interiorType', 'Stoff');
+
+    if (l.includes('plug-in')) setz('fuelType', 'Plug-in Hybrid');
+    else if (l.includes('vollhybrid') || l.includes('mild-hybrid')) setz('fuelType', 'Hybrid');
+    else if (l.includes('elektroantrieb')) setz('fuelType', 'Elektro');
+  }
+
+  return ergaenzt;
 }

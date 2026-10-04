@@ -6,7 +6,7 @@ import {
   mobileEuronorm, mobileTueren, mobileUmsatzsteuer,
   mobilePolsterung, mobileInnenfarbe, mobileAntrieb, mobileHu, laenderCode, farbnameSauber, monatJahr,
 } from '../../../lib/mobileUebersetzung';
-import { mobileAusstattung } from '../../../lib/ausstattungAnwenden';
+import { mobileAusstattung, ohnePortalEntsprechung, ausAusstattungErgaenzen } from '../../../lib/ausstattungAnwenden';
 import { mobileEnvkv } from '../../../lib/mobileEnvkv';
 import { validateEnvkv, type EnvkvData } from '../../../lib/envkv';
 import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
@@ -298,7 +298,21 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Bitte anmelden.' }, { status: 401 });
 
   const { formData, description, images, trockenlauf, draftId } = await req.json();
-  const { inserat, fehlt } = inseratBauen(formData || {}, description);
+  /*
+   * Merkmale, die in Wahrheit ein anderes Feld fuellen.
+   *
+   * Wer "Automatikgetriebe" ankreuzt und das Getriebefeld leer laesst,
+   * hat die Angabe gemacht — sie ging aber verloren, weil die Portale
+   * das Getriebe nicht als Ausstattung fuehren. Ergaenzt wird nur, was
+   * leer ist: Steht im Formular "Manuell", gewinnt das Formular.
+   */
+  const ergaenzungen = ausAusstattungErgaenzen(formData?.equipment || [], formData || {});
+  const angereichert = { ...(formData || {}), ...ergaenzungen };
+
+  /* Was kein Portal als Merkmal kennt — fuer die ehrliche Auskunft. */
+  const nichtUebertragen = ohnePortalEntsprechung(formData?.equipment || []);
+
+  const { inserat, fehlt } = inseratBauen(angereichert, description);
 
   const zugang = await zugangLesen(user.id, 'mobile');
 
@@ -310,6 +324,8 @@ export async function POST(req: NextRequest) {
         : !zugang ? 'Fuer mobile.de sind keine Zugangsdaten gespeichert (Einstellungen → Portale)'
         : 'Die gespeicherten Zugangsdaten sind unvollstaendig',
       fehlendeAngaben: fehlt,
+      nichtUebertragen,
+      ergaenzt: Object.keys(ergaenzungen).length ? ergaenzungen : undefined,
       wuerdeSenden: inserat,
     }, { status: trockenlauf ? 200 : 409 });
   }
@@ -465,6 +481,8 @@ export async function POST(req: NextRequest) {
       ? 'Testinserat — es liegt in der Sandbox von mobile.de, ist nicht öffentlich '
         + 'und kostet nichts. Öffentliche Links gibt es dafür nicht.'
       : undefined,
+    nichtUebertragen,
+    ergaenzt: Object.keys(ergaenzungen).length ? ergaenzungen : undefined,
     imagesUploaded: bildVerweise.length,
     bildFehler,
   });
