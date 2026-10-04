@@ -12,6 +12,8 @@
  * Sie brauchen keine Anmeldung und sind am 2026-08-27 geprueft.
  */
 
+import { grundfarbe } from './farbe';
+
 const gleich = (s: string): string => (s || '').trim().toLowerCase();
 
 /**
@@ -68,8 +70,20 @@ const FARBE: Record<string, string> = {
   'orange':  'ORANGE','silber':'SILVER','gelb':  'YELLOW',
 };
 
+/**
+ * Aussenfarbe.
+ *
+ * Erst die Tabelle, dann der Rueckfall ueber lib/farbe.ts. Der Grund:
+ * Das Farbfeld in Schritt 1 ist frei und hat den Platzhalter
+ * "Tiefschwarz" — genau so tippt es der Haendler. Die Tabelle kannte
+ * nur "schwarz", also ging das Fahrzeug ohne Farbe raus. Nach Farbe
+ * wird auf beiden Boersen gefiltert.
+ */
 export function mobileFarbe(f: string): string | undefined {
-  return FARBE[gleich(f)];
+  const direkt = FARBE[gleich(f)];
+  if (direkt) return direkt;
+  const g = grundfarbe(f);
+  return g ? FARBE[gleich(g)] : undefined;
 }
 
 /** "Euro 6d-Temp" -> "EURO6D_TEMP" */

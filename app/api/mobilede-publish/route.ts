@@ -13,6 +13,7 @@ import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
 import { createClient } from '../../../lib/supabase/server';
 import { zugangLesen } from '../../../lib/portalZugang';
 import { alsYyyyMM } from '../../../lib/erstzulassung';
+import { istHerstellerName } from '../../../lib/farbe';
 
 export const dynamic = 'force-dynamic';
 
@@ -203,7 +204,19 @@ function inseratBauen(formData: FormData, description?: string) {
   if (zylinder >= 1 && zylinder <= 24) inserat.cylinder = zylinder;
   const tank = ganzzahl(formData.fuelTankVolume);
   if (tank > 0 && tank <= 9999) inserat.fuelTankVolume = tank;
-  const farbname = farbnameSauber(formData.manufacturerColorName || '', 32);
+  /*
+   * Die Herstellerfarbe.
+   *
+   * Gelesen wurde bisher nur ein eigenes Feld, das im Formular niemand
+   * ausfuellt. Dabei steht der Herstellername laengst im Farbfeld: Der
+   * Haendler tippt dort "Tiefschwarz Perleffekt", nicht "Schwarz".
+   * exteriorColor bekommt daraus die Grundfarbe, und der volle Name
+   * gehoert in dieses Feld — so steht im Inserat, was auch im
+   * Fahrzeugschein steht.
+   */
+  const farbQuelle = formData.manufacturerColorName
+    || (istHerstellerName(formData.color || '') ? formData.color : '');
+  const farbname = farbnameSauber(farbQuelle || '', 32);
   if (farbname) inserat.manufacturerColorName = farbname;
 
   /* Letzte Wartung. Den Kilometerstand nimmt nur mobile.de. */

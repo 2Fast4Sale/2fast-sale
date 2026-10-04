@@ -26,6 +26,8 @@ import { AS24_MARKEN, AS24_REFERENZEN } from './as24Referenzen';
  * erst dort normalisiert und dann hier gesucht.
  */
 import { markeModellAnzeige, mobileMarkenWertOderNull } from './carDatabase';
+import { grundfarbe } from './farbe';
+import { monatJahrLesen } from './erstzulassung';
 
 /**
  * Vergleichsform: klein, ohne Betonungszeichen, ohne Bindestriche.
@@ -202,8 +204,15 @@ const FARBE_AS24: Record<string, string> = {
   'bronze':  'Bronze',
 };
 
+/**
+ * Aussenfarbe — mit demselben Rueckfall wie bei mobile.de.
+ *
+ * "Tiefschwarz", "Reflexsilber", "Uranograu": Herstellernamen, die die
+ * Tabelle nicht kennt. lib/farbe.ts sucht das Grundfarbwort darin.
+ */
 export function as24FarbeId(farbe: string): string | undefined {
-  const englisch = FARBE_AS24[gleichform(farbe)];
+  const englisch = FARBE_AS24[gleichform(farbe)]
+    ?? (() => { const g = grundfarbe(farbe); return g ? FARBE_AS24[gleichform(g)] : undefined; })();
   return englisch ? referenz('BodyColor', englisch) : undefined;
 }
 
@@ -267,13 +276,17 @@ export function as24AntriebId(a: string): string | undefined {
  * statt es abgelehnt zu bekommen.
  */
 export function as24Hu(huUntil: string): string | undefined {
-  const s = (huUntil || '').trim();
-  const m = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
-  if (!m) return undefined;
-  const monat = Number(m[1]);
-  const jahr = Number(m[2]);
-  if (monat < 1 || monat > 12) return undefined;
-  const abstand = Math.abs(jahr - new Date().getFullYear());
+  /*
+   * Gelesen wird mit derselben Funktion wie die Erstzulassung. Hier stand
+   * eine eigene, die nur Punkt und Schraegstrich kannte — "202611" aus
+   * einem Scan fiel durch, waehrend mobile.de denselben Wert annahm. Zwei
+   * Portale, dieselbe Angabe, verschiedene Ergebnisse: genau die Sorte
+   * Unterschied, die man erst beim Kunden bemerkt.
+   */
+  const d = monatJahrLesen(huUntil);
+  if (!d) return undefined;
+
+  const abstand = Math.abs(d.jahr - new Date().getFullYear());
   if (abstand > 5) return undefined;
-  return `${jahr}-${String(monat).padStart(2, '0')}`;
+  return `${d.jahr}-${String(d.monat).padStart(2, '0')}`;
 }
