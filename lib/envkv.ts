@@ -62,14 +62,35 @@ export function fahrzeugartGewaehlt(kind: VehicleKind | '' | null | undefined): 
  * CO2-Klasse nach Anlage 2 Pkw-EnVKV, ermittelt aus den kombinierten
  * CO2-Emissionen (WLTP) in g/km.
  */
+/**
+ * CO2-Klasse nach § 3a Pkw-EnVKV.
+ *
+ * Die Grenzen stehen im Gesetz und sind am 4. Oktober 2026 gegen
+ * gesetze-im-internet.de geprueft:
+ *
+ *   A  0            E  136–155
+ *   B  1–95         F  156–175
+ *   C  96–115       G  ab 176
+ *   D  116–135
+ *
+ * Vorher standen hier andere Zahlen (B bis 45, C bis 95, D bis 125,
+ * F bis 195). Damit bekam ein Golf mit 129 g/km die Klasse E statt D
+ * und ein Wagen mit 180 g/km die Klasse F statt G — eine falsche
+ * Pflichtangabe. Sie steht im Inserat, im PDF und im Beschreibungstext,
+ * und sie ist abmahnfaehig: Die Klasse ist keine Schaetzung, sondern
+ * eine Rechenvorschrift mit festen Grenzen.
+ *
+ * Die Klasse A ist ausdruecklich NUR die Null. Ein Fahrzeug mit 1 g/km
+ * ist B, auch wenn das nach wenig aussieht.
+ */
 export function co2Class(co2CombinedGPerKm: number): Co2Class {
   const v = co2CombinedGPerKm;
   if (v <= 0)   return 'A';
-  if (v <= 45)  return 'B';
-  if (v <= 95)  return 'C';
-  if (v <= 125) return 'D';
+  if (v <= 95)  return 'B';
+  if (v <= 115) return 'C';
+  if (v <= 135) return 'D';
   if (v <= 155) return 'E';
-  if (v <= 195) return 'F';
+  if (v <= 175) return 'F';
   return 'G';
 }
 
