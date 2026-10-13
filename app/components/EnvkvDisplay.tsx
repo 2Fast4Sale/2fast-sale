@@ -19,6 +19,7 @@ export function envkvFromVehicle(v: Record<string, unknown>): EnvkvData {
     powerConsumptionCombined: n(v.power_consumption_combined),
     co2Combined:              n(v.co2_combined),
     co2CombinedDischarged:    n(v.co2_combined_discharged),
+    consumptionCombinedDischarged: n(v.consumption_combined_discharged),
     electricRangeKm:          n(v.electric_range_km),
   };
 }
@@ -58,6 +59,16 @@ export default function EnvkvDisplay({ vehicle }: Props) {
   });
   if (data.electricRangeKm != null)
     rows.push({ label: 'Elektrische Reichweite', value: `${nf(data.electricRangeKm, 0)} km` });
+  /*
+   * Bei entladener Batterie gehoeren beide Angaben in die Tabelle.
+   * Der Verbrauch fehlte — eine Pflichtangabe weniger auf der Seite,
+   * die der Kaeufer zu sehen bekommt.
+   */
+  if (data.consumptionCombinedDischarged != null)
+    rows.push({
+      label: 'Verbrauch bei entladener Batterie',
+      value: `${nf(data.consumptionCombinedDischarged)} l/100 km`,
+    });
   if (data.co2CombinedDischarged != null)
     rows.push({
       label: 'CO₂ bei entladener Batterie',

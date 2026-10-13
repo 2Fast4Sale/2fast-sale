@@ -61,19 +61,41 @@ export function mobileEnvkv(daten: EnvkvData, fuelType: string): Record<string, 
     feld.emissions = emissionen;
   }
 
-  const verbrauch: Record<string, unknown> = {};
-  if (sprit !== undefined) verbrauch.fuel = { combined: sprit };
-  if (strom !== undefined) verbrauch.power = { combined: strom };
+  const spritLeer = z(daten.consumptionCombinedDischarged);
+
   /*
-   * Beim Plug-in-Hybrid verlangt mobile.de zusaetzlich die
-   * "gewichteten kombinierten" Werte. Das sind bei WLTP genau die
-   * kombinierten Werte eines Plug-in-Hybrids — dieselbe Zahl, anderer
-   * Name. Deshalb hier doppelt gesetzt und nicht neu erfragt.
+   * ── Was in welches Feld gehoert, steht in ihrer Doku ──────────────
+   *
+   * Woertlich aus dem Handbuch der Seller-API:
+   *
+   *   fuel   "WLTP fuel consumption values. In case of plugin hybrid,
+   *           it is the fuel consumption when battery is discharged."
+   *   power  "For plugin hybrid, electrical power consumption in pure
+   *           electric mode."
+   *
+   * Beim Plug-in-Hybrid ist consumptions.fuel.combined also der
+   * Verbrauch bei LEERER Batterie — nicht der gewichtete. Der
+   * gewichtete steht in weightedCombinedFuel.
+   *
+   * Hier stand bisher in beiden Feldern derselbe Wert, naemlich der
+   * gewichtete. Im Inserat haette dann gestanden, ein Plug-in-Hybrid
+   * verbrauche mit leerer Batterie 1,4 l/100 km. Das ist keine
+   * Kleinigkeit: Der Verbrauch mit leerer Batterie ist der Wert, der
+   * den Kaeufer im Alltag betrifft, und er ist eine Pflichtangabe.
    */
+  const verbrauch: Record<string, unknown> = {};
+
   if (antrieb === 'plugin_hybrid') {
+    if (spritLeer !== undefined) verbrauch.fuel = { combined: spritLeer };
+    if (strom !== undefined) verbrauch.power = { combined: strom };
+    /* Pflicht beim Plug-in laut Anforderungstabelle der Doku. */
     if (sprit !== undefined) verbrauch.weightedCombinedFuel = sprit;
     if (strom !== undefined) verbrauch.weightedCombinedPower = strom;
+  } else {
+    if (sprit !== undefined) verbrauch.fuel = { combined: sprit };
+    if (strom !== undefined) verbrauch.power = { combined: strom };
   }
+
   if (Object.keys(verbrauch).length > 0) feld.consumptions = verbrauch;
 
   if (reichweite !== undefined) {

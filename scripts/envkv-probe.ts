@@ -54,6 +54,7 @@ const FAELLE: Fall[] = [
     name: 'Plug-in, vollstaendig', kraftstoff: 'Plug-in Hybrid', art: 'neuwagen',
     daten: {
       ...leer, consumptionCombined: 1.4, powerConsumptionCombined: 15.2,
+      consumptionCombinedDischarged: 7.4,
       co2Combined: 32, co2CombinedDischarged: 148, electricRangeKm: 62,
     },
   },

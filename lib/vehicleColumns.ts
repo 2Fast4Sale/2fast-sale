@@ -36,6 +36,8 @@ export const MOBILE_SPALTEN = [
 export const ENVKV_SPALTEN = [
   'vehicle_kind', 'consumption_combined', 'power_consumption_combined',
   'co2_combined', 'co2_combined_discharged', 'electric_range_km',
+  /* Migration 026 — Pflichtangabe fuer Plug-in-Hybride. */
+  'consumption_combined_discharged',
 ] as const;
 
 export const ALLE_FAHRZEUG_SPALTEN: readonly string[] = [

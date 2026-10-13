@@ -212,6 +212,18 @@ export default function EnvkvFields({ value, fuelType, isMobile = false, onChang
 
             {drivetrain === 'plugin_hybrid' &&
               field('CO₂ entladene Batterie', 'g/km', 'co2CombinedDischarged', 'z.B. 178')}
+
+            {/*
+              Der Verbrauch bei entladener Batterie fehlte.
+
+              Die Verordnung verlangt ihn bei Plug-in-Hybriden neben dem
+              gewichteten Verbrauch, und AutoScout24 fuehrt ihn als
+              Pflichtfeld fuer deutsche Haendler. Ohne ihn bleibt das
+              Inserat dort inaktiv — und es waere auch rechtlich
+              unvollstaendig.
+            */}
+            {drivetrain === 'plugin_hybrid' &&
+              field('Verbrauch entladene Batterie', 'l/100km', 'consumptionCombinedDischarged', 'z.B. 7,4')}
           </div>
 
           {/* CO2-Klassen-Skala */}

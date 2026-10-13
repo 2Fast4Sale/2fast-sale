@@ -127,6 +127,18 @@ export interface EnvkvData {
   co2Combined?: number | null;
   /** Nur Plug-in-Hybrid: CO2 kombiniert bei entladener Batterie in g/km */
   co2CombinedDischarged?: number | null;
+  /**
+   * Nur Plug-in-Hybrid: Kraftstoffverbrauch bei entladener Batterie,
+   * l/100 km (WLTP).
+   *
+   * Fehlte. Die Pkw-EnVKV verlangt die Angabe bei Plug-in-Hybriden
+   * neben dem gewichteten Verbrauch, und AutoScout24 fuehrt sie als
+   * Pflichtfeld fuer deutsche Haendler (consumptionCombinedDischarged,
+   * "mandatory for PHEV"). Ohne sie bleibt ein Plug-in-Hybrid als
+   * Neuwagen dort inaktiv — und das Inserat waere auch nach der
+   * Verordnung unvollstaendig.
+   */
+  consumptionCombinedDischarged?: number | null;
   /** Nur Elektro / Plug-in: elektrische Reichweite in km */
   electricRangeKm?: number | null;
 }
@@ -189,6 +201,7 @@ export function validateEnvkv(data: EnvkvData, fuelType: string): EnvkvValidatio
     if (!has(data.powerConsumptionCombined)) missing.push('Stromverbrauch kombiniert');
     if (!has(data.co2Combined))              missing.push('CO₂-Emissionen kombiniert');
     if (!has(data.co2CombinedDischarged))    missing.push('CO₂ bei entladener Batterie');
+    if (!has(data.consumptionCombinedDischarged)) missing.push('Verbrauch bei entladener Batterie');
     if (!has(data.electricRangeKm))          missing.push('Elektrische Reichweite');
   } else {
     if (!has(data.consumptionCombined)) missing.push('Kraftstoffverbrauch kombiniert');
@@ -233,11 +246,19 @@ export function buildEnvkvText(data: EnvkvData, fuelType: string): string | null
       lines.push(`Elektrische Reichweite: ${nf(data.electricRangeKm, 0)} km`);
     if (data.co2Combined != null)
       lines.push(`CO₂-Klasse: ${co2Class(data.co2Combined)}`);
-    if (data.co2CombinedDischarged != null)
-      lines.push(
-        `Bei entladener Batterie — CO₂-Emissionen: ${nf(data.co2CombinedDischarged, 0)} g/km, ` +
-        `CO₂-Klasse: ${co2Class(data.co2CombinedDischarged)}`
-      );
+    /*
+     * Bei entladener Batterie gehoeren BEIDE Angaben in den Text:
+     * Verbrauch und CO2. Der Verbrauch fehlte, obwohl die Verordnung
+     * ihn verlangt — im Pflichttext stand nur die Haelfte.
+     */
+    const leerTeile: string[] = [];
+    if (data.consumptionCombinedDischarged != null)
+      leerTeile.push(`Kraftstoffverbrauch: ${nf(data.consumptionCombinedDischarged)} l/100 km`);
+    if (data.co2CombinedDischarged != null) {
+      leerTeile.push(`CO₂-Emissionen: ${nf(data.co2CombinedDischarged, 0)} g/km`);
+      leerTeile.push(`CO₂-Klasse: ${co2Class(data.co2CombinedDischarged)}`);
+    }
+    if (leerTeile.length) lines.push(`Bei entladener Batterie — ${leerTeile.join(', ')}`);
   } else {
     if (data.consumptionCombined != null)
       lines.push(`Kraftstoffverbrauch (kombiniert): ${nf(data.consumptionCombined)} l/100 km`);
