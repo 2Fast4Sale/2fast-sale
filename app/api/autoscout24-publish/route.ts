@@ -12,6 +12,7 @@ import { bildHolen, alsJpeg } from '../../../lib/bildHolen';
 import { createClient } from '../../../lib/supabase/server';
 import { zugangLesen } from '../../../lib/portalZugang';
 import { alsYyyyBindestrichMM } from '../../../lib/erstzulassung';
+import { istHerstellerName } from '../../../lib/farbe';
 
 export const dynamic = 'force-dynamic';
 
