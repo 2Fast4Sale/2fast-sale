@@ -172,7 +172,13 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
      Personenwagen kein Feld dafuer. */
   const zylinder = ganzzahl(formData.cylinders);
   if (zylinder >= 1 && zylinder <= 99) nutzlast.cylinderCount = zylinder;
-  const farbname = farbnameSauber(formData.manufacturerColorName || '', 30);
+  /*
+   * Wie bei mobile.de: Der Herstellername steht im freien Farbfeld,
+   * nicht im eigenen Feld, das niemand ausfuellt.
+   */
+  const farbQuelle = formData.manufacturerColorName
+    || (istHerstellerName(formData.color || '') ? formData.color : '');
+  const farbname = farbnameSauber(farbQuelle || '', 30);
   if (farbname) nutzlast.bodyColorName = farbname;
   /* Nur das Datum — einen Kilometerstand zur Wartung kennt
      AutoScout24 nicht. */
