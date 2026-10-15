@@ -64,6 +64,16 @@ das ihm nicht gehört.
 >    Kein Händler legt sich für ein einzelnes Inserat extra ein
 >    DAT-Konto an.
 >
+>
+> Konkret zu Ihrem Punkt 1: Auf Ihrer Seite zur FIN-Abfrage steht ein
+> Preis ab 1,85 € netto je Abruf, als Erweiterung zu einem
+> SilverDAT-Produkt und ohne separate Grundgebühr. Genau dieses Modell
+> würde zu mir passen — ich gebe den Abruf als Aufpreis an den Händler
+> weiter, der ihn auslöst, und zahle nur bei echter Nutzung.
+>
+> Ist dieser Weg für mich offen? Und reicht dafür das kleinste
+> SilverDAT-Produkt, oder setzt die FIN-Abfrage etwas Größeres voraus?
+>
 > Zu Ihrer Sorge vom Telefon, ich könnte zur Konkurrenz werden: Ich
 > verkaufe keine Fahrzeugdaten weiter. Die Ausstattung wird in das
 > Inserat des Händlers geschrieben, der sie bestellt hat, und erscheint
