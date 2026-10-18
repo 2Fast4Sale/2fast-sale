@@ -1215,6 +1215,24 @@ def main():
         licht()
         cam_pos, cam_brenn = KAMERA_POS, BRENNWEITE
         cam = kamera()
+    # ── Echtes Licht auch fuer die gebauten Raeume ────────────────────
+    #
+    # Bisher nahm nur `studio` eine HDRI an, und der Nachtlauf, der die
+    # veroeffentlichten Raeume gerechnet hat, uebergab keine. Alle 21
+    # Raeume stehen also in erfundenem Licht: gleichmaessige
+    # Flaechenlampen, in deren Lack sich nichts spiegelt. Genau das
+    # schreibt die Erklaerung zu `echtes_licht` als Grund dafuer, dass
+    # die Bilder gerechnet aussehen.
+    #
+    # Hier kommt die Aufnahme als ZUSATZ dazu, nicht als Ersatz: Die
+    # Deckenleuchten des Raums bleiben das Hauptlicht — sie sind im Bild
+    # zu sehen und muessen leuchten —, die HDRI bringt die Umgebung, die
+    # sich im Lack spiegelt, und das weiche Licht aus den Ecken.
+    # Deshalb eine kleinere Staerke als beim Studio.
+    if hdri and bauart not in ('echtraum', 'studio'):
+        echtes_licht(hdri, float(opt.get('lichtstaerke', '0.35')),
+                     float(opt.get('lichtdrehung', '0')))
+
     rendern(ziel, proben, opt.get('maschine', 'cycles'), int(opt.get('skala', '100')))
 
     daten = {

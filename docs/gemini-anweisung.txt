@@ -1,0 +1,24 @@
+You are preparing a photograph for a professional car dealership listing. 
+Image 1 is the original photograph of a car, taken outdoors or in a yard. Image 2 is the empty showroom the car must end up in. 
+Produce one single photorealistic image: the car from image 1, standing inside the showroom from image 2, looking as if it had really been photographed there. 
+First cut the car out of image 1 completely and cleanly. 
+Follow its real outline: mirrors, antenna, spoiler, tow bar and the gap under the bumpers belong to the car, the ground under the tyres does not. 
+Nothing of the original surroundings may survive anywhere in the result: no asphalt, no kerb, no grass, no buildings, no other cars, no people, not even as a thin edge along the body. 
+Place the car on the floor of the showroom with every visible wheel resting exactly on the ground, so that it neither floats above the floor nor sinks into it. 
+You may move, scale and very slightly rotate the car to achieve that, but never mirror it: the side facing the camera in image 1 must face the camera in the result, and the steering wheel stays on the same side. 
+You are free to move the car anywhere on the floor and to make it larger or smaller as much as you need: keeping its original size matters far less than standing correctly in the room. 
+Size the car so that it covers about half of the image width and never more than 60 percent, and leave clear empty floor in front of it, behind it and on both sides. 
+The car must stand level on the floor: its wheel contact points must follow the perspective of that floor, so the car looks neither tilted to one side nor leaning forwards or backwards, and the line between floor and wall must run behind the car, never through it. 
+Think of the floor as a flat horizontal plane that continues under the whole car; place all four wheels on that same plane, not one wheel higher than the other. 
+Keep the room exactly as it is in image 2: same walls, same floor, same lights, same camera position, same framing, and do not make the hall look smaller or narrower. 
+The whole car must be inside the picture with clear margin to every edge, and the roof must stay below the middle height of the picture. 
+Add a realistic soft ground shadow under the car, darkest directly under the tyres and the underbody, fading out softly a short distance beyond the outline, lying only on the floor and never on the walls. 
+Match brightness, contrast and white balance of the car to the light of this hall, without repainting the car. 
+The finished picture must be at least as bright as image 2: do not darken the room, not even slightly, because a dark showroom looks cheap in a listing. 
+Look carefully through the windscreen, the side windows and the rear window. 
+Everything visible through that glass belongs to the place where the car was photographed, so every other car, fence, tree, building, street and person behind the glass must be painted over with the calm reflections and surfaces of this showroom. 
+Keep the glass as glass: transparent where it was transparent, the seats and the interior still visible, and the tint exactly as dark as in image 1. 
+The car itself must stay exactly as photographed: same shape, same colour, same wheels, same rims, same badges, same trim, same mirrors, same windows. 
+Never hide, smooth or repair a scratch, a dent, rust, dirt, a sticker, a chip or a crack, neither in the paint nor in the glass, because the dealer is liable for every defect that a listing conceals. 
+Do not add parts the car does not have, and do not add people, other vehicles, plants, text, logos or watermarks anywhere in the image. 
+Before you finish, check your result once more: does every visible wheel touch the floor, is the whole car inside the picture, is any piece of the old surroundings still visible anywhere including through the glass, and is the dealer name spelled exactly as given? 
