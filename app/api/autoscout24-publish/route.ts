@@ -34,6 +34,14 @@ const zahl = (roh: unknown): number =>
 const ganzzahl = (roh: unknown): number =>
   parseInt(String(roh ?? '').replace(/[^\d]/g, ''), 10) || 0;
 
+/*
+ * AutoScout24 verbietet in JEDEM Textfeld die Zeichen < und >
+ * ("Forbidden characters are < or >"). Ein einziges davon — etwa in
+ * einer Beschreibung wie "Reifen <2 Jahre" — laesst das ganze Inserat
+ * durchfallen. Deshalb werden sie ersetzt, nicht das Inserat verworfen.
+ */
+const ohneKlammern = (s: string): string => s.replace(/[<>]/g, ' ');
+
 interface FormData {
   brand?: string; model?: string; vin?: string; firstRegistration?: string;
   km?: string; price?: string; fuelType?: string; gearbox?: string;
@@ -45,6 +53,7 @@ interface FormData {
   huUntil?: string; interiorType?: string; interiorColor?: string;
   driveType?: string; warranty?: boolean; countryVersion?: string;
   cylinders?: string; manufacturerColorName?: string; lastServiceDate?: string;
+  previousOwners?: string;
 }
 
 /**
@@ -56,6 +65,13 @@ interface FormData {
  */
 function nutzlastBauen(formData: FormData, description?: string, imageIds: string[] = []) {
   const fehlt: string[] = [];
+  /*
+   * Angaben, die AutoScout24 so nicht annimmt, die aber nichts
+   * Pflichtiges sind: Sie werden weggelassen und hier vermerkt. Ohne
+   * diese Liste faehrt der Haendler entweder gegen eine Ablehnung des
+   * ganzen Inserats oder bekommt still ein Inserat ohne die Angabe.
+   */
+  const uebersprungen: string[] = [];
   const nutzlast: Record<string, unknown> = {
     vehicleType: 'C',
     /*
@@ -68,10 +84,18 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
     availability: { availabilityType: 1 },
   };
 
-  /* Neu- oder Gebrauchtwagen. Ohne Erstzulassung gilt es als neu. */
+  /*
+   * Neu- oder Gebrauchtwagen. Ohne Erstzulassung gilt es als neu.
+   *
+   * Die Grenze ist "kleiner als 1.000", nicht "bis 1.000": In der
+   * Feldbeschreibung steht "Mileage must be less than 1000 when
+   * offerType is N (new)". Bei genau 1.000 km hat die Route vorher N
+   * gesetzt und gleichzeitig mileage=1000 gesendet — die eine Zeile,
+   * die sich selbst widerspricht, und AutoScout24 haette abgelehnt.
+   */
   const km = ganzzahl(formData.km);
   const erst = alsYyyyBindestrichMM(formData.firstRegistration);
-  nutzlast.offerType = !erst && km <= 1000 ? 'N' : 'U';
+  nutzlast.offerType = !erst && km < 1000 ? 'N' : 'U';
   if (erst) nutzlast.firstRegistrationDate = erst;
   else if (nutzlast.offerType === 'U') fehlt.push('Erstzulassung');
 
@@ -88,7 +112,7 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
    */
   const modellId = as24ModellId(formData.brand || '', formData.model || '');
   if (modellId !== undefined) nutzlast.model = modellId;
-  else if (formData.model) nutzlast.modelVersion = formData.model.slice(0, 50);
+  else if (formData.model) nutzlast.modelVersion = ohneKlammern(formData.model).slice(0, 121);
   else fehlt.push('Modell');
 
   const karosserie = as24KarosserieId(formData.bodyType || '');
@@ -124,14 +148,36 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   if (km > 0) nutzlast.mileage = km;
   else if (nutzlast.offerType === 'U') fehlt.push('Kilometerstand');
 
-  const kw = ganzzahl(formData.powerKw);
-  if (kw > 0) nutzlast.power = kw;
-  const ccm = ganzzahl(formData.displacementCcm);
-  if (ccm > 0) nutzlast.cylinderCapacity = ccm;
-  const sitze = ganzzahl(formData.seats);
-  if (sitze > 0) nutzlast.seatCount = sitze;
-  const tueren = ganzzahl(formData.doors);
-  if (tueren > 0) nutzlast.doorCount = tueren;
+  /*
+   * Zahlenfelder mit den Grenzen aus der Feldbeschreibung.
+   *
+   * Ein Wert ausserhalb der Grenzen wird WEGGELASSEN und gemeldet,
+   * nicht zurechtgebogen: 99999 kW ist ein Tippfehler, und ein
+   * stillschweigend gekuerzter Wert waere eine Falschangabe im
+   * Inserat des Haendlers. Vorher ging jeder Wert > 0 raus — und
+   * AutoScout24 lehnt dann das GANZE Inserat ab
+   * (maximum-value-exceeded), wegen einer freiwilligen Angabe.
+   */
+  const zahlFeld = (feld: string, roh: unknown, min: number, max: number, name: string) => {
+    const w = ganzzahl(roh);
+    if (w <= 0) return;
+    if (w < min || w > max) {
+      uebersprungen.push(`${name}: ${w} liegt ausserhalb von ${min}–${max}`);
+      return;
+    }
+    nutzlast[feld] = w;
+  };
+
+  zahlFeld('power', formData.powerKw, 1, 9999, 'Leistung (kW)');
+  zahlFeld('cylinderCapacity', formData.displacementCcm, 1, 99999, 'Hubraum (ccm)');
+  zahlFeld('seatCount', formData.seats, 1, 99, 'Sitzplätze');
+  zahlFeld('doorCount', formData.doors, 1, 9, 'Türen');
+  /*
+   * Vorbesitzer gingen bisher nur an mobile.de. Das Formular erfasst
+   * sie, AutoScout24 hat das Feld (previousOwnerCount, 0 bis 99) —
+   * die Angabe fiel einfach weg.
+   */
+  zahlFeld('previousOwnerCount', formData.previousOwners, 1, 99, 'Vorbesitzer');
   /*
    * Leermasse. AutoScout24 nennt es "emptyWeight" und sagt in der
    * Beschreibung ausdruecklich, was gemeint ist: "without driver,
@@ -140,8 +186,7 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
    * Die Anhaengelasten fehlen hier bewusst — AutoScout24 hat fuer
    * Personenwagen kein Feld dafuer. Sie gehen nur an mobile.de.
    */
-  const leermasse = ganzzahl(formData.leermasseKg);
-  if (leermasse > 0) nutzlast.emptyWeight = leermasse;
+  zahlFeld('emptyWeight', formData.leermasseKg, 1, 99999, 'Leermasse (kg)');
 
   /*
    * Fuenf Felder, die das Formular erfasst und die bisher weggeworfen
@@ -165,14 +210,24 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
   const land = laenderCode(formData.countryVersion || '');
   if (land) nutzlast.countryVersion = land;
 
-  if (formData.vin) nutzlast.vin = formData.vin;
+  /*
+   * Fahrgestellnummer: genau 17 Zeichen, sonst lehnt AutoScout24 das
+   * ganze Inserat ab ("Min. length: 17, Max. length: 17"). Vorher ging
+   * durch, was im Feld stand — eine abgetippte 16-stellige Nummer hat
+   * damit das Inserat gekippt, und in der Meldung stand nur
+   * "invalid-field-length".
+   */
+  const fin = String(formData.vin ?? '').trim().toUpperCase();
+  if (fin) {
+    if (/^[A-Z0-9]{17}$/.test(fin)) nutzlast.vin = fin;
+    else uebersprungen.push(`Fahrgestellnummer: "${fin}" hat nicht 17 Stellen`);
+  }
 
   const farbe = as24FarbeId(formData.color || '');
   if (farbe) nutzlast.bodyColor = Number(farbe);
   /* Tankgroesse fehlt hier bewusst — AutoScout24 hat fuer
      Personenwagen kein Feld dafuer. */
-  const zylinder = ganzzahl(formData.cylinders);
-  if (zylinder >= 1 && zylinder <= 99) nutzlast.cylinderCount = zylinder;
+  zahlFeld('cylinderCount', formData.cylinders, 1, 99, 'Zylinder');
   /*
    * Wie bei mobile.de: Der Herstellername steht im freien Farbfeld,
    * nicht im eigenen Feld, das niemand ausfuellt.
@@ -212,10 +267,10 @@ function nutzlastBauen(formData: FormData, description?: string, imageIds: strin
     Object.assign(nutzlast, as24Envkv(envkv, formData.fuelType || ''));
   }
 
-  if (description) nutzlast.description = description.slice(0, 5000);
+  if (description) nutzlast.description = ohneKlammern(description).slice(0, 5000);
   if (imageIds.length > 0) nutzlast.images = imageIds.map(id => ({ id }));
 
-  return { nutzlast, fehlt };
+  return { nutzlast, fehlt, uebersprungen };
 }
 
 export async function POST(req: NextRequest) {
@@ -242,7 +297,7 @@ export async function POST(req: NextRequest) {
   /* Was kein Portal als Merkmal kennt — fuer die ehrliche Auskunft. */
   const nichtUebertragen = ohnePortalEntsprechung(formData?.equipment || []);
 
-  const { nutzlast, fehlt } = nutzlastBauen(angereichert, description);
+  const { nutzlast, fehlt, uebersprungen } = nutzlastBauen(angereichert, description);
 
   const zugang = await zugangLesen(user.id, 'as24');
   const username = zugang?.benutzer ?? null;
@@ -272,6 +327,7 @@ export async function POST(req: NextRequest) {
         : 'Die gespeicherten Zugangsdaten sind unvollstaendig',
       fehlendeAngaben: fehlt,
       nichtUebertragen,
+      uebersprungen: uebersprungen.length ? uebersprungen : undefined,
       ergaenzt: Object.keys(ergaenzungen).length ? ergaenzungen : undefined,
       wuerdeSenden: {
         ...nutzlast,
@@ -398,6 +454,7 @@ export async function POST(req: NextRequest) {
      */
     dealerUrl: testmodus ? null : `https://autoscout24.com/account/listings/${inserat.id}`,
     nichtUebertragen,
+    uebersprungen: uebersprungen.length ? uebersprungen : undefined,
     ergaenzt: Object.keys(ergaenzungen).length ? ergaenzungen : undefined,
     imagesUploaded: imageIds.length,
     // Welche Fotos nicht durchkamen — vorher stand das nur im Log des

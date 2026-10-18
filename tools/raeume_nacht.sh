@@ -4,7 +4,10 @@
 # auf zwei Kernen rund eine Dreiviertelstunde.
 set -u
 BL="/c/Program Files/Blender Foundation/Blender 5.2/blender.exe"
-AUS="tools/proben/raeume_neu"
+# Absoluter Pfad: Blender loest relative Pfade gegen sein eigenes
+# Arbeitsverzeichnis auf, und das war C:\ — der erste Lauf landete
+# deshalb in C:\tools statt im Projekt.
+AUS="$(cd "$(dirname "$0")/.." && pwd -W 2>/dev/null || cd "$(dirname "$0")/.." && pwd)/tools/proben/raeume_neu"
 PROBEN=${PROBEN:-128}
 mkdir -p "$AUS"
 

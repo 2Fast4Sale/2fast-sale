@@ -928,6 +928,8 @@ function Step4Inner() {
     bereitsVorhanden?: boolean;
     /** Angekreuzte Merkmale, die das Portal nicht als Ausstattung kennt. */
     nichtUebertragen?: string[];
+    /** Angaben, die das Portal so nicht annimmt und die weggelassen wurden. */
+    uebersprungen?: string[];
     /** Felder, die aus der Ausstattung ergaenzt wurden. */
     ergaenzt?: Record<string, string>;
     /** Lief es in der Testumgebung des Portals? */
@@ -1045,6 +1047,7 @@ function Step4Inner() {
           grund: d.grund || d.error,
           fehlendeAngaben: d.fehlendeAngaben,
           nichtUebertragen: d.nichtUebertragen,
+          uebersprungen: d.uebersprungen,
           ergaenzt: d.ergaenzt,
         });
         return;
@@ -1055,6 +1058,7 @@ function Step4Inner() {
           grund: d.grund,
           fehlendeAngaben: d.fehlendeAngaben,
           nichtUebertragen: d.nichtUebertragen,
+          uebersprungen: d.uebersprungen,
           ergaenzt: d.ergaenzt,
         });
         return;
@@ -1065,6 +1069,7 @@ function Step4Inner() {
           fehler: d.error || `Das Portal antwortete mit ${antwort.status}.`,
           fehlendeAngaben: d.fehlendeAngaben,
           nichtUebertragen: d.nichtUebertragen,
+          uebersprungen: d.uebersprungen,
           ergaenzt: d.ergaenzt,
           bildFehler: d.bildFehler,
           details: d.details,
@@ -1077,6 +1082,7 @@ function Step4Inner() {
         testmodusGelaufen: Boolean(d.testmodus),
         bereitsVorhanden: Boolean(d.bereitsVorhanden),
         nichtUebertragen: d.nichtUebertragen,
+        uebersprungen: d.uebersprungen,
         ergaenzt: d.ergaenzt,
         kennung: d.mobileAdId || d.listingId || '',
         adUrl: d.adUrl ?? null,
@@ -1775,6 +1781,30 @@ function Step4Inner() {
                     <div style={{ color: '#64748b', marginTop: 4 }}>
                       Sie stehen in der Beschreibung, aber nicht als Filtermerkmal — Käufer finden
                       das Fahrzeug darüber nicht.
+                    </div>
+                  </div>
+                )}
+
+                {/*
+                  Angaben, die das Portal so nicht annimmt: eine FIN mit 16
+                  Stellen, eine Leistung mit einer Null zu viel. Sie wurden
+                  weggelassen, damit nicht das ganze Inserat abgelehnt wird —
+                  aber der Haendler muss es erfahren, sonst fehlt die Angabe
+                  im Inserat und niemand weiss, warum.
+                */}
+                {portalErgebnis.uebersprungen && portalErgebnis.uebersprungen.length > 0 && (
+                  <div style={{ marginBottom: '14px', fontSize: '12.5px', color: '#92400e', lineHeight: 1.6 }}>
+                    <strong>
+                      {portalErgebnis.uebersprungen.length === 1
+                        ? 'Eine Angabe wurde weggelassen:'
+                        : `${portalErgebnis.uebersprungen.length} Angaben wurden weggelassen:`}
+                    </strong>
+                    <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                      {portalErgebnis.uebersprungen.map(x => <li key={x}>{x}</li>)}
+                    </ul>
+                    <div style={{ color: '#64748b', marginTop: 4 }}>
+                      Das Portal hätte das ganze Inserat abgelehnt. Angabe in Schritt 1
+                      korrigieren und erneut übertragen.
                     </div>
                   </div>
                 )}
