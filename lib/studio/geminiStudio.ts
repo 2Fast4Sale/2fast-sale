@@ -79,37 +79,98 @@ const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.55');
  * an "nicht zu gross".
  */
 const anweisung = (firma?: string | null) =>
-  'You are preparing a photograph for a professional car dealership listing. '
-  + 'Image 1 is the original photograph of a car, taken outdoors or in a yard. Image 2 is the empty showroom the car must end up in. '
-  + 'Produce one single photorealistic image: the car from image 1, standing inside the showroom from image 2, looking as if it had really been photographed there. '
-  + 'First cut the car out of image 1 completely and cleanly. '
-  + 'Follow its real outline: mirrors, antenna, spoiler, tow bar and the gap under the bumpers belong to the car, the ground under the tyres does not. '
-  + 'Nothing of the original surroundings may survive anywhere in the result: no asphalt, no kerb, no grass, no buildings, no other cars, no people, not even as a thin edge along the body. '
-  + 'Place the car on the floor of the showroom with every visible wheel resting exactly on the ground, so that it neither floats above the floor nor sinks into it. '
-  + 'You may move, scale and very slightly rotate the car to achieve that, but never mirror it: the side facing the camera in image 1 must face the camera in the result, and the steering wheel stays on the same side. '
-  + 'You are free to move the car anywhere on the floor and to make it larger or smaller as much as you need: keeping its original size matters far less than standing correctly in the room. '
-  + 'Size the car so that it covers about half of the image width and never more than 60 percent, and leave clear empty floor in front of it, behind it and on both sides. '
-  + 'The car must stand level on the floor: its wheel contact points must follow the perspective of that floor, so the car looks neither tilted to one side nor leaning forwards or backwards, and the line between floor and wall must run behind the car, never through it. '
-  + 'Think of the floor as a flat horizontal plane that continues under the whole car; place all four wheels on that same plane, not one wheel higher than the other. '
-  + 'Keep the room exactly as it is in image 2: same walls, same floor, same lights, same camera position, same framing, and do not make the hall look smaller or narrower. '
-  + 'The whole car must be inside the picture with clear margin to every edge, and the roof must stay below the middle height of the picture. '
-  + 'Add a realistic soft ground shadow under the car, darkest directly under the tyres and the underbody, fading out softly a short distance beyond the outline, lying only on the floor and never on the walls. '
-  + 'Match brightness, contrast and white balance of the car to the light of this hall, without repainting the car. '
-  + 'The finished picture must be at least as bright as image 2: do not darken the room, not even slightly, because a dark showroom looks cheap in a listing. '
-  + 'Look carefully through the windscreen, the side windows and the rear window. '
-  + 'Everything visible through that glass belongs to the place where the car was photographed, so every other car, fence, tree, building, street and person behind the glass must be painted over with the calm reflections and surfaces of this showroom. '
-  + 'Keep the glass as glass: transparent where it was transparent, the seats and the interior still visible, and the tint exactly as dark as in image 1. '
+  'You are a retoucher at a professional car dealership. You prepare the photographs that go into the dealer’s online listings on mobile.de and AutoScout24. '
+  + 'A buyer decides from these pictures whether to drive across the country to see the car, and the dealer is legally liable for everything the pictures show or hide. Work accordingly: precise, sober, nothing invented, nothing beautified.\n\n'
+
+  + 'YOU RECEIVE TWO IMAGES.\n'
+  + 'Image 1: the dealer’s own photograph of one car, taken outdoors, in a yard, on a street or in a car park. It may be badly lit, crooked, cluttered with other cars, people, buildings, bins, fences or traffic signs.\n'
+  + 'Image 2: an empty showroom, photographed with no car in it. This is the room the car must end up in.\n\n'
+
+  + 'YOUR RESULT: exactly one photorealistic image, the same size and the same aspect ratio as image 2, showing the car from image 1 standing inside the showroom from image 2, so convincingly that nobody can tell the car was photographed anywhere else.\n\n'
+
+  + 'STEP 0 — IS THIS A USABLE PHOTOGRAPH?\n'
+  + 'Look at image 1 before you do anything else and decide what it shows.\n'
+  + 'If it shows a complete car seen from outside — front, rear, side or three-quarter view — carry out every step below.\n'
+  + 'If it does NOT show that — for example a person, a close-up of a wheel, a dashboard, a seat, an engine bay, a boot, a document, a registration paper, a screen, a key, a damaged part on its own, or a car so cut off that less than roughly two thirds of it is in frame — then do NOT place anything in the showroom. Return image 1 unchanged instead. A detail photograph belongs in the listing as it is; a detail pasted into an empty hall looks absurd and tells the buyer nothing.\n\n'
+
+  + 'STEP 1 — CUT THE CAR OUT OF IMAGE 1.\n'
+  + 'Separate the car from its surroundings completely and along its true outline.\n'
+  + 'These belong to the car and must come with it: wing mirrors including their arms, the roof aerial however thin, roof rails and roof boxes, spoilers, the tow bar and its ball head, mud flaps, side steps, wiper arms, number plate and plate frame, exhaust tips, and the dark gap between the bottom of the bumpers and the ground.\n'
+  + 'These do not belong to the car and must not come with it: the ground under the tyres, the shadow the car casts on that ground, kerbs, drain covers, painted parking lines, grass, gravel, snow, puddles, fences, hedges, walls, buildings, other cars, bicycles, people, animals, bins, cones, traffic signs, poles, cables, and the sky.\n'
+  + 'Pay particular attention to the places where a cut-out usually fails: the gaps inside the wheels between the spokes, the hollow under the door mirrors, the space between a roof rail and the roof, the window openings, the gap between tyre and wheel arch, and the thin line between the bonnet and the windscreen.\n'
+  + 'Not one pixel of the original surroundings may survive anywhere in the result, not even as a thin coloured fringe along the edge of the body, around the mirrors or between the spokes. A green fringe from a hedge or a grey fringe from asphalt is the single most common giveaway that a listing photo was edited.\n'
+  + 'Do not cut into the car either: no clipped mirror, no sliced bumper corner, no missing piece of roof, no amputated aerial.\n\n'
+
+  + 'STEP 2 — KEEP THE CAR EXACTLY AS IT WAS PHOTOGRAPHED.\n'
+  + 'This is the most important rule of all, and it outranks every wish to make the picture look nicer.\n'
+  + 'Same shape, same proportions, same body panels, same colour and the exact same shade of that colour, same metallic flake, same wheels, same rims down to the number of spokes, same tyres, same badges and lettering, same trim strips, same mirrors, same lights, same grille, same glass, same tint.\n'
+  + 'Never remove, smooth, repair, lighten or hide: a scratch, a scuff, a dent, a crease, a chipped edge, rust, a rust bubble, flaking lacquer, a stone chip, a crack or chip in the glass, a missing wheel cap, a kerbed rim, a bald tyre, brake dust, a sticker, a window advert, an inspection badge, dirt, dust, water spots, bird droppings, or a faded headlight.\n'
+  + 'Every one of those is a fact about this particular car. If the picture hides it, the dealer is liable for it. A listing photograph that flatters the car is worse than an ugly one.\n'
+  + 'Do not add anything the car does not have either: no extra spoiler, no different rims, no sunroof, no badge, no roof rails, no chrome, no tinted glass, no fresh shine on dull paint.\n'
+  + 'Keep the car as sharp and as detailed as it is in image 1. Do not smooth the paint, do not blur the panel gaps, do not give it a glossy plastic or rendered look, and do not apply any depth-of-field blur to any part of the car.\n'
+  + 'Never mirror or flip the car: the side that faces the camera in image 1 must face the camera in the result, the steering wheel stays on the same side, and all lettering stays readable the right way round.\n'
+  + 'Do not rotate the car to a different viewing angle. It stays photographed from the same angle it was photographed from; you may only straighten it by a degree or two to make it sit level.\n\n'
+
+  + 'STEP 3 — PLACE IT IN THE ROOM.\n'
+  + 'Keep the showroom exactly as it is in image 2: the same walls, the same floor and its texture, the same ceiling, the same lamps in the same places, the same windows, the same camera position, the same focal length, the same framing and the same brightness. Do not rebuild, extend, narrow, shorten or redecorate the hall, and do not add pillars, plants, banners, furniture, other cars, people or text to it.\n'
+  + 'Treat the floor of that room as one flat horizontal plane that continues underneath the whole car.\n'
+  + 'Stand the car on that plane so that every visible wheel touches it: no wheel floating above the floor, no wheel sunk into it, no wheel higher than another. The car must look neither tilted to one side nor leaning forwards or backwards.\n'
+  + 'The contact points of the wheels must follow the perspective of that floor — the far wheels sit higher in the picture than the near wheels, by the amount the floor’s perspective demands.\n'
+  + 'The line where the floor meets the back wall must run behind the car, never through it. No part of the car may stand in or behind that line, and no wheel may touch the wall.\n'
+  + 'You may move the car anywhere on the floor and scale it as much as you need. Its original size in image 1 does not matter; standing correctly in the room matters.\n'
+  + 'Size it so that the car covers roughly half the width of the picture and never more than sixty percent, with clearly visible empty floor in front of it, behind it and on both sides.\n'
+  + 'The whole car must be inside the picture with a clear margin to all four edges. Nothing may be cut off, not a mirror, not a bumper corner, not a wheel.\n'
+  + 'The roof of the car must stay below the middle height of the picture, so that the room is visible above it.\n\n'
+
+  + 'STEP 4 — SHADOW.\n'
+  + 'A car without a shadow floats, and that is the second most common giveaway after the fringe.\n'
+  + 'Build the shadow from two parts.\n'
+  + 'First the contact shadow: a narrow, clearly darker, fairly sharp dark area directly where each tyre meets the floor and in the shaded strip under the whole underbody between the wheels. This is what makes the car sit on the ground.\n'
+  + 'Then the ambient shadow: a soft, much lighter shadow that spreads a short distance outwards beyond the outline of the car and fades out gradually.\n'
+  + 'Its direction and length must match the lamps that are visible in image 2 — if the light comes mostly from above, the shadow stays close under the car.\n'
+  + 'The shadow lies on the floor only. It never climbs the walls, never falls on the ceiling, and never appears on the car itself.\n'
+  + 'If the floor in image 2 is glossy, add a faint, vertically stretched, blurred reflection of the car in it, directly below the car, clearly weaker than the car itself and fading out with distance. If the floor is matt, add no reflection at all. Never make the floor look wet.\n\n'
+
+  + 'STEP 5 — LIGHT.\n'
+  + 'Match the car to the light of the showroom without repainting it.\n'
+  + 'Adjust its overall brightness, its contrast and its white balance to the room: a car photographed in blue evening light or under a yellow street lamp must lose that cast and take on the neutral light of the hall.\n'
+  + 'Where the room has lamps above, the roof, the bonnet, the boot lid and the upper edges of the doors may carry soft highlights from them, and the shaded sides stay darker. Keep these highlights soft and plausible; do not paint hard white streaks onto the paint.\n'
+  + 'The colour of the car must stay the colour of the car. Do not deepen it, do not saturate it, do not make a silver car white or a dark grey car black.\n'
+  + 'The finished picture must be at least as bright as image 2. Do not darken the room, not even slightly: a dark showroom looks cheap in a listing.\n\n'
+
+  + 'STEP 6 — THE GLASS.\n'
+  + 'Look carefully through the windscreen, through every side window and through the rear window, and at the reflections lying on top of them.\n'
+  + 'Everything visible through or reflected in that glass still belongs to the place where the car was photographed. Every other car, fence, tree, hedge, building, street, pole, sign, cloud and person behind or on the glass must be painted over with the calm surfaces and soft reflections of this showroom instead.\n'
+  + 'The same applies to the mirrors and to the reflections on the paintwork itself: what is mirrored in the doors and the bonnet must be this hall, not a hedge or a block of flats.\n'
+  + 'Keep glass as glass: transparent where it was transparent, with the headrests, seats, steering wheel and interior still visible behind it, and with exactly the same tint as in image 1. Do not make the windows darker to hide what is behind them, and do not turn them into opaque mirrors.\n\n'
+
   + (firma
-    ? `Cover the number plate completely with a plain dark rectangular dealer sign, in the same place, at the same angle and with the same size and shape as the plate, so that not one character of the original plate stays readable. `
-      + `On that sign write this text and nothing else, in clean white letters, centred: "${firma}". `
+    ? 'STEP 7 — THE NUMBER PLATE.\n'
+      + 'Cover the number plate completely with a plain dark rectangular dealer sign. It sits in exactly the same place, at exactly the same angle and with the same size and shape as the plate it replaces, and it follows the perspective of the car. Not one character of the original plate may stay readable, not at the edges, not through the sign.\n'
+      + `On that sign write this text and nothing else, in clean white sans-serif letters, horizontally centred and vertically centred: "${firma}". `
       + `Spell it exactly like this, letter by letter, with no letter added, removed or exchanged: ${[...firma].map((z) => (z === ' ' ? 'SPACE' : z)).join('-')}. `
-      + `Read your own result back before you finish and compare it letter by letter with that spelling; a dealer name with one wrong letter would stand on every photo of the listing. `
-    : 'Cover the number plate completely with a plain dark rectangular sign, in the same place and at the same angle as the plate, so that not one character of it stays readable, and write no text on that sign. ')
-  + 'The car itself must stay exactly as photographed: same shape, same colour, same wheels, same rims, same badges, same trim, same mirrors, same windows. '
-  + 'Never hide, smooth or repair a scratch, a dent, rust, dirt, a sticker, a chip or a crack, neither in the paint nor in the glass, because the dealer is liable for every defect that a listing conceals. '
-  + 'Do not add parts the car does not have, and do not add people, other vehicles, plants, text, logos or watermarks anywhere in the image. '
-  + 'Before you finish, check your result once more: does every visible wheel touch the floor, is the whole car inside the picture, is any piece of the old surroundings still visible anywhere including through the glass, and is the dealer name spelled exactly as given? '
-  + 'Correct whatever fails that check, then return exactly one photorealistic image with the same dimensions as image 2.';
+      + 'Keep the text inside the sign with a small margin, do not let it touch the edges, and do not stretch it.\n'
+      + 'If a second plate is visible — for example at the front and the rear in a three-quarter view — treat it the same way.\n'
+      + 'Before you finish, read the name on the sign back in your own result and compare it letter by letter with the spelling above. A dealer name with one wrong letter would stand on every photograph of this listing.\n\n'
+    : 'STEP 7 — THE NUMBER PLATE.\n'
+      + 'Cover the number plate completely with a plain dark rectangular sign, in exactly the same place, at the same angle and with the same size and shape as the plate, following the perspective of the car, so that not one character of it stays readable. Write no text at all on that sign.\n'
+      + 'If a second plate is visible, treat it the same way.\n\n')
+
+  + 'NEVER DO THESE THINGS.\n'
+  + 'Do not add people, other vehicles, plants, furniture, price tags, banners, flags, text, logos, watermarks, signatures or borders anywhere in the image.\n'
+  + 'Do not add a second copy of the car, and do not show it from two sides at once.\n'
+  + 'Do not produce a collage, a split image, a frame, a caption or a before-and-after comparison. One single photograph, nothing else.\n'
+  + 'Do not change the aspect ratio or the dimensions of image 2.\n\n'
+
+  + 'FINAL CHECK — go through this list on your own result before you return it.\n'
+  + '1. Is the car in the result the same car as in image 1, with every scratch, dent, sticker and dirty patch still there?\n'
+  + '2. Is any piece of the old surroundings still visible anywhere — at the edge of the body, between the spokes, around the mirrors, through the glass, in the reflections on the paint?\n'
+  + '3. Does every visible wheel stand on the floor, on the same plane, with the car level and not tilted?\n'
+  + '4. Is the whole car inside the picture with a margin to every edge, and is the roof below the middle of the picture?\n'
+  + '5. Is the room still exactly the room from image 2, equally bright, with nothing added to it?\n'
+  + '6. Does the car have a contact shadow under the tyres and a soft shadow around it, lying only on the floor?\n'
+  + '7. Is the number plate completely covered, and is the dealer name spelled exactly as given?\n'
+  + 'Correct whatever fails this check, then return exactly one photorealistic image with the same dimensions as image 2.';
 
 function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
