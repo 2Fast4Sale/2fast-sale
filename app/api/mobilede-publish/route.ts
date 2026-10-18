@@ -69,6 +69,13 @@ interface FormData {
  */
 function inseratBauen(formData: FormData, description?: string) {
   const fehlt: string[] = [];
+  /*
+   * Angaben, die mobile.de so nicht annimmt und die nichts Pflichtiges
+   * sind: weglassen und hier vermerken. Sonst faehrt der Haendler
+   * entweder gegen eine Ablehnung des ganzen Inserats oder bekommt
+   * still ein Inserat ohne die Angabe.
+   */
+  const uebersprungen: string[] = [];
   const inserat: Record<string, unknown> = { vehicleClass: 'Car' };
 
   const marke = (formData.brand || '').trim();
@@ -149,12 +156,35 @@ function inseratBauen(formData: FormData, description?: string) {
     };
   } else fehlt.push('Preis');
 
-  const kw = ganzzahl(formData.powerKw);
-  if (kw > 0) inserat.power = kw;
-  const ccm = ganzzahl(formData.displacementCcm);
-  if (ccm > 0) inserat.cubicCapacity = ccm;
-  const sitze = ganzzahl(formData.seats);
-  if (sitze > 0) inserat.seats = sitze;
+  /*
+   * Zahlenfelder mit den Grenzen aus der Schnittstellenbeschreibung.
+   *
+   * Ein Wert ausserhalb der Grenzen wird WEGGELASSEN und gemeldet,
+   * nicht gekuerzt: Eine gekuerzte Zahl waere eine Falschangabe im
+   * Inserat des Haendlers. Vorher ging jeder Wert > 0 raus, und
+   * mobile.de lehnt dann das GANZE Inserat ab — wegen einer
+   * freiwilligen Angabe.
+   *
+   * Bei power widerspricht sich ihre eigene Dokumentation: Die
+   * Feldtabelle sagt 0 bis 9999, die Fehlerliste sagt
+   * "power-invalid-range Power must be in a range from 0 to 999".
+   * Hier gilt die engere Angabe — 999 kW sind 1358 PS, darueber
+   * steht kein Haendlerfahrzeug auf dem Hof, und ein abgelehntes
+   * Inserat ist teurer als ein fehlendes Feld.
+   */
+  const zahlFeld = (feld: string, roh: unknown, min: number, max: number, name: string) => {
+    const w = ganzzahl(roh);
+    if (w <= 0) return;
+    if (w < min || w > max) {
+      uebersprungen.push(`${name}: ${w} liegt ausserhalb von ${min}–${max}`);
+      return;
+    }
+    inserat[feld] = w;
+  };
+
+  zahlFeld('power', formData.powerKw, 1, 999, 'Leistung (kW)');
+  zahlFeld('cubicCapacity', formData.displacementCcm, 1, 99999, 'Hubraum (ccm)');
+  zahlFeld('seats', formData.seats, 1, 255, 'Sitzplätze');
   const tueren = mobileTueren(ganzzahl(formData.doors));
   if (tueren) inserat.doors = tueren;
   const vorbesitzer = ganzzahl(formData.previousOwners);
@@ -166,12 +196,9 @@ function inseratBauen(formData: FormData, description?: string) {
    * mobile.de nennt das Gewichtsfeld "weight". Gemeint ist die
    * Leermasse — dieselbe Zahl, die im Inserat unter "Gewicht" steht.
    */
-  const leermasse = ganzzahl(formData.leermasseKg);
-  if (leermasse > 0) inserat.weight = leermasse;
-  const zugGebremst = ganzzahl(formData.anhaengelastGebremstKg);
-  if (zugGebremst > 0) inserat.trailerLoadBraked = zugGebremst;
-  const zugUngebremst = ganzzahl(formData.anhaengelastUngebremstKg);
-  if (zugUngebremst > 0) inserat.trailerLoadUnbraked = zugUngebremst;
+  zahlFeld('weight', formData.leermasseKg, 1, 999999, 'Leermasse (kg)');
+  zahlFeld('trailerLoadBraked', formData.anhaengelastGebremstKg, 1, 99999, 'Anhängelast gebremst (kg)');
+  zahlFeld('trailerLoadUnbraked', formData.anhaengelastUngebremstKg, 1, 99999, 'Anhängelast ungebremst (kg)');
 
   /*
    * Fuenf Felder, die das Formular erfasst und die bisher weggeworfen
@@ -196,14 +223,23 @@ function inseratBauen(formData: FormData, description?: string) {
   if (land) inserat.countryVersion = land;
   else if (inserat.condition === 'NEW') fehlt.push('Länderversion (Pflicht bei Neuwagen)');
 
-  if (formData.vin) inserat.vin = formData.vin.toUpperCase();
+  /*
+   * Fahrgestellnummer: 17 Stellen, Grossbuchstaben. Das Grossschreiben
+   * steht so in ihrer Beschreibung ('The field is case sensitive. Please
+   * send capital letters'); die Laenge pruefte niemand, und eine
+   * abgetippte 16-stellige Nummer kippte das ganze Inserat mit
+   * vehicleIdentificationNumber-invalid.
+   */
+  const fin = String(formData.vin ?? '').trim().toUpperCase();
+  if (fin) {
+    if (/^[A-Z0-9]{17}$/.test(fin)) inserat.vin = fin;
+    else uebersprungen.push(`Fahrgestellnummer: "${fin}" hat nicht 17 Stellen`);
+  }
   const farbe = mobileFarbe(formData.color || '');
   if (farbe) inserat.exteriorColor = farbe;
   if (formData.metallic) inserat.metallic = true;
-  const zylinder = ganzzahl(formData.cylinders);
-  if (zylinder >= 1 && zylinder <= 24) inserat.cylinder = zylinder;
-  const tank = ganzzahl(formData.fuelTankVolume);
-  if (tank > 0 && tank <= 9999) inserat.fuelTankVolume = tank;
+  zahlFeld('cylinder', formData.cylinders, 1, 24, 'Zylinder');
+  zahlFeld('fuelTankVolume', formData.fuelTankVolume, 1, 9999, 'Tankinhalt (l)');
   /*
    * Die Herstellerfarbe.
    *
@@ -266,7 +302,7 @@ function inseratBauen(formData: FormData, description?: string) {
     fehlt.push('EnVKV-Angaben für Neuwagen');
   }
 
-  return { inserat, fehlt };
+  return { inserat, fehlt, uebersprungen };
 }
 
 /**
@@ -312,7 +348,7 @@ export async function POST(req: NextRequest) {
   /* Was kein Portal als Merkmal kennt — fuer die ehrliche Auskunft. */
   const nichtUebertragen = ohnePortalEntsprechung(formData?.equipment || []);
 
-  const { inserat, fehlt } = inseratBauen(angereichert, description);
+  const { inserat, fehlt, uebersprungen } = inseratBauen(angereichert, description);
 
   const zugang = await zugangLesen(user.id, 'mobile');
 
@@ -325,6 +361,7 @@ export async function POST(req: NextRequest) {
         : 'Die gespeicherten Zugangsdaten sind unvollstaendig',
       fehlendeAngaben: fehlt,
       nichtUebertragen,
+      uebersprungen: uebersprungen.length ? uebersprungen : undefined,
       ergaenzt: Object.keys(ergaenzungen).length ? ergaenzungen : undefined,
       wuerdeSenden: inserat,
     }, { status: trockenlauf ? 200 : 409 });
@@ -482,6 +519,7 @@ export async function POST(req: NextRequest) {
         + 'und kostet nichts. Öffentliche Links gibt es dafür nicht.'
       : undefined,
     nichtUebertragen,
+    uebersprungen: uebersprungen.length ? uebersprungen : undefined,
     ergaenzt: Object.keys(ergaenzungen).length ? ergaenzungen : undefined,
     imagesUploaded: bildVerweise.length,
     bildFehler,

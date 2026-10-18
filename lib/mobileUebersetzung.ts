@@ -13,6 +13,7 @@
  */
 
 import { grundfarbe } from './farbe';
+import { monatJahrLesen } from './erstzulassung';
 
 const gleich = (s: string): string => (s || '').trim().toLowerCase();
 
@@ -183,11 +184,25 @@ export function mobileAntrieb(a: string): string | undefined {
  * Schreibweise.
  */
 export function mobileHu(huUntil: string): string | undefined {
-  const s = (huUntil || '').trim();
-  const mmJJJJ = s.match(/^(\d{1,2})\s*[\/.]\s*(\d{4})$/);
-  if (mmJJJJ) return `${mmJJJJ[2]}${mmJJJJ[1].padStart(2, '0')}`;
-  if (/^\d{6}$/.test(s)) return s;
-  return undefined;
+  /*
+   * Gelesen wird mit derselben Funktion wie bei AutoScout24. Hier stand
+   * eine eigene: Sechs Ziffern gingen UNVERAENDERT durch, als waeren sie
+   * immer JJJJMM. Tippt der Haendler "112026" (November 2026, so wie es
+   * im Scan steht), ging daraus Jahr 1120, Monat 26 raus — dasselbe
+   * Feld, dieselbe Eingabe, und AutoScout24 nahm sie richtig an.
+   */
+  const d = monatJahrLesen(huUntil);
+  if (!d) return undefined;
+
+  /*
+   * Grenzen aus ihrer Fehlerliste: "hu-year-too-high — must not be more
+   * than 6 years in future", "hu-year-too-low — must not be before the
+   * year 1000". Vorher ging jedes Jahr raus, und ein Tippfehler im
+   * Datum hat das ganze Inserat gekippt.
+   */
+  const jetzt = new Date().getFullYear();
+  if (d.jahr > jetzt + 6 || d.jahr < 1000) return undefined;
+  return `${d.jahr}${String(d.monat).padStart(2, '0')}`;
 }
 
 /**
