@@ -57,12 +57,23 @@ Beispiele was zu suchen ist:
 - Premium-Soundsystem (Bose, Harman Kardon, B&O, Burmester, JBL)
 - Ambientebeleuchtung, elektrische Sitze, Memory-Sitze
 - Keyless Entry/Go, Start-Stopp, Mild-Hybrid, Plug-in Hybrid
-- Scheckheftgepflegt, Garantie, 1. Hand, Unfallfreiheit
 
 Antworte NUR als pures JSON ohne Markdown:
 {"equipment": ["Merkmal 1", "Merkmal 2", ...]}
 
-Gib so viele Merkmale wie möglich zurück. Lieber zu viel als zu wenig.`,
+Nimm NUR auf, was in diesem Dokument tatsächlich steht. Ergänze nichts
+aus dem, was du über dieses Modell oder diese Ausstattungslinie weißt —
+auch dann nicht, wenn es bei diesem Fahrzeug fast immer dabei ist. Die
+Liste landet in einem Verkaufsinserat, für das der Händler haftet; ein
+vermutetes Merkmal ist dort eine falsche Angabe.
+
+Nicht aufnehmen, selbst wenn es im Dokument steht: Scheckheft, Garantie,
+Anzahl der Vorbesitzer, Unfallfreiheit. Das sind keine
+Ausstattungsmerkmale, sie stehen im Formular in eigenen Feldern, und in
+einem alten Dokument sind sie veraltet — "1. Hand" in einem fünf Jahre
+alten Inserat ist heute falsch.
+
+Wenn du nichts lesen kannst: {"equipment": []}`,
           },
           toImageBlock(image),
         ],

@@ -28,7 +28,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ equipment: [] });
     }
 
-    const imageBlocks = images.slice(0, 3).map(toImageBlock);
+    /*
+     * Welche Fotos angeschaut werden.
+     *
+     * Vorher: die ersten drei. Die ersten Fotos eines Inserats sind
+     * aber immer Aussenansichten — der Haendler fotografiert vorne
+     * links, vorne rechts, hinten. Innenraum, Lenkrad und
+     * Mittelkonsole kommen ab Bild fuenf. Damit konnte diese Erkennung
+     * Sitzheizung, Navigation, Rueckfahrkamera und Ledersitze
+     * ueberhaupt nicht finden: Genau die Merkmale, die sie laut Liste
+     * erkennen darf, waren auf keinem der drei Bilder zu sehen.
+     *
+     * Jetzt acht Fotos, gleichmaessig ueber den ganzen Stapel verteilt.
+     * Das erste ist immer dabei. Acht statt alle, weil jedes Bild
+     * bezahlt wird (rund 4 Cent fuer den ganzen Aufruf) und ein
+     * Haendler bis zu 40 Fotos hochlaedt.
+     */
+    const HOECHSTENS = 8;
+    const auswahl: string[] = images.length <= HOECHSTENS
+      ? images
+      : Array.from({ length: HOECHSTENS },
+          (_, k) => images[Math.round((k * (images.length - 1)) / (HOECHSTENS - 1))]);
+    const imageBlocks = auswahl.map(toImageBlock);
 
     const response = await getAnthropic().messages.create({
       model: 'claude-opus-4-8',
