@@ -129,14 +129,26 @@ const anweisung = (firma?: string | null) =>
   + 'Then the ambient shadow: a soft, much lighter shadow that spreads a short distance outwards beyond the outline of the car and fades out gradually.\n'
   + 'Its direction and length must match the lamps that are visible in image 2 — if the light comes mostly from above, the shadow stays close under the car.\n'
   + 'The shadow lies on the floor only. It never climbs the walls, never falls on the ceiling, and never appears on the car itself.\n'
-  + 'If the floor in image 2 is glossy, add a faint, vertically stretched, blurred reflection of the car in it, directly below the car, clearly weaker than the car itself and fading out with distance. If the floor is matt, add no reflection at all. Never make the floor look wet.\n\n'
+  + 'The contact shadow is not optional and it is not a detail. A car with a reflection but without a dark patch under its tyres reads as a cut-out pasted onto a floor, and that is the single most common reason these pictures look fake.\n'
+  + 'If the floor in image 2 is glossy, add a faint, vertically stretched reflection of the car in it, directly below the car. That reflection must be blurred and soft, clearly weaker than the car itself, fading out with distance, and broken up by the texture, joints, dust and small marks of the real floor. Never a sharp, clean, perfect mirror image: a floor that mirrors like glass is the look of a computer rendering, not of a hall.\n'
+  + 'If the floor is matt, add no reflection at all. Never make the floor look wet or polished to a shine it does not have.\n\n'
 
   + 'STEP 5 — LIGHT.\n'
   + 'Match the car to the light of the showroom without repainting it.\n'
   + 'Adjust its overall brightness, its contrast and its white balance to the room: a car photographed in blue evening light or under a yellow street lamp must lose that cast and take on the neutral light of the hall.\n'
   + 'Where the room has lamps above, the roof, the bonnet, the boot lid and the upper edges of the doors may carry soft highlights from them, and the shaded sides stay darker. Keep these highlights soft and plausible; do not paint hard white streaks onto the paint.\n'
-  + 'The colour of the car must stay the colour of the car. Do not deepen it, do not saturate it, do not make a silver car white or a dark grey car black.\n'
+  + 'Remove the signs of the old light while you do it: hard sunlight highlights burnt into the bonnet and the roof, the hard-edged shadow of a tree or a fence lying across the body, and a blue or orange cast from sky or street lamps. Indoor light is soft and even, and a hard outdoor shadow edge on a car standing in a hall is impossible.\n'
+  + 'The colour of the car must stay the colour of the car, exactly as in image 1, in hue and in strength. Do not deepen it, do not saturate it, do not make a silver car white or a dark grey car black.\n'
+  + 'Above all, do not drain the colour out of the picture. A warm grey stays warm, a greenish grey stays greenish, a beige stays beige, and the metallic flake still glitters where the light hits it. The result is a colour photograph, never a grey, desaturated, washed-out or near-monochrome image: paint that has lost its own shade looks like unpainted clay, and clay is what a rendering looks like.\n'
   + 'The finished picture must be at least as bright as image 2. Do not darken the room, not even slightly: a dark showroom looks cheap in a listing.\n\n'
+
+  + 'STEP 5b — IT MUST LOOK PHOTOGRAPHED, NOT RENDERED.\n'
+  + 'The result has to pass as a photograph taken with a camera in a real hall. A buyer who has seen a hundred listings recognises a computer image immediately, and a car that looks computed looks like a car that is being hidden.\n'
+  + 'So: keep the fine grain and sensor noise of image 1 in the car, and keep the grain of image 2 in the room, instead of producing clean, noiseless, perfectly even surfaces.\n'
+  + 'Keep the real texture of the paint: the faint orange peel of the lacquer, the reflections of the surroundings running along the flanks, the slightly different sheen on bonnet, doors and bumper. Plastic trim, rubber seals and tyres stay matt and dark, never glossy.\n'
+  + 'Keep the floor and the walls of image 2 as they are: their texture, their joints, their small marks, their dust, their uneven lighting. Do not sand them smooth and do not give them an even studio glow.\n'
+  + 'Tyres keep their tread, their lettering and their dust; rims keep their brake dust and their scratches.\n'
+  + 'Nothing in the picture may look like a smooth untextured surface, and no edge of the car may be unnaturally clean or sharp against the background: real lenses give a soft transition of less than a pixel, not a cut-out line.\n\n'
 
   + 'STEP 6 — THE GLASS.\n'
   + 'Look carefully through the windscreen, through every side window and through the rear window, and at the reflections lying on top of them.\n'
@@ -168,7 +180,8 @@ const anweisung = (firma?: string | null) =>
   + '3. Does every visible wheel stand on the floor, on the same plane, with the car level and not tilted?\n'
   + '4. Is the whole car inside the picture with a margin to every edge, and is the roof below the middle of the picture?\n'
   + '5. Is the room still exactly the room from image 2, equally bright, with nothing added to it?\n'
-  + '6. Does the car have a contact shadow under the tyres and a soft shadow around it, lying only on the floor?\n'
+  + '6. Does the car have a clearly visible dark contact shadow under the tyres and a soft shadow around it, lying only on the floor?\n'
+  + '6b. Does the picture look photographed rather than rendered — grain present, paint colour as strong as in image 1, no clay-grey car, no mirror-smooth floor, no surface without texture?\n'
   + '7. Is the number plate completely covered, and is the dealer name spelled exactly as given?\n'
   + 'Correct whatever fails this check, then return exactly one photorealistic image with the same dimensions as image 2.';
 
