@@ -151,7 +151,8 @@ const anweisung = (firma?: string | null) =>
   + 'Nothing in the picture may look like a smooth untextured surface, and no edge of the car may be unnaturally clean or sharp against the background: real lenses give a soft transition of less than a pixel, not a cut-out line.\n\n'
 
   + 'STEP 6 — THE GLASS.\n'
-  + 'Look carefully through the windscreen, through every side window and through the rear window, and at the reflections lying on top of them.\n'
+  + 'Go through the panes one by one and look through each of them separately: the windscreen, the driver window, the front passenger window, both rear side windows, the small rear quarter windows behind them, and the rear window. The small panes at the back are the ones that get forgotten, and that is exactly where the old place stays visible — a strip of hedge, a few treetops, a horizon line, a patch of sky above the shoulder line.\n'
+  + 'Look as carefully at the reflections lying on top of the glass as at what is behind it.\n'
   + 'Everything visible through or reflected in that glass still belongs to the place where the car was photographed. Every other car, fence, tree, hedge, building, street, pole, sign, cloud and person behind or on the glass must be painted over with the calm surfaces and soft reflections of this showroom instead.\n'
   + 'The same applies to the mirrors and to the reflections on the paintwork itself: what is mirrored in the doors and the bonnet must be this hall, not a hedge or a block of flats.\n'
   + 'Keep glass as glass: transparent where it was transparent, with the headrests, seats, steering wheel and interior still visible behind it, and with exactly the same tint as in image 1. Do not make the windows darker to hide what is behind them, and do not turn them into opaque mirrors.\n\n'
@@ -177,6 +178,7 @@ const anweisung = (firma?: string | null) =>
   + 'FINAL CHECK — go through this list on your own result before you return it.\n'
   + '1. Is the car in the result the same car as in image 1, with every scratch, dent, sticker and dirty patch still there?\n'
   + '2. Is any piece of the old surroundings still visible anywhere — at the edge of the body, between the spokes, around the mirrors, through the glass, in the reflections on the paint?\n'
+  + '2b. Go to the rear side windows and the small quarter windows once more and look closely: is there still a hedge, a treetop, a horizon line or a patch of sky behind them? That is the place where it survives.\n'
   + '3. Does every visible wheel stand on the floor, on the same plane, with the car level and not tilted?\n'
   + '4. Is the whole car inside the picture with a margin to every edge, and is the roof below the middle of the picture?\n'
   + '5. Is the room still exactly the room from image 2, equally bright, with nothing added to it?\n'

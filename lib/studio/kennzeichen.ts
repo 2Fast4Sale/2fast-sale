@@ -364,8 +364,24 @@ export async function ersetzeKennzeichenImKasten(
 
   // Etwas groesser, damit Rand und Schrauben verschwinden.
   const rand = Math.max(2, Math.round(H * 0.10));
-  const sw = Math.round(W + rand * 2), sh = Math.round(H + rand * 2);
-  const pad = rand * 3;
+  /*
+   * Das Schild muss den erkannten Kasten IMMER ganz verdecken.
+   *
+   * Die Hoehe H wird oben geschaetzt — aus dem blauen EU-Feld oder aus
+   * dem Verhaeltnis 3,6 : 1 eines schraeg gesehenen Schildes. Faellt
+   * die Schaetzung zu klein aus, bleibt oben ein Streifen des echten
+   * Kennzeichens stehen. Genau das ist am Audi Q7 passiert: Ueber dem
+   * Haendlerschild standen die oberen Kanten der Ziffern noch im Bild,
+   * lesbar genug, um das Fahrzeug zuzuordnen.
+   *
+   * Ein lesbares Kennzeichen ist ein personenbezogenes Datum. Deshalb
+   * hier die Untergrenze: nie kleiner als der Kasten, mit etwas
+   * Zugabe. Zu gross faellt nicht auf — das Schild sitzt ohnehin in
+   * der dunklen Stossstange.
+   */
+  const sw = Math.max(Math.round(W + rand * 2), Math.round(w * 1.04));
+  const sh = Math.max(Math.round(H + rand * 2), Math.round(h * 1.10));
+  const pad = Math.max(rand * 3, Math.ceil(Math.max(sw - w, sh - h) / 2) + 4);
   const lw = w + pad * 2, lh = h + pad * 2;
 
   const svg = Buffer.from(
