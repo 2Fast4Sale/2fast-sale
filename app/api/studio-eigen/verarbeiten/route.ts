@@ -9,6 +9,7 @@ import { raum, raumBild } from '../../../../lib/studio/raeume';
 import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, istEchtesKennzeichen, type KennzeichenKasten } from '../../../../lib/studio/kennzeichen';
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
+import { freistellenMitGemini, freistellGrund } from '../../../../lib/studio/geminiFreisteller';
 import { studioBildMitGemini, studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
@@ -228,6 +229,29 @@ export async function POST(req: NextRequest) {
     const geminiWeg = !!process.env.GEMINI_API_KEY && process.env.STUDIO_WEG !== 'aus';
 
     /*
+     * Zwei Arten, Gemini zu benutzen — und sie unterscheiden sich in
+     * genau dem Punkt, auf den es bei einem Inserat ankommt.
+     *
+     *   'maske'  (Voreinstellung)  Gemini sagt nur, welche Bildpunkte
+     *            zum Fahrzeug gehoeren. Die Farbe kommt aus dem
+     *            Originalfoto, Punkt fuer Punkt. Hinstellen, Schatten
+     *            und Spiegelung rechnet der Kompositor mit den
+     *            Kameradaten des Raums.
+     *
+     *   'malen'  Gemini baut das ganze Bild. Sitzt sauber im Raum, aber
+     *            das Auto darin ist eine Nachzeichnung: Lack neu
+     *            gerechnet, Felgen neu gerechnet, Spiegelungen
+     *            erfunden. Genau das sah im ersten echten Versuch
+     *            (Audi Q7) unecht aus, und es ist auch rechtlich die
+     *            schlechtere Seite — ein nachgemaltes Auto kann einen
+     *            Kratzer verlieren, fuer den der Haendler haftet.
+     *
+     * Umschaltbar ueber STUDIO_GEMINI_WEG, damit sich beides am selben
+     * Foto vergleichen laesst.
+     */
+    const geminiMalt = geminiWeg && (process.env.STUDIO_GEMINI_WEG || 'maske') === 'malen';
+
+    /*
      * Das Kennzeichen deckt IMMER der eigene Code ab.
      *
      * Gemini bekam die Aufgabe dreimal ausdruecklich in seiner Anweisung
@@ -244,7 +268,7 @@ export async function POST(req: NextRequest) {
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
     let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0 && !geminiWeg) {
+      if (roh.length > 0 && !geminiMalt) {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -313,7 +337,7 @@ export async function POST(req: NextRequest) {
       });
     };
 
-    if (geminiWeg && halle) {
+    if (geminiMalt && halle) {
 
       const quelle = roh.length > 0 ? roh : vorab;
       if (quelle && quelle.length > 0) {
@@ -407,8 +431,32 @@ export async function POST(req: NextRequest) {
     // Freistellungskante als Teiltransparenz, sonst harte Raender.
     form.append('format', 'png');
 
+    /*
+     * ── Gemini als Freisteller ────────────────────────────────────
+     *
+     * Die eine Aufgabe, die Gemini wirklich besser kann als jedes
+     * Modell im Browser: erkennen, welche Bildpunkte zum Fahrzeug
+     * gehoeren. Im Stapel ueber 65 Fotos liess der eigene Weg bei zwoelf
+     * nur Bruchstuecke uebrig — dunkles Auto auf dunklem Pflaster.
+     *
+     * Zurueck kommt das ORIGINALFOTO mit Alphakanal, nicht ein neu
+     * gemaltes Auto. Die Farbe stammt Punkt fuer Punkt aus der Datei
+     * des Haendlers; aus Geminis Antwort wird nur gelesen, wo das
+     * Fahrzeug aufhoert.
+     */
+    /* Nur mit dem Originalfoto: Was aus dem Browser kommt, ist bereits
+     * freigestellt, dort ist nichts mehr zu trennen. */
+    const geminiFrei = geminiWeg && !geminiMalt && roh.length > 0
+      ? await freistellenMitGemini(roh, bildGebucht)
+      : null;
+    if (geminiWeg && !geminiMalt && roh.length > 0 && !geminiFrei) {
+      console.warn('[verarbeiten] Gemini-Freisteller nicht verwendbar:', freistellGrund());
+    }
+
     let freigestellt: Buffer;
-    if (vorab) {
+    if (geminiFrei) {
+      freigestellt = geminiFrei;
+    } else if (vorab) {
       /*
        * Erst pruefen, ob die Freistellung ueberhaupt etwas taugt.
        *
@@ -462,7 +510,7 @@ export async function POST(req: NextRequest) {
          * der Server selbst (kennzeichenModell.ts) — im Browser laeuft das
          * Modell nicht.
          */
-        if (geminiWeg) throw new Error('Gemini setzt das Schild');
+        if (geminiMalt) throw new Error('Gemini setzt das Schild');
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -581,7 +629,7 @@ export async function POST(req: NextRequest) {
     let geaendert = 0;
     /* Anteil geaenderter Punkte an der oberen Fahrzeughaelfte (Scheiben). */
     let fahrzeugGeaendert = 0;
-    if (geminiWeg) {
+    if (geminiMalt) {
       const vorherBild = ergebnis.bild;
       let fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null, bildGebucht);
       /*
