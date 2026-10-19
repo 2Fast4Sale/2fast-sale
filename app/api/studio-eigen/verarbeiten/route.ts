@@ -350,13 +350,46 @@ export async function POST(req: NextRequest) {
         }
         if (ki) {
           /*
+           * ── Das Schild zum Schluss noch einmal selbst setzen ──────
+           *
+           * Gemini malt das ganze Bild neu, also auch das Schild, das
+           * der eigene Code vorher aufs Kennzeichen gelegt hat. Dabei
+           * schreibt es die Beschriftung ab — und verschreibt sich: Am
+           * Q7 stand "VIBa Automobile" statt "ViBa Automobile", der
+           * Punkt auf dem i war weg. In der Anweisung steht die
+           * Buchstabierung Zeichen fuer Zeichen; es hat trotzdem nicht
+           * gereicht, und das wird es auch nicht, denn das Modell malt
+           * Buchstaben, es setzt sie nicht.
+           *
+           * Ein falsch geschriebener Haendlername steht auf jedem Foto
+           * des Inserats. Deshalb kommt das Schild hier noch einmal
+           * drueber, gezeichnet statt gemalt. Gesucht wird es auf dem
+           * FERTIGEN Bild, weil Gemini den Wagen verschoben und in der
+           * Groesse veraendert haben kann.
+           */
+          let fertig = ki.bild;
+          let schildQuelle: 'modell' | 'gemini' = 'gemini';
+          try {
+            const fund = await kennzeichenAufServerFinden(fertig);
+            if (fund && fund !== 'keins') {
+              const kz = await ersetzeKennzeichenImKasten(fertig, fund, firma ?? null);
+              if (kz.ersetzt) { fertig = kz.bild; schildQuelle = 'modell'; }
+            }
+          } catch (err) {
+            /* Misslingt es, bleibt Geminis Schild stehen — verdeckt ist
+               das Kennzeichen dann trotzdem, nur der Name kann falsch
+               geschrieben sein. */
+            console.warn('[verarbeiten] Schild nachtraeglich setzen misslang:', err);
+          }
+
+          /*
            * Keine Buchung mehr an dieser Stelle: bildGebucht hat jedes
            * erzeugte Bild einzeln gebucht, auch die verworfenen.
            */
           return NextResponse.json({
-            result: `data:image/jpeg;base64,${ki.bild.toString('base64')}`,
+            result: `data:image/jpeg;base64,${fertig.toString('base64')}`,
             kennzeichenErsetzt: true,
-            kennzeichenQuelle: 'gemini',
+            kennzeichenQuelle: schildQuelle,
             gemini: true,
             verfeinert: Number(ki.aehnlich.toFixed(3)),
             geaendert: Number(ki.geaendert.toFixed(1)),

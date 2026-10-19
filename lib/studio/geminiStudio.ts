@@ -131,6 +131,8 @@ const anweisung = (firma?: string | null) =>
   + 'The shadow lies on the floor only. It never climbs the walls, never falls on the ceiling, and never appears on the car itself.\n'
   + 'The contact shadow is not optional and it is not a detail. A car with a reflection but without a dark patch under its tyres reads as a cut-out pasted onto a floor, and that is the single most common reason these pictures look fake.\n'
   + 'If the floor in image 2 is glossy, add a faint, vertically stretched reflection of the car in it, directly below the car. That reflection must be blurred and soft, clearly weaker than the car itself, fading out with distance, and broken up by the texture, joints, dust and small marks of the real floor. Never a sharp, clean, perfect mirror image: a floor that mirrors like glass is the look of a computer rendering, not of a hall.\n'
+  + 'Keep it short and keep it vague: it fades away within roughly the lower third of the car’s own height, and nothing in it may be readable or identifiable — no legible lettering on the dealer sign, no countable spokes in the wheels, no sharp edge of the bumper. If a viewer can read the mirrored text, the reflection is far too strong.\n'
+  + 'The contact shadow stays visible on a glossy floor too. Reflection and shadow are two different things: the dark patch where the tyre meets the floor must still be there, otherwise the car stands on a mirror instead of on the ground.\n'
   + 'If the floor is matt, add no reflection at all. Never make the floor look wet or polished to a shine it does not have.\n\n'
 
   + 'STEP 5 — LIGHT.\n'
@@ -155,7 +157,9 @@ const anweisung = (firma?: string | null) =>
   + 'Look as carefully at the reflections lying on top of the glass as at what is behind it.\n'
   + 'Everything visible through or reflected in that glass still belongs to the place where the car was photographed. Every other car, fence, tree, hedge, building, street, pole, sign, cloud and person behind or on the glass must be painted over with the calm surfaces and soft reflections of this showroom instead.\n'
   + 'The same applies to the mirrors and to the reflections on the paintwork itself: what is mirrored in the doors and the bonnet must be this hall, not a hedge or a block of flats.\n'
-  + 'Keep glass as glass: transparent where it was transparent, with the headrests, seats, steering wheel and interior still visible behind it, and with exactly the same tint as in image 1. Do not make the windows darker to hide what is behind them, and do not turn them into opaque mirrors.\n\n'
+  + 'Keep glass as glass: transparent where it was transparent, with the headrests, seats, steering wheel and interior still visible behind it, and with exactly the same tint as in image 1. Do not make the windows darker to hide what is behind them, and do not turn them into opaque mirrors.\n'
+  + 'Where a pane shows no interior at all — typically the small rear quarter windows, where you only ever saw the hedge or the sky behind the car — fill it with the calm grey of the showroom wall seen through tinted glass. That is what you would really see there, and it is always better than a leftover piece of garden.\n'
+  + 'This matters more than it sounds: in a listing, a buyer zooms into exactly these windows to look at the interior. A row of treetops behind the rear door is the one detail that gives away where the car really stood.\n\n'
 
   + (firma
     ? 'STEP 7 — THE NUMBER PLATE.\n'
