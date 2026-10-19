@@ -246,10 +246,12 @@ export async function POST(req: NextRequest) {
      *            schlechtere Seite — ein nachgemaltes Auto kann einen
      *            Kratzer verlieren, fuer den der Haendler haftet.
      *
-     * Umschaltbar ueber STUDIO_GEMINI_WEG, damit sich beides am selben
-     * Foto vergleichen laesst.
+     * Fabian hat am 19.10.2026 entschieden: In Schritt 2 macht Gemini
+     * alles allein. Der Einwand — das Fahrzeug ist danach eine
+     * Nachzeichnung — stand dabei auf dem Tisch; es bleibt bei 'malen'.
+     * 'maske' ist nur noch zum Vergleichen da (STUDIO_GEMINI_WEG=maske).
      */
-    const geminiMalt = geminiWeg && (process.env.STUDIO_GEMINI_WEG || 'maske') === 'malen';
+    const geminiMalt = geminiWeg && (process.env.STUDIO_GEMINI_WEG || 'malen') !== 'maske';
 
     /*
      * Das Kennzeichen deckt IMMER der eigene Code ab.
@@ -268,7 +270,7 @@ export async function POST(req: NextRequest) {
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
     let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0 && !geminiMalt) {
+      if (roh.length > 0) {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
