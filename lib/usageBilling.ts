@@ -29,7 +29,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
  * abgedeckt; berechnet wird hier nur, was darueber hinausgeht.
  */
 export { PREIS_PRO_INSERAT_CENT } from './preismodell';
-import { PREIS_PRO_INSERAT_CENT, studioZusatzCent } from './preismodell';
+import { PREIS_PRO_INSERAT_CENT, studioZusatzCent, PAKETE } from './preismodell';
 
 /*
  * Kontingent und Zusatzpreis kommen aus lib/studioQuota — dasselbe Modul, das
@@ -99,12 +99,66 @@ export async function berechneInserat(args: {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('usage_billing, stripe_customer_id')
+      .select('usage_billing, stripe_customer_id, plan')
       .eq('id', userId)
       .single();
 
-    if (!profile?.usage_billing) {
+    /*
+     * ── Paketkunden: Kontingent zaehlen ───────────────────────────────
+     *
+     * Ein Paket enthaelt eine Zahl von Inseraten im Monat (S 50, M 150,
+     * L 550). Auf der Preisseite steht seit jeher, was darueber hinaus
+     * passiert: "x Inserate ueber dem Kontingent" zum Einzelpreis.
+     *
+     * Berechnet wurde das nie. Diese Funktion stieg bei jedem
+     * Paketkunden sofort mit "kein_usage_kunde" aus, und
+     * consume_listing_credit gab fuer jeden Plan ausser 'free' einfach
+     * true zurueck. Ein Paket S fuer 320 EUR erlaubte damit
+     * unbegrenzt viele Inserate — bei rund 1,30 EUR Einkauf je Inserat
+     * ist das ab dem 247. Inserat ein Verlustgeschaeft, und nach oben
+     * offen.
+     *
+     * Gezaehlt wird ueber listing_charges: Fuer JEDES Inserat entsteht
+     * dort eine Zeile, auch die im Kontingent mit 0 Cent. Das ist
+     * zugleich die Zaehlung und die Sperre gegen Doppelberechnung
+     * (vehicle_id ist unique).
+     */
+    const paket = PAKETE.find(p => p.id === profile?.plan);
+
+    if (!profile || (!profile.usage_billing && !paket)) {
       return { berechnet: false, grund: 'kein_usage_kunde' };
+    }
+
+    let imKontingent = false;
+    if (paket) {
+      /*
+       * Kalendermonat, nicht Abrechnungszeitraum von Stripe. Der
+       * Haendler liest sein Kontingent als "50 im Monat"; ein Zeitraum,
+       * der am 17. beginnt, waere ihm nicht zu erklaeren. Der
+       * Unterschied faellt nur in dem Monat an, in dem er bucht.
+       */
+      const monatsBeginn = new Date();
+      monatsBeginn.setDate(1);
+      monatsBeginn.setHours(0, 0, 0, 0);
+
+      const { count, error: zaehlFehler } = await supabase
+        .from('listing_charges')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', monatsBeginn.toISOString());
+
+      if (zaehlFehler) {
+        /*
+         * Im Zweifel fuer den Haendler: Laesst sich nicht zaehlen, gilt
+         * das Inserat als im Kontingent. Lieber einmal nicht berechnet
+         * als einem Kunden etwas in Rechnung gestellt, das sein Paket
+         * abdeckt.
+         */
+        console.error('[usageBilling] Kontingent nicht zaehlbar:', zaehlFehler.message);
+        imKontingent = true;
+      } else {
+        imKontingent = (count ?? 0) < paket.inserate;
+      }
     }
 
     /*
@@ -129,7 +183,16 @@ export async function berechneInserat(args: {
       }
     }
 
-    const posten = berechnePosten(studioImages);
+    const rohPosten = berechnePosten(studioImages);
+    /*
+     * Im Kontingent kostet das Inserat selbst nichts. Zusaetzliche
+     * Studio-Bilder kosten trotzdem — sie stehen in keinem Paket drin
+     * (siehe studioQuota: fuenfzehn ueberall, jedes weitere 14 Cent),
+     * und sie sind der Posten, der uns wirklich Geld kostet.
+     */
+    const posten = imKontingent
+      ? { ...rohPosten, baseCents: 0, summeCent: rohPosten.extraCents }
+      : rohPosten;
 
     // Posten zuerst in der eigenen Datenbank festhalten. Das unique auf
     // vehicle_id laesst den zweiten Versuch scheitern — genau so soll es sein.
@@ -169,13 +232,21 @@ export async function berechneInserat(args: {
     // Ohne "invoice" haengt Stripe den Posten an die naechste Abo-Rechnung.
     // Grundpreis und Zusatzbilder werden getrennt ausgewiesen, damit der
     // Haendler auf der Rechnung sieht, wofuer er zahlt.
-    const item = await stripe.invoiceItems.create({
-      customer:    profile.stripe_customer_id,
-      amount:      posten.baseCents,
-      currency:    'eur',
-      description: `Inserat: ${bezug}`,
-      metadata:    { vehicle_id: vehicleId, user_id: userId, art: 'inserat' },
-    });
+    /*
+     * Im Kontingent entsteht kein Posten bei Stripe. Die Zeile in
+     * listing_charges bleibt trotzdem stehen — sie ist die Zaehlung.
+     */
+    const item = posten.baseCents > 0
+      ? await stripe.invoiceItems.create({
+          customer:    profile.stripe_customer_id,
+          amount:      posten.baseCents,
+          currency:    'eur',
+          description: paket
+            ? `Inserat über dem Kontingent (${paket.name}): ${bezug}`
+            : `Inserat: ${bezug}`,
+          metadata:    { vehicle_id: vehicleId, user_id: userId, art: 'inserat' },
+        })
+      : null;
 
     if (posten.extraCents > 0) {
       await stripe.invoiceItems.create({
@@ -189,7 +260,10 @@ export async function berechneInserat(args: {
 
     await supabase
       .from('listing_charges')
-      .update({ stripe_invoice_item_id: item.id, billed_at: new Date().toISOString() })
+      .update({
+        stripe_invoice_item_id: item?.id ?? null,
+        billed_at: item ? new Date().toISOString() : null,
+      })
       .eq('id', charge.id);
 
     return { berechnet: true, betragCent: posten.summeCent };

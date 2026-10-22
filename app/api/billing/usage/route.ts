@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '../../../../lib/supabase/server';
 import { periodenNutzung, PREIS_PRO_INSERAT_CENT } from '../../../../lib/usageBilling';
+import { PAKETE } from '../../../../lib/preismodell';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,11 +17,23 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('usage_billing')
+    .select('usage_billing, plan')
     .eq('id', user.id)
     .single();
 
-  if (!profile?.usage_billing) {
+  /*
+   * Paketkunden sehen hier ihr Kontingent.
+   *
+   * Vorher stieg diese Auskunft bei ihnen mit usageBilling:false aus —
+   * sie hatten also keine Moeglichkeit zu sehen, wie viele ihrer
+   * Inserate noch im Paket stecken. Seit die Inserate ueber dem
+   * Kontingent wirklich berechnet werden, ist das keine Nettigkeit
+   * mehr, sondern Pflicht: Eine Rechnung am Monatsende darf nie eine
+   * Ueberraschung sein.
+   */
+  const paket = PAKETE.find(p => p.id === profile?.plan);
+
+  if (!profile?.usage_billing && !paket) {
     return NextResponse.json({ usageBilling: false });
   }
 
@@ -37,5 +50,11 @@ export async function GET() {
     anzahl,
     summeCent,
     preisProInserat: PREIS_PRO_INSERAT_CENT,
+    ...(paket ? {
+      paket:          paket.name,
+      kontingent:     paket.inserate,
+      nochFrei:       Math.max(0, paket.inserate - anzahl),
+      ueberKontingent: Math.max(0, anzahl - paket.inserate),
+    } : {}),
   });
 }
