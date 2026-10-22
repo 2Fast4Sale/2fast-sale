@@ -111,6 +111,16 @@ const anweisung = (firma?: string | null) =>
   + 'Never mirror or flip the car: the side that faces the camera in image 1 must face the camera in the result, the steering wheel stays on the same side, and all lettering stays readable the right way round.\n'
   + 'Do not rotate the car to a different viewing angle. It stays photographed from the same angle it was photographed from; you may only straighten it by a degree or two to make it sit level.\n\n'
 
+  + 'STEP 2b — THE DETAILS THAT DRIFT. Go through this list on the car in front of you; every one of these has been changed by accident before, and a buyer notices all of them.\n'
+  + 'Wheels: the same rim design, the same number of spokes, the same colour — black rims stay black, a kerbed rim stays kerbed. The same diameter: do not fit larger wheels, and do not make the tyre sidewall thinner. Tyre brand lettering, tread pattern and tyre dirt stay as they are.\n'
+  + 'Steering: the front wheels stay turned exactly as far as they are turned in image 1. Do not straighten them.\n'
+  + 'Ride height and proportions: do not lower the car, do not raise it, do not widen the arches, do not stretch or shorten the body, do not make it look sportier. An estate stays an estate, a van stays a van, an SUV keeps its height.\n'
+  + 'Badges and lettering: the model name, the engine badge and the trim lettering on the tailgate and the wings stay exactly the same characters in exactly the same places. Do not invent a badge, do not remove one, do not change the maker’s logo.\n'
+  + 'Lights: if the headlights are off in image 1 they stay off; if the daytime running lights are lit they stay lit, in the same pattern and the same colour. Do not switch anything on to make the car look better.\n'
+  + 'Open or closed stays open or closed: doors, boot, bonnet, fuel flap, sunroof, convertible top, folded or unfolded mirrors, aerial up or down.\n'
+  + 'Things stuck to the car stay: the inspection badge on the windscreen, a toll or parking sticker, a dealer sticker in the rear window, a roof box, a bike rack, a tow bar, mud flaps.\n'
+  + 'Inside: the seats keep their colour and their material, the headrests stay where they are, an object lying on the back seat stays lying there. Do not tidy the interior.\n\n'
+
   + 'STEP 3 — PLACE IT IN THE ROOM.\n'
   + 'Keep the showroom exactly as it is in image 2: the same walls, the same floor and its texture, the same ceiling, the same lamps in the same places, the same windows, the same camera position, the same focal length, the same framing and the same brightness. Do not rebuild, extend, narrow, shorten or redecorate the hall, and do not add pillars, plants, banners, furniture, other cars, people or text to it.\n'
   + 'Treat the floor of that room as one flat horizontal plane that continues underneath the whole car.\n'
@@ -122,6 +132,13 @@ const anweisung = (firma?: string | null) =>
   + 'The whole car must be inside the picture with a clear margin to all four edges. Nothing may be cut off, not a mirror, not a bumper corner, not a wheel.\n'
   + 'The roof of the car must stay below the middle height of the picture, so that the room is visible above it.\n\n'
 
+  + 'STEP 3b — CAMERA AND PERSPECTIVE.\n'
+  + 'Image 2 was taken from a specific height with a specific lens, and the car has to agree with that, otherwise it looks pasted even when everything else is right.\n'
+  + 'Keep the angle the car was photographed from. If image 1 shows the car slightly from above, it keeps that; if it was taken from a low position, it keeps that too. Never re-draw the car from a different angle to make it fit the room.\n'
+  + 'Match the horizon instead: place and scale the car so that the vanishing lines of its roof, window line and sills run towards the same horizon as the floor and the wall of the room. A car whose perspective points above or below the room’s horizon is the classic pasted-in look.\n'
+  + 'Keep the vertical lines of the room vertical — wall corners, door frames, pillars. Do not tilt or rotate the picture.\n'
+  + 'Stand the car roughly parallel to the back wall, turned by the same amount as in image 1, and leave clear floor between the car and that wall: about one car width, so the hall has depth behind it.\n'
+  + 'Do not zoom, crop or re-frame the room to make the car fit. The car is moved and scaled, the room is not.\n\n'
   + 'STEP 4 — SHADOW.\n'
   + 'A car without a shadow floats, and that is the second most common giveaway after the fringe.\n'
   + 'Build the shadow from two parts.\n'
@@ -152,6 +169,14 @@ const anweisung = (firma?: string | null) =>
   + 'Tyres keep their tread, their lettering and their dust; rims keep their brake dust and their scratches.\n'
   + 'Nothing in the picture may look like a smooth untextured surface, and no edge of the car may be unnaturally clean or sharp against the background: real lenses give a soft transition of less than a pixel, not a cut-out line.\n\n'
 
+  + 'STEP 5c — WHAT THE HALL DOES TO THE BODYWORK. This is where a picture becomes believable, so work through it part by part.\n'
+  + 'Car paint is a mirror, a blurred one. Whatever is in image 2 has to appear in it, softly: the bright ceiling or the light band above shows up as a long highlight running along the shoulder line and across the roof, the bonnet and the boot lid; the darker floor shows up as a dimmer, slightly warmer band low down in the doors and the sills; the back wall shows in the flanks as a broad, even, barely visible tone.\n'
+  + 'The highlight follows the shape of the panel. It is narrow and bright over a sharp body crease, wide and soft on a flat door, and it bends where the panel bends. It never runs straight across a curved flank.\n'
+  + 'Chrome and polished metal mirror sharply and brightly: window trim, the frame of the grille, exhaust tips, the badge. Matt black plastic, rubber seals and tyres barely mirror at all and stay dark. Do not give them a wet shine.\n'
+  + 'Glass mirrors the ceiling lights as soft rectangles and keeps a slight blue-grey cast; it is brighter at the top of the pane than at the bottom.\n'
+  + 'It gets darker where the hall’s light cannot reach: inside the wheel arches, under the bumpers, under the mirrors, behind the wheels, in the gap under the sills. Those areas are the darkest parts of the car and they must not be lifted to the same brightness as the flanks.\n'
+  + 'The top surfaces are the brightest, the flanks are in between, the lower edges are darkest. If your result has the same brightness everywhere, the car is lit by nothing and looks cut out.\n'
+  + 'Keep all of this soft and plausible. No hard white streaks painted onto the paint, no star-shaped sparkles, no glow around the car, no halo along its outline.\n\n'
   + 'STEP 6 — THE GLASS.\n'
   + 'Go through the panes one by one and look through each of them separately: the windscreen, the driver window, the front passenger window, both rear side windows, the small rear quarter windows behind them, and the rear window. The small panes at the back are the ones that get forgotten, and that is exactly where the old place stays visible — a strip of hedge, a few treetops, a horizon line, a patch of sky above the shoulder line.\n'
   + 'Look as carefully at the reflections lying on top of the glass as at what is behind it.\n'
@@ -173,6 +198,14 @@ const anweisung = (firma?: string | null) =>
       + 'Cover the number plate completely with a plain dark rectangular sign, in exactly the same place, at the same angle and with the same size and shape as the plate, following the perspective of the car, so that not one character of it stays readable. Write no text at all on that sign.\n'
       + 'If a second plate is visible, treat it the same way.\n\n')
 
+  + 'THE SEVEN MISTAKES THAT HAVE ACTUALLY HAPPENED WITH THIS TASK. They are listed because they came back from real listings, not because they are theoretically possible. Check your result against every one of them.\n'
+  + '1. A strip of the old place survived behind the rear side windows: treetops, a hedge, a horizon line. The small panes at the back are where it hides.\n'
+  + '2. The number plate stayed partly readable because the dealer sign was drawn slightly too small and the top edge of the digits showed above it.\n'
+  + '3. The dealer name on the sign was misspelled — a capital I instead of a lower-case i, the dot on the i missing. The name must be copied letter by letter from the spelling given above.\n'
+  + '4. The floor mirrored like glass: the mirrored sign was readable and the spokes of the wheels could be counted. A hall floor never does that.\n'
+  + '5. The colour was drained out of the car. A warm grey became a neutral grey, the metallic flake disappeared, and the whole picture was almost monochrome — the car looked like unpainted clay.\n'
+  + '6. The car had a reflection but no contact shadow under the tyres, so it hovered a few centimetres above the floor.\n'
+  + '7. The whole image was perfectly smooth: no grain, no texture in the paint, no dust on the floor. That is what gives a computer-made picture away at a glance.\n\n'
   + 'NEVER DO THESE THINGS.\n'
   + 'Do not add people, other vehicles, plants, furniture, price tags, banners, flags, text, logos, watermarks, signatures or borders anywhere in the image.\n'
   + 'Do not add a second copy of the car, and do not show it from two sides at once.\n'
@@ -190,6 +223,14 @@ const anweisung = (firma?: string | null) =>
   + '6b. Does the picture look photographed rather than rendered — grain present, paint colour as strong as in image 1, no clay-grey car, no mirror-smooth floor, no surface without texture?\n'
   + '7. Is the number plate completely covered, and is the dealer name spelled exactly as given?\n'
   + 'Correct whatever fails this check, then return exactly one photorealistic image with the same dimensions as image 2.';
+
+/**
+ * Die Anweisung im Wortlaut — fuer scripts/anweisung-zeigen.ts.
+ *
+ * Nur zum Nachlesen und Vergleichen. Wer sie aendern will, aendert
+ * anweisung() selbst; hier gibt es nichts zu konfigurieren.
+ */
+export const anweisungFuerGemini = (firma?: string | null) => anweisung(firma);
 
 function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
