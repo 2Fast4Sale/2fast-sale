@@ -44,7 +44,8 @@ export async function updateSession(request: NextRequest) {
      * konnte sie aufrufen und auf meine Rechnung Modelle laufen lassen.
      */
     "/api/scan-doc", "/api/scan-equipment-doc", "/api/detect-equipment",
-    // PhotoRoom rechnet je Aufruf ab.
+    // Zeichnet die Scheiben eines Innenraumfotos weich — eine Gemini-Anfrage je Bild.
+    "/api/scheiben",
     "/api/generate-description", "/api/generate-title",
     "/api/autoscout24-publish", "/api/mobilede-publish",
   ].some((praefix) => p.startsWith(praefix));

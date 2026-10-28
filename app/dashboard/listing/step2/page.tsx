@@ -163,6 +163,10 @@ interface Photo {
    * ersten Fotos, den Rest kann der Haendler manuell dazuschalten.
    */
   studio: boolean;
+  /** Scheiben weichgezeichnet (Innenraumfoto). Laeuft nur auf Knopfdruck. */
+  scheibenLaeuft?: boolean;
+  scheibenFertig?: boolean;
+  scheibenGrund?: string;
 }
 
 /** So viele Fotos werden per Voreinstellung freigestellt. */
@@ -395,6 +399,50 @@ function Step2Inner() {
    * Folge sofortiger Downloads fuer einen Missbrauchsversuch und
    * blocken alles nach dem ersten. 350 ms reichen.
    */
+  /**
+   * Scheiben weichzeichnen — fuer Innenraumfotos.
+   *
+   * Durch die Frontscheibe sieht man den ganzen Hof: fremde Fahrzeuge
+   * mit lesbaren Kennzeichen, das Firmenschild des Nachbarn samt
+   * Anschrift, manchmal Leute. Gemini markiert, was durch eine Scheibe
+   * nach draussen zeigt; weichgezeichnet wird danach das Original.
+   * Innenraum, Armaturenbrett und jeder Kratzer bleiben unveraendert.
+   *
+   * Je Foto eine Gemini-Anfrage, deshalb nur auf Knopfdruck am
+   * einzelnen Bild.
+   */
+  const scheibenSaeubern = useCallback(async (id: string) => {
+    const foto = photos.find(x => x.id === id);
+    const quelle = foto?.processed || foto?.preview;
+    if (!foto || !quelle) return;
+
+    setPhotos(list => list.map(x => x.id === id
+      ? { ...x, scheibenLaeuft: true, scheibenGrund: undefined } : x));
+    try {
+      const antwort = await fetch('/api/scheiben', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: quelle, draftId: entwurfId() }),
+      });
+      const daten = await antwort.json().catch(() => ({}));
+
+      if (!antwort.ok || (!daten.geaendert && !daten.bild)) {
+        setPhotos(list => list.map(x => x.id === id ? {
+          ...x, scheibenLaeuft: false,
+          scheibenGrund: daten.grund || daten.error || 'Nichts gefunden',
+        } : x));
+        return;
+      }
+      setPhotos(list => list.map(x => x.id === id ? {
+        ...x, scheibenLaeuft: false, scheibenFertig: true, processed: daten.bild,
+      } : x));
+    } catch (fehler) {
+      console.error('[scheiben]', fehler);
+      setPhotos(list => list.map(x => x.id === id
+        ? { ...x, scheibenLaeuft: false, scheibenGrund: 'Verbindung gestört' } : x));
+    }
+  }, [photos]);
+
   const bilderHerunterladen = useCallback(async () => {
     const liste = photos.map(p => p.processed || p.preview).filter(Boolean) as string[];
     for (const [i, quelle] of liste.entries()) {
@@ -1465,6 +1513,42 @@ function Step2Inner() {
                   <div style={{ position: 'absolute', bottom: '7px', left: '7px', background: 'rgba(0,0,0,0.65)', color: TS, fontSize: '11px', fontWeight: '700', padding: '2px 7px', borderRadius: '5px' }}>
                     #{i + 1}
                   </div>
+
+                  {/*
+                    Scheiben säubern — für Fotos, die NICHT ins Studio
+                    gehen, also Innenraum, Cockpit, Motorraum. Dort ist
+                    durch die Frontscheibe der ganze Hof zu sehen.
+                  */}
+                  {!p.studio && !p.processing && (
+                    <button
+                      title={p.scheibenFertig
+                        ? 'Scheiben sind gesäubert'
+                        : 'Weichzeichnen, was durch die Scheiben zu sehen ist (fremde Kennzeichen, Firmenschilder). Kostet eine KI-Anfrage.'}
+                      disabled={p.scheibenLaeuft || p.scheibenFertig}
+                      onClick={e => { e.stopPropagation(); scheibenSaeubern(p.id); }}
+                      style={{
+                        position: 'absolute', bottom: '7px', right: '7px',
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        background: p.scheibenFertig ? 'rgba(16,185,129,0.92)' : 'rgba(0,0,0,0.6)',
+                        border: 'none', borderRadius: '6px', color: '#fff',
+                        fontSize: '10px', fontWeight: '700', fontFamily: F,
+                        padding: '3px 7px',
+                        cursor: p.scheibenLaeuft || p.scheibenFertig ? 'default' : 'pointer',
+                      }}
+                    >
+                      {p.scheibenLaeuft
+                        ? <><Loader2 size={9} style={{ animation: 'spin 1s linear infinite' }} /> SCHEIBEN</>
+                        : p.scheibenFertig
+                          ? <><CheckCircle2 size={9} /> SCHEIBEN</>
+                          : <><Droplets size={9} /> SCHEIBEN</>}
+                    </button>
+                  )}
+
+                  {p.scheibenGrund && (
+                    <div style={{ position: 'absolute', bottom: '30px', right: '7px', background: 'rgba(180,83,9,0.9)', color: '#fff', fontSize: '9px', fontWeight: '700', padding: '2px 6px', borderRadius: '5px', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.scheibenGrund}
+                    </div>
+                  )}
 
                   {/* Studio an/aus — nur solange noch nicht verarbeitet */}
                   {!p.processed && !p.processing && (
