@@ -11,6 +11,7 @@ import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
 import { studioAufteilung, studioInklusive, centAlsEuro, PREIS_EXTRA_BILD_CENT } from '../../../../lib/studioQuota';
 import { studioZusatzCent } from '../../../../lib/preismodell';
+import { createClient } from '../../../../lib/supabase/client';
 import { G } from '../gestaltung';
 import { useDauerText } from '../../../../lib/sitzungsspeicher';
 import { entwurfId } from '../../../../lib/entwurf';
@@ -290,6 +291,32 @@ function Step2Inner() {
 
   // Auf dem Handy sitzt die Dashboard-Navigation unten fest (56 px hoch).
   // Die Weiter-Leiste muss darueber liegen, sonst ist sie nicht antippbar.
+  /*
+   * Herunterladen gibt es nur fuer den Betreiber.
+   *
+   * Ein Inserat wird erst beim Speichern in Schritt 4 abgerechnet. Die
+   * Studio-Bilder entstehen aber schon hier — und sie kosten uns bei
+   * Google echtes Geld, rund 14 Cent das Stueck. Mit einem
+   * Download-Knopf koennte jeder Fotos hochladen, durchs Studio
+   * schicken, die fertigen Bilder mitnehmen und nie ein Inserat
+   * anlegen. Bezahlt haette er nichts, bezahlt haetten wir.
+   *
+   * Deshalb zeigt die Oberflaeche den Knopf nur bei is_admin. Das ist
+   * eine Bequemlichkeitssperre, keine Mauer: Wer die Bilder sonstwie
+   * aus dem Browser holen will, kann das (Rechtsklick, Screenshot).
+   * Die eigentliche Loesung waere, die Studio-Bilder selbst
+   * abzurechnen statt erst das Inserat.
+   */
+  const [istChef, setIstChef] = useState(false);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user: u } }) => {
+      if (!u) return;
+      const { data } = await supabase.from('profiles').select('is_admin').eq('id', u.id).single();
+      setIstChef(data?.is_admin === true);
+    });
+  }, []);
+
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -1173,7 +1200,7 @@ function Step2Inner() {
                   das Original. Die Nummerierung haelt die Reihenfolge fest:
                   01 ist das Titelbild.
                 */}
-                {photos.some(p => p.processed) && (
+                {istChef && photos.some(p => p.processed) && (
                   <button onClick={bilderHerunterladen}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '6px',
@@ -1415,7 +1442,7 @@ function Step2Inner() {
                   )}
 
                   {/* Einzelnes Bild speichern — neben dem Entfernen-Knopf. */}
-                  {p.processed && (
+                  {istChef && p.processed && (
                     <button
                       title="Dieses Bild speichern"
                       onClick={async e => {
