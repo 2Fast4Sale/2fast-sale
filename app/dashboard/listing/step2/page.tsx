@@ -336,6 +336,20 @@ function Step2Inner() {
     }
   }, []);
 
+  /*
+   * Kurze oder lange Anweisung an Gemini.
+   *
+   * Die lange ist ueber Wochen gewachsen, Absatz fuer Absatz nach
+   * jedem misslungenen Bild. Ob sie wirklich besser ist als drei
+   * klare Saetze, weiss man erst, wenn man beide am selben Foto
+   * sieht — deshalb der Schalter und nicht eine Umgebungsvariable,
+   * die einen Deploy braucht.
+   */
+  const [kurzeAnweisung, setKurzeAnweisung] = useState(false);
+  useEffect(() => {
+    setKurzeAnweisung(localStorage.getItem('anweisung_kurz_v1') === 'ja');
+  }, []);
+
   const [istChef, setIstChef] = useState(false);
   useEffect(() => {
     const supabase = createClient();
@@ -726,6 +740,7 @@ function Step2Inner() {
           raum: raumName,
           firma: kennzeichenModus === 'name' ? (firma || undefined) : undefined,
           kennzeichenModus,
+          kurzeAnweisung,
           hintergrundUrl: customBackgroundUrl || undefined,
           // Die vom Haendler markierte Bodenlinie seines Hallenfotos.
           hallenHorizont: customBackgroundUrl
@@ -788,7 +803,7 @@ function Step2Inner() {
        */
       const kurz = String(data.modell || '').replace('gemini-3.1-', '').replace('-image', '');
       const weg = data.verfeinert
-        ? 'Gemini ' + data.verfeinert + (kurz ? ' · ' + kurz : '') + ' · ' + (data.geaendert ?? '?') + '% Bild / ' + (data.fahrzeugGeaendert ?? '?') + '% Scheiben'
+        ? 'Gemini ' + data.verfeinert + (kurz ? ' · ' + kurz : '') + (data.anweisung ? ' · ' + data.anweisung : '') + ' · ' + (data.geaendert ?? '?') + '% Bild / ' + (data.fahrzeugGeaendert ?? '?') + '% Scheiben'
         : 'eigen' + (data.verfeinertGrund ? ' · ' + String(data.verfeinertGrund).slice(0, 40) : '');
       setPhotos(p => p.map(x => x.id === photo.id
         ? { ...x, processed: result, processing: false, wegText: weg }
@@ -1280,6 +1295,30 @@ function Step2Inner() {
                     }}>
                     <Eye size={14} />
                     {zeigeOriginale ? 'Studio-Bilder zeigen' : 'Originale zeigen'}
+                  </button>
+                )}
+
+                {/*
+                  Kurze oder lange Anweisung — nur für den Betreiber.
+                  Ein Händler soll nicht zwischen zwei KI-Texten wählen
+                  müssen; das ist eine Frage, die wir beantworten.
+                */}
+                {istChef && (
+                  <button
+                    title="Zum Vergleichen: die kurze Anweisung an Gemini (3 Sätze) statt der langen (22.000 Zeichen)"
+                    onClick={() => {
+                      const neu = !kurzeAnweisung;
+                      setKurzeAnweisung(neu);
+                      localStorage.setItem('anweisung_kurz_v1', neu ? 'ja' : 'nein');
+                    }}
+                    style={{
+                      fontSize: '12px', fontWeight: '600', fontFamily: F, cursor: 'pointer',
+                      padding: '5px 10px', borderRadius: '8px',
+                      background: kurzeAnweisung ? G.akzentSchleier : 'transparent',
+                      border: `1px solid ${kurzeAnweisung ? G.akzent : G.linieLeise}`,
+                      color: kurzeAnweisung ? G.akzent : G.leise,
+                    }}>
+                    {kurzeAnweisung ? 'KI-Anweisung: kurz' : 'KI-Anweisung: lang'}
                   </button>
                 )}
 

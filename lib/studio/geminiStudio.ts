@@ -96,6 +96,40 @@ const LEERER_RAUM_MAX = Number(process.env.GEMINI_LEERER_RAUM_MAX || '5');
  */
 export type SchildModus = 'name' | 'neutral' | 'original';
 
+/**
+ * Die kurze Anweisung — so, wie man es einem Menschen sagen wuerde.
+ *
+ * ── Warum es sie gibt ──────────────────────────────────────────────
+ *
+ * Die lange Fassung darunter ist ueber Wochen gewachsen: Nach jedem
+ * misslungenen Bild kam ein Absatz dazu. Inzwischen sind es 22.000
+ * Zeichen. Fabian sagt, wenn er Gemini selbst schreibt "mach das Bild
+ * in den Showroom", kommt ein besseres Bild heraus als bei uns — und
+ * das ist ein ernstzunehmender Einwand: Ein langer Text mit vielen
+ * Verboten kann ein Modell auch ablenken.
+ *
+ * Deshalb beide Fassungen nebeneinander, umschaltbar am selben Foto.
+ * Was bleibt, sind die drei Saetze, die nicht verhandelbar sind: Das
+ * Fahrzeug bleibt wie fotografiert, das Kennzeichen wird abgedeckt,
+ * der Raum bleibt der Raum aus Bild 2. Alles andere faellt weg.
+ */
+const kurzeAnweisung = (firma?: string | null, schild: SchildModus = 'name') =>
+  'Image 1 is a photograph of a car. Image 2 is an empty showroom. '
+  + 'Put the car from image 1 into that showroom and return one photorealistic image, the same size as image 2.\n\n'
+
+  + 'Cut the car out cleanly, with nothing of its old surroundings left — not along the body, not between the spokes, not behind the windows. '
+  + 'Stand it on the floor so every wheel touches the ground, with a dark contact shadow under the tyres and a soft shadow around it. '
+  + 'Let it cover about half the image width, leave the room exactly as it is, and match the car to the light of the hall.\n\n'
+
+  + 'Keep the car exactly as it was photographed: same colour, same wheels, same badges. '
+  + 'Every scratch, dent, stone chip and dirty patch stays — the dealer is liable for anything the picture hides.\n\n'
+
+  + (schild === 'original'
+    ? 'Leave the number plate exactly as it is.'
+    : schild === 'name' && firma
+      ? `Cover the number plate with a plain dark sign, same place and angle, reading "${firma}" in white letters, spelled exactly: ${[...firma].map((z) => (z === ' ' ? 'SPACE' : z)).join('-')}.`
+      : 'Cover the number plate with a plain dark sign in the same place and at the same angle, with no text on it.');
+
 const anweisung = (firma?: string | null, schild: SchildModus = 'name') =>
   'You are a retoucher at a professional car dealership. You prepare the photographs that go into the dealer’s online listings on mobile.de and AutoScout24. '
   + 'A buyer decides from these pictures whether to drive across the country to see the car, and the dealer is legally liable for everything the pictures show or hide. Work accordingly: precise, sober, nothing invented, nothing beautified.\n\n'
@@ -251,7 +285,8 @@ const anweisung = (firma?: string | null, schild: SchildModus = 'name') =>
  * Nur zum Nachlesen und Vergleichen. Wer sie aendern will, aendert
  * anweisung() selbst; hier gibt es nichts zu konfigurieren.
  */
-export const anweisungFuerGemini = (firma?: string | null, schild: SchildModus = 'name') => anweisung(firma, schild);
+export const anweisungFuerGemini = (firma?: string | null, schild: SchildModus = 'name', kurz = false) =>
+  (kurz ? kurzeAnweisung : anweisung)(firma, schild);
 
 function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
@@ -349,6 +384,8 @@ export async function studioBildMitGemini(
   gezaehlt?: Bildzaehler,
   /** Was mit dem Kennzeichen geschehen soll. */
   schild: SchildModus = 'name',
+  /** Kurze Anweisung statt der langen — zum Vergleichen am selben Foto. */
+  kurz = false,
 ): Promise<StudioErgebnis | null> {
   const key = process.env.GEMINI_API_KEY;
   letzterGrund = '';
@@ -366,7 +403,7 @@ export async function studioBildMitGemini(
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: anweisung(firma, schild) },
+              { text: kurz ? kurzeAnweisung(firma, schild) : anweisung(firma, schild) },
               { inline_data: { mime_type: 'image/jpeg', data: auto.toString('base64') } },
               { inline_data: { mime_type: 'image/jpeg', data: halle.toString('base64') } },
             ],

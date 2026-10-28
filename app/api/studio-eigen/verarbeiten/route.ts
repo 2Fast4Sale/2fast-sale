@@ -51,7 +51,7 @@ function hintergrundErlaubt(adresse: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite, kennzeichen: reqKennzeichen, kennzeichenModus } =
+    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite, kennzeichen: reqKennzeichen, kennzeichenModus, kurzeAnweisung } =
       await req.json() as {
         /** Bodenlinie im eigenen Hallenfoto, Anteil der Bildhoehe von oben. */
         hallenHorizont?: number;
@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
         /** Firmenname des Haendlers — kommt auf das Ersatzschild. */
         firma?: string;
         kennzeichenModus?: 'name' | 'neutral' | 'original';
+        /** Kurze statt langer Anweisung an Gemini — zum Vergleichen. */
+        kurzeAnweisung?: boolean;
         kompositor?: Partial<KompositorEinstellungen>;
         hintergrund?: Partial<StudioHintergrund>;
         hintergrundUrl?: string;
@@ -318,10 +320,10 @@ export async function POST(req: NextRequest) {
          * Schritt 0 der Anweisung verlangt dasselbe von Gemini; ob es
          * sich daran haelt, zeigt das Bild.
          */
-        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus);
+        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus, Boolean(kurzeAnweisung));
         if (!ki) {
           console.info('[verarbeiten] erster Gemini-Versuch nicht verwendbar (' + letzterGrund + '), zweiter Anlauf');
-          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus);
+          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus, Boolean(kurzeAnweisung));
         }
         if (ki) {
           /*
@@ -372,6 +374,7 @@ export async function POST(req: NextRequest) {
             geaendert: Number(ki.geaendert.toFixed(1)),
             fahrzeugGeaendert: 0,
             modell: GENUTZTES_MODELL,
+            anweisung: kurzeAnweisung ? 'kurz' : 'lang',
             verfeinertGrund: '',
 
           });
