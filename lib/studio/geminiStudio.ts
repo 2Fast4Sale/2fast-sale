@@ -66,6 +66,22 @@ const ZEITLIMIT_MS = 35_000;
 const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.55');
 
 /*
+ * Wie viel Prozent des Bildes sich mindestens von der LEEREN HALLE
+ * unterscheiden muessen, damit ein Fahrzeug darin stehen kann.
+ *
+ * Gemessen statt geschaetzt (scripts/leerer-raum-probe.ts, Vergleich
+ * ueber 256er-Miniaturen): Die leere Halle zurueckzubekommen ergibt
+ * 0,0 Prozent. Ein Fahrzeug ueber 30 Prozent der Bildbreite ergibt
+ * 5,7, ueber 50 Prozent 15,8.
+ *
+ * Deshalb fuenf und nicht zwoelf: Zwoelf haette ein Fahrzeug ueber 40
+ * Prozent der Breite verworfen (10,2) — und kleiner als vorgesehen
+ * stellt Gemini das Auto regelmaessig hin. Fuenf trennt sicher, was
+ * hier getrennt werden muss: Auto da oder Auto nicht da.
+ */
+const LEERER_RAUM_MAX = Number(process.env.GEMINI_LEERER_RAUM_MAX || '5');
+
+/*
  * Die gesamte Arbeit steht in diesem Text.
  *
  * Auf ausdruecklichen Wunsch macht Gemini alles: freistellen, in den
@@ -410,6 +426,31 @@ export async function studioBildMitGemini(
      * Erst Blech gegen Blech. Nur wenn das Fahrzeugmodell nicht laeuft,
      * wird ersatzweise das ganze Bild verglichen.
      */
+    /*
+     * Zuerst die Frage, die alles andere erledigt: Ist ueberhaupt ein
+     * Auto im Ergebnis?
+     *
+     * Im Live-Test kamen Bilder zurueck, die nur die leere Halle
+     * zeigten — Wand, Boden, sonst nichts. Die Aehnlichkeitspruefung
+     * unten hat das durchgewinkt (0,796 und 0,851 gegen eine Schwelle
+     * von 0,55), denn sie vergleicht mit dem Originalfoto, und ein
+     * leerer Raum ist einem Hof mit Auto ungefaehr so unaehnlich wie
+     * eine gelungene Freistellung.
+     *
+     * Der richtige Vergleich ist der mit dem RAUM: Wenn sich das
+     * Ergebnis kaum von der leeren Halle unterscheidet, steht da kein
+     * Fahrzeug. Ein Auto deckt nach unserer eigenen Vorgabe rund die
+     * halbe Bildbreite ab und veraendert damit zwangslaeufig einen
+     * zweistelligen Prozentsatz der Bildpunkte.
+     */
+    const gegenRaum = await anteilGeaendert(raumBild, bild);
+    console.info('[gemini-studio] Unterschied zur leeren Halle:', gegenRaum.toFixed(1), '%');
+    if (gegenRaum < LEERER_RAUM_MAX) {
+      letzterGrund = `verworfen, kein Fahrzeug im Bild (nur ${gegenRaum.toFixed(1)} % Unterschied zur leeren Halle)`;
+      console.warn('[gemini-studio]', letzterGrund);
+      return null;
+    }
+
     const nurAuto = await fahrzeugAehnlichkeit(foto, bild);
     const aehnlich = nurAuto ?? await aehnlichkeit(foto, bild);
     console.info('[gemini-studio] Vergleich',
