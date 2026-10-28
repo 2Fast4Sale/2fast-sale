@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Upload, X, ChevronRight, ChevronLeft, Camera,
   CheckCircle2, Loader2,
-  Wand2, Eye, AlertCircle, Droplets, Lock, Download,
+  Wand2, Eye, AlertCircle, Droplets, Lock, Download, RotateCcw,
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
@@ -832,6 +832,28 @@ function Step2Inner() {
     }
   };
 
+  /**
+   * Ein fertiges Foto noch einmal rechnen lassen.
+   *
+   * Bisher ging das nicht: processAll ueberspringt alles, was schon
+   * ein Ergebnis hat. Beim Vergleich der kurzen gegen die lange
+   * Anweisung ist das aufgefallen — der Schalter wurde umgelegt, das
+   * Foto lief nicht neu, und das alte Ergebnis sah aus wie das neue.
+   *
+   * Auch im Alltag gebraucht: Gemini antwortet nicht zweimal gleich.
+   * Ist ein Bild misslungen, ist der zweite Versuch oft gut. Dass er
+   * 14 Cent kostet, steht am Knopf.
+   */
+  const nochmalRechnen = async (id: string) => {
+    const foto = photos.find(x => x.id === id);
+    if (!foto || foto.processing) return;
+    setPhotos(list => list.map(x => x.id === id
+      ? { ...x, processed: null, wegText: undefined, error: false, fehlerText: undefined }
+      : x));
+    /* Mit dem alten Zustand rechnen: processOne nimmt die Datei, nicht das Ergebnis. */
+    await processOne({ ...foto, processed: null });
+  };
+
   const processAll = async () => {
     setBulk(true);
     // Nur was auch ins Studio soll — der Rest bleibt unangetastet und kostet nichts
@@ -1642,6 +1664,17 @@ function Step2Inner() {
                       style={{ position: 'absolute', bottom: '7px', right: '7px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(124,58,237,0.9)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: F }}
                     >
                       <Wand2 size={10} /> KI
+                    </button>
+                  )}
+
+                  {/* Noch einmal rechnen — links neben dem Speichern-Knopf. */}
+                  {p.processed && !p.processing && (
+                    <button
+                      title="Dieses Foto noch einmal durchs Studio schicken (kostet 14 Cent)"
+                      onClick={e => { e.stopPropagation(); nochmalRechnen(p.id); }}
+                      style={{ position: 'absolute', top: '7px', right: istChef ? '67px' : '37px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <RotateCcw size={12} />
                     </button>
                   )}
 
