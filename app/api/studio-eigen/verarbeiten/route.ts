@@ -304,50 +304,20 @@ export async function POST(req: NextRequest) {
       const quelle = roh.length > 0 ? roh : vorab;
       if (quelle && quelle.length > 0) {
         /*
-         * Ist auf dem Foto ueberhaupt ein Fahrzeug von aussen zu sehen?
+         * Keine eigene Vorpruefung mehr, welches Foto ins Studio darf.
          *
-         * Ein Innenraumfoto gehoert nicht ins Studio: Da ist nichts
-         * freizustellen, und eine Halle dahinterzusetzen ergibt keinen
-         * Sinn — man sitzt ja drin. In der Anweisung steht genau das
-         * (Schritt 0: zeigt Bild 1 kein vollstaendiges Fahrzeug von
-         * aussen, Bild unveraendert zurueckgeben), aber Gemini haelt
-         * sich nicht daran: Im Live-Test kamen Innenraumfotos mit 71
-         * Prozent geaenderter Bildflaeche zurueck — also zum guten Teil
-         * neu gemalt, samt Hof hinter den Scheiben.
+         * Hier stand eine Sperre: Findet der eigene Erkenner kein
+         * Fahrzeug von aussen — oder einen Kasten, der das ganze Bild
+         * fuellt, wie bei einem Innenraumfoto —, ging das Foto gar
+         * nicht erst an Gemini.
          *
-         * Deshalb entscheidet das hier der eigene Erkenner, bevor
-         * ueberhaupt etwas bezahlt wird. Dieselbe Pruefung lief bisher
-         * nur auf dem anderen Weg.
+         * Fabian hat das am 29.10.2026 abgeraeumt: Gemini soll die
+         * Arbeit machen, nicht unser Erkenner. Die Entscheidung kennt
+         * den Einwand — im Live-Test kamen Innenraumfotos mit bis zu
+         * 77 Prozent neu gemalter Flaeche zurueck —, und sie steht.
+         * Schritt 0 der Anweisung verlangt dasselbe von Gemini; ob es
+         * sich daran haelt, zeigt das Bild.
          */
-        /*
-         * Gemessen statt vermutet: Auf einem Innenraumfoto FINDET der
-         * Erkenner ein Fahrzeug — und zwar ueber das ganze Bild.
-         * Nachgemessen an den beiden Fotos aus dem Live-Test:
-         *
-         *   Innenraum (Fahrersitz)   0,00 … 1,00  x  0,00 … 1,00
-         *   Aussen (Audi Q7)         0,22 … 0,83  x  0,60 … 0,94
-         *
-         * Das ist der Unterschied, auf den es ankommt: Wer IM Auto
-         * steht, hat es ringsum im Bild. Ein Fahrzeug von aussen laesst
-         * immer Rand — und ohne Rand gaebe es auch nichts
-         * freizustellen.
-         */
-        const fahrzeugDa = await fahrzeugKastenFinden(quelle);
-        const randlos = !!fahrzeugDa && fahrzeugDa !== 'keins'
-          && (fahrzeugDa.x1 - fahrzeugDa.x0) > 0.92
-          && (fahrzeugDa.y1 - fahrzeugDa.y0) > 0.92;
-        if (fahrzeugDa === 'keins' || randlos) {
-          console.info('[verarbeiten] Kein Fahrzeug von aussen erkannt — kein Studio',
-            randlos ? '(Fahrzeug fuellt das ganze Bild, also Innenraum)' : '(nichts gefunden)');
-          return NextResponse.json({
-            error: 'Auf diesem Foto ist kein vollständiges Fahrzeug von außen zu erkennen. '
-                 + 'Innenraum-, Motorraum- und Detailfotos gehören nicht ins Studio — '
-                 + 'für sie gibt es den Knopf „Scheiben".',
-            keinFahrzeug: true,
-            innenraum: true,
-          }, { status: 422 });
-        }
-
         let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus);
         if (!ki) {
           console.info('[verarbeiten] erster Gemini-Versuch nicht verwendbar (' + letzterGrund + '), zweiter Anlauf');
