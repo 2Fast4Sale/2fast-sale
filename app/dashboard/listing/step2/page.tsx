@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Upload, X, ChevronRight, ChevronLeft, Camera,
   CheckCircle2, Loader2,
-  Wand2, Eye, AlertCircle, Droplets, Lock,
+  Wand2, Eye, AlertCircle, Droplets, Lock, Download,
 } from 'lucide-react';
 import { addWatermark } from '../../../../components/VehicleTools';
 import GuidedCapture, { SHOTS } from '../../../components/GuidedCapture';
@@ -327,6 +327,42 @@ function Step2Inner() {
 
   const processedCount = photos.filter(p => p.processed).length;
   const totalCount     = photos.length;
+
+  /**
+   * Die fertigen Bilder auf den eigenen Rechner speichern.
+   *
+   * Gespeichert wird je Foto das Studio-Bild, wo es eines gibt, sonst
+   * das Original — so fehlt keines, auch wenn die Verarbeitung bei
+   * einem Bild nicht gelaufen ist.
+   *
+   * Die Bilder kommen als Data-URL aus dem Speicher des Browsers.
+   * `fetch` darauf ist der kurze Weg zu einem Blob, ohne Base64 von
+   * Hand zu zerlegen.
+   *
+   * Zwischen den Klicks liegt eine kurze Pause: Browser halten eine
+   * Folge sofortiger Downloads fuer einen Missbrauchsversuch und
+   * blocken alles nach dem ersten. 350 ms reichen.
+   */
+  const bilderHerunterladen = useCallback(async () => {
+    const liste = photos.map(p => p.processed || p.preview).filter(Boolean) as string[];
+    for (const [i, quelle] of liste.entries()) {
+      try {
+        const blob = await (await fetch(quelle)).blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = `foto-${String(i + 1).padStart(2, '0')}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        /* Erst freigeben, wenn der Browser die Datei geholt hat. */
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      } catch (fehler) {
+        console.error('[step2] Bild konnte nicht gespeichert werden:', fehler);
+      }
+      if (i < liste.length - 1) await new Promise(ok => setTimeout(ok, 350));
+    }
+  }, [photos]);
 
   /* ---- Ausstattung aus Fotos erkennen ---- */
   const detectEquipmentFromPhotos = useCallback(async (currentPhotos: Photo[]) => {
@@ -1125,6 +1161,32 @@ function Step2Inner() {
                   </button>
                 )}
 
+                {/*
+                  Herunterladen.
+
+                  Die fertigen Bilder lagen bisher nur im Browser und gingen
+                  von dort an die Portale. Wer sie sonst wo braucht — eine
+                  eigene Anzeige, eine Mail an einen Kaeufer, das eigene
+                  Fahrzeug —, kam nicht an sie heran.
+
+                  Gespeichert wird das Studio-Bild, wo es eines gibt, sonst
+                  das Original. Die Nummerierung haelt die Reihenfolge fest:
+                  01 ist das Titelbild.
+                */}
+                {photos.some(p => p.processed) && (
+                  <button onClick={bilderHerunterladen}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      fontSize: '13px', fontWeight: '600', fontFamily: F, cursor: 'pointer',
+                      padding: '6px 12px', borderRadius: '8px',
+                      background: 'transparent', border: `1px solid ${G.linieLeise}`,
+                      color: G.leise,
+                    }}>
+                    <Download size={14} />
+                    {`${photos.filter(p => p.processed).length} Bilder herunterladen`}
+                  </button>
+                )}
+
                 <button onClick={() => setPhotos([])} style={{ fontSize: '13px', color: G.fehler, background: 'none', border: 'none', cursor: 'pointer', fontFamily: F }}>
                   Alle entfernen
                 </button>
@@ -1349,6 +1411,32 @@ function Step2Inner() {
                       style={{ position: 'absolute', bottom: '7px', right: '7px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(124,58,237,0.9)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', fontFamily: F }}
                     >
                       <Wand2 size={10} /> KI
+                    </button>
+                  )}
+
+                  {/* Einzelnes Bild speichern — neben dem Entfernen-Knopf. */}
+                  {p.processed && (
+                    <button
+                      title="Dieses Bild speichern"
+                      onClick={async e => {
+                        e.stopPropagation();
+                        try {
+                          const blob = await (await fetch(p.processed!)).blob();
+                          const url  = URL.createObjectURL(blob);
+                          const a    = document.createElement('a');
+                          a.href = url;
+                          a.download = `foto-${String(i + 1).padStart(2, '0')}.jpg`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          setTimeout(() => URL.revokeObjectURL(url), 10_000);
+                        } catch (fehler) {
+                          console.error('[step2] Bild konnte nicht gespeichert werden:', fehler);
+                        }
+                      }}
+                      style={{ position: 'absolute', top: '7px', right: '37px', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Download size={12} />
                     </button>
                   )}
 
