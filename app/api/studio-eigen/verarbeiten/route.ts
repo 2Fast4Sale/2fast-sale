@@ -319,9 +319,26 @@ export async function POST(req: NextRequest) {
          * ueberhaupt etwas bezahlt wird. Dieselbe Pruefung lief bisher
          * nur auf dem anderen Weg.
          */
+        /*
+         * Gemessen statt vermutet: Auf einem Innenraumfoto FINDET der
+         * Erkenner ein Fahrzeug — und zwar ueber das ganze Bild.
+         * Nachgemessen an den beiden Fotos aus dem Live-Test:
+         *
+         *   Innenraum (Fahrersitz)   0,00 … 1,00  x  0,00 … 1,00
+         *   Aussen (Audi Q7)         0,22 … 0,83  x  0,60 … 0,94
+         *
+         * Das ist der Unterschied, auf den es ankommt: Wer IM Auto
+         * steht, hat es ringsum im Bild. Ein Fahrzeug von aussen laesst
+         * immer Rand — und ohne Rand gaebe es auch nichts
+         * freizustellen.
+         */
         const fahrzeugDa = await fahrzeugKastenFinden(quelle);
-        if (fahrzeugDa === 'keins') {
-          console.info('[verarbeiten] Kein Fahrzeug von aussen erkannt — kein Studio');
+        const randlos = !!fahrzeugDa && fahrzeugDa !== 'keins'
+          && (fahrzeugDa.x1 - fahrzeugDa.x0) > 0.92
+          && (fahrzeugDa.y1 - fahrzeugDa.y0) > 0.92;
+        if (fahrzeugDa === 'keins' || randlos) {
+          console.info('[verarbeiten] Kein Fahrzeug von aussen erkannt — kein Studio',
+            randlos ? '(Fahrzeug fuellt das ganze Bild, also Innenraum)' : '(nichts gefunden)');
           return NextResponse.json({
             error: 'Auf diesem Foto ist kein vollständiges Fahrzeug von außen zu erkennen. '
                  + 'Innenraum-, Motorraum- und Detailfotos gehören nicht ins Studio — '
