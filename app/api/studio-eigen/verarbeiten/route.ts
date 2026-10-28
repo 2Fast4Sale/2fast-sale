@@ -79,7 +79,7 @@ function hintergrundErlaubt(adresse: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite, kennzeichen: reqKennzeichen } =
+    const { image, draftId, code, raum: raumName, firma, kompositor, hintergrund, hintergrundUrl, hallenHorizont, freigestellt: reqFreigestellt, breite, kennzeichen: reqKennzeichen, kennzeichenModus } =
       await req.json() as {
         /** Bodenlinie im eigenen Hallenfoto, Anteil der Bildhoehe von oben. */
         hallenHorizont?: number;
@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
         raum?: string;
         /** Firmenname des Haendlers — kommt auf das Ersatzschild. */
         firma?: string;
+        kennzeichenModus?: 'name' | 'neutral' | 'original';
         kompositor?: Partial<KompositorEinstellungen>;
         hintergrund?: Partial<StudioHintergrund>;
         hintergrundUrl?: string;
@@ -266,11 +267,24 @@ export async function POST(req: NextRequest) {
     /* Wo das Schild im freigestellten Bild sitzt, relativ 0 bis 1. */
     let schildKasten: KennzeichenKasten | null = null;
 
+    /*
+     * Drei Moeglichkeiten, aus Schritt 2 gewaehlt:
+     *
+     *   name      Haendlerschild mit Firmennamen (Voreinstellung)
+     *   neutral   dunkles Schild ohne Text
+     *   original  das Kennzeichen bleibt stehen
+     *
+     * Fehlt die Angabe, gilt wie bisher der Haendlername. Alte
+     * Aufrufe verhalten sich damit unveraendert.
+     */
+    const schildModus = kennzeichenModus ?? 'name';
+    const schildName = schildModus === 'name' ? (firma ?? null) : null;
+
     let kennzeichenErsetzt = false;
     // Welcher Weg das Schild gesetzt hat — zur Fehlersuche im Browser.
     let kennzeichenQuelle: 'modell' | 'farbregel' | 'gemini' | null = null;
     try {
-      if (roh.length > 0) {
+      if (roh.length > 0 && schildModus !== 'original') {
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(roh);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -279,10 +293,10 @@ export async function POST(req: NextRequest) {
          * den Kotfluegel. Nur wenn das Modell gar nicht lief, bleibt sie.
          */
         const kz = kasten
-          ? await ersetzeKennzeichenImKasten(roh, kasten, firma ?? null)
+          ? await ersetzeKennzeichenImKasten(roh, kasten, schildName)
           : fund === 'keins'
             ? { bild: roh, ersetzt: false }
-            : await ersetzeKennzeichen(roh, firma ?? null);
+            : await ersetzeKennzeichen(roh, schildName);
         roh = kz.bild;
         kennzeichenErsetzt = kz.ersetzt;
         kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
@@ -343,10 +357,10 @@ export async function POST(req: NextRequest) {
 
       const quelle = roh.length > 0 ? roh : vorab;
       if (quelle && quelle.length > 0) {
-        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null, bildGebucht);
+        let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus);
         if (!ki) {
           console.info('[verarbeiten] erster Gemini-Versuch nicht verwendbar (' + letzterGrund + '), zweiter Anlauf');
-          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, firma ?? null, bildGebucht);
+          ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus);
         }
         if (ki) {
           /*
@@ -370,9 +384,11 @@ export async function POST(req: NextRequest) {
           let fertig = ki.bild;
           let schildQuelle: 'modell' | 'gemini' = 'gemini';
           try {
-            const fund = await kennzeichenAufServerFinden(fertig);
+            /* Bei 'original' bleibt das Kennzeichen stehen — dann wird
+               hier auch nichts gesucht und nichts gezeichnet. */
+            const fund = schildModus === 'original' ? 'keins' as const : await kennzeichenAufServerFinden(fertig);
             if (fund && fund !== 'keins') {
-              const kz = await ersetzeKennzeichenImKasten(fertig, fund, firma ?? null);
+              const kz = await ersetzeKennzeichenImKasten(fertig, fund, schildName);
               if (kz.ersetzt) { fertig = kz.bild; schildQuelle = 'modell'; }
             }
           } catch (err) {
@@ -546,6 +562,7 @@ export async function POST(req: NextRequest) {
          * Modell nicht.
          */
         if (geminiMalt) throw new Error('Gemini setzt das Schild');
+        if (schildModus === 'original') throw new Error('Kennzeichen bleibt stehen');
         const fund = gueltigerKasten(reqKennzeichen) ?? await kennzeichenAufServerFinden(vorab);
         const kasten = fund && fund !== 'keins' ? fund : null;
         /*
@@ -554,10 +571,10 @@ export async function POST(req: NextRequest) {
          * den Kotfluegel. Nur wenn das Modell gar nicht lief, bleibt sie.
          */
         const kz = kasten
-          ? await ersetzeKennzeichenImKasten(vorab, kasten, firma ?? null)
+          ? await ersetzeKennzeichenImKasten(vorab, kasten, schildName)
           : fund === 'keins'
             ? { bild: vorab, ersetzt: false }
-            : await ersetzeKennzeichen(vorab, firma ?? null);
+            : await ersetzeKennzeichen(vorab, schildName);
         freigestellt = kz.bild;
         kennzeichenErsetzt = kz.ersetzt;
         kennzeichenQuelle = kz.ersetzt ? (kasten ? 'modell' : 'farbregel') : null;
@@ -666,7 +683,7 @@ export async function POST(req: NextRequest) {
     let fahrzeugGeaendert = 0;
     if (geminiMalt) {
       const vorherBild = ergebnis.bild;
-      let fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null, bildGebucht);
+      let fein = await studioVerfeinernMitGemini(ergebnis.bild, schildName, bildGebucht);
       /*
        * Ein zweiter Versuch, wenn das erste Ergebnis verworfen wurde.
        *
@@ -678,7 +695,7 @@ export async function POST(req: NextRequest) {
        */
       if (!fein) {
         console.info('[verarbeiten] erster Versuch verworfen (' + letzterGrund + '), zweiter Anlauf');
-        fein = await studioVerfeinernMitGemini(ergebnis.bild, firma ?? null, bildGebucht);
+        fein = await studioVerfeinernMitGemini(ergebnis.bild, schildName, bildGebucht);
 
       }
       /*
@@ -686,12 +703,12 @@ export async function POST(req: NextRequest) {
        * abgedeckt. Das holt der eigene Code nach, sonst stuende ein
        * fremdes Kennzeichen im Inserat.
        */
-      if (!fein) {
+      if (!fein && schildModus !== 'original') {
         try {
           const fund = await kennzeichenAufServerFinden(ergebnis.bild);
           const kasten = fund && fund !== 'keins' ? fund : null;
           if (kasten) {
-            const kz2 = await ersetzeKennzeichenImKasten(ergebnis.bild, kasten, firma ?? null);
+            const kz2 = await ersetzeKennzeichenImKasten(ergebnis.bild, kasten, schildName);
             if (kz2.ersetzt) {
               ergebnis = { ...ergebnis, bild: kz2.bild };
               kennzeichenErsetzt = true;

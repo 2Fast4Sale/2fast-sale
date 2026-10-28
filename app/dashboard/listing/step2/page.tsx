@@ -307,6 +307,31 @@ function Step2Inner() {
    * Die eigentliche Loesung waere, die Studio-Bilder selbst
    * abzurechnen statt erst das Inserat.
    */
+  /*
+   * Was mit dem Kennzeichen geschieht.
+   *
+   *   'name'     Haendlerschild mit dem hinterlegten Firmennamen
+   *   'neutral'  dunkles Schild ohne Text
+   *   'original' das Kennzeichen bleibt stehen
+   *
+   * Die ersten beiden sind der Normalfall im Handel. 'original' gibt es,
+   * weil es Faelle gibt, in denen das Kennzeichen ins Bild gehoert — das
+   * eigene Fahrzeug, ein Foto fuer die eigenen Unterlagen.
+   *
+   * Dabei ein Hinweis, der in der Oberflaeche steht und hier auch:
+   * Ein lesbares Kennzeichen ist ein personenbezogenes Datum. In einem
+   * oeffentlichen Inserat gehoert es abgedeckt, erst recht bei einem
+   * Fahrzeug, das jemand anderem gehoert.
+   */
+  type KennzeichenModus = 'name' | 'neutral' | 'original';
+  const [kennzeichenModus, setKennzeichenModus] = useState<KennzeichenModus>('name');
+  useEffect(() => {
+    const gespeichert = localStorage.getItem('kennzeichen_modus_v1');
+    if (gespeichert === 'name' || gespeichert === 'neutral' || gespeichert === 'original') {
+      setKennzeichenModus(gespeichert);
+    }
+  }, []);
+
   const [istChef, setIstChef] = useState(false);
   useEffect(() => {
     const supabase = createClient();
@@ -651,7 +676,8 @@ function Step2Inner() {
           draftId: entwurfId(),
           code: raumCode,
           raum: raumName,
-          firma: firma || undefined,
+          firma: kennzeichenModus === 'name' ? (firma || undefined) : undefined,
+          kennzeichenModus,
           hintergrundUrl: customBackgroundUrl || undefined,
           // Die vom Haendler markierte Bodenlinie seines Hallenfotos.
           hallenHorizont: customBackgroundUrl
@@ -1187,6 +1213,40 @@ function Step2Inner() {
                     {zeigeOriginale ? 'Studio-Bilder zeigen' : 'Originale zeigen'}
                   </button>
                 )}
+
+                {/*
+                  Kennzeichen: drei Moeglichkeiten, eine Zeile.
+
+                  Die Wahl merkt sich der Browser, weil sie fuer einen
+                  Haendler immer dieselbe ist — er stellt sie einmal ein
+                  und nie wieder.
+                */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: G.leise, fontFamily: F }}>Kennzeichen:</span>
+                  {([
+                    ['name',     'Mit Firmenname'],
+                    ['neutral',  'Abdecken'],
+                    ['original', 'So lassen'],
+                  ] as const).map(([wert, text]) => (
+                    <button key={wert}
+                      onClick={() => {
+                        setKennzeichenModus(wert);
+                        localStorage.setItem('kennzeichen_modus_v1', wert);
+                      }}
+                      title={wert === 'original'
+                        ? 'Das Kennzeichen bleibt lesbar im Bild. Für ein öffentliches Inserat ist das nicht zulässig — ein Kennzeichen ist ein personenbezogenes Datum.'
+                        : undefined}
+                      style={{
+                        fontSize: '12px', fontWeight: '600', fontFamily: F, cursor: 'pointer',
+                        padding: '5px 10px', borderRadius: '8px',
+                        background: kennzeichenModus === wert ? G.akzentSchleier : 'transparent',
+                        border: `1px solid ${kennzeichenModus === wert ? G.akzent : G.linieLeise}`,
+                        color: kennzeichenModus === wert ? G.akzent : G.leise,
+                      }}>
+                      {text}
+                    </button>
+                  ))}
+                </div>
 
                 {/*
                   Herunterladen.

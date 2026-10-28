@@ -78,7 +78,9 @@ const AEHNLICH_MIN = Number(process.env.GEMINI_AEHNLICH_MIN || '0.55');
  * Ein Modell haelt sich eher an "etwa die Haelfte der Bildbreite" als
  * an "nicht zu gross".
  */
-const anweisung = (firma?: string | null) =>
+export type SchildModus = 'name' | 'neutral' | 'original';
+
+const anweisung = (firma?: string | null, schild: SchildModus = 'name') =>
   'You are a retoucher at a professional car dealership. You prepare the photographs that go into the dealer’s online listings on mobile.de and AutoScout24. '
   + 'A buyer decides from these pictures whether to drive across the country to see the car, and the dealer is legally liable for everything the pictures show or hide. Work accordingly: precise, sober, nothing invented, nothing beautified.\n\n'
 
@@ -186,7 +188,10 @@ const anweisung = (firma?: string | null) =>
   + 'Where a pane shows no interior at all — typically the small rear quarter windows, where you only ever saw the hedge or the sky behind the car — fill it with the calm grey of the showroom wall seen through tinted glass. That is what you would really see there, and it is always better than a leftover piece of garden.\n'
   + 'This matters more than it sounds: in a listing, a buyer zooms into exactly these windows to look at the interior. A row of treetops behind the rear door is the one detail that gives away where the car really stood.\n\n'
 
-  + (firma
+  + (schild === 'original'
+    ? 'STEP 7 — THE NUMBER PLATE.\n'
+      + 'Leave the number plate exactly as it is: the same characters, the same position, the same angle, the same colours, as sharp and as readable as in image 1. Do not cover it, do not blur it, do not replace it with a sign, and do not invent a different registration number. It has been asked for deliberately and it stays.\n\n'
+    : (schild === 'name' && firma)
     ? 'STEP 7 — THE NUMBER PLATE.\n'
       + 'Cover the number plate completely with a plain dark rectangular dealer sign. It sits in exactly the same place, at exactly the same angle and with the same size and shape as the plate it replaces, and it follows the perspective of the car. Not one character of the original plate may stay readable, not at the edges, not through the sign.\n'
       + `On that sign write this text and nothing else, in clean white sans-serif letters, horizontally centred and vertically centred: "${firma}". `
@@ -230,7 +235,7 @@ const anweisung = (firma?: string | null) =>
  * Nur zum Nachlesen und Vergleichen. Wer sie aendern will, aendert
  * anweisung() selbst; hier gibt es nichts zu konfigurieren.
  */
-export const anweisungFuerGemini = (firma?: string | null) => anweisung(firma);
+export const anweisungFuerGemini = (firma?: string | null, schild: SchildModus = 'name') => anweisung(firma, schild);
 
 function mitZeitlimit<T>(p: Promise<T>, ms: number): Promise<T | null> {
   return Promise.race([p, new Promise<null>((ok) => setTimeout(() => ok(null), ms))]);
@@ -326,6 +331,8 @@ export async function studioBildMitGemini(
   firma?: string | null,
   /** Wird nach jedem Bild aufgerufen, das Google berechnet hat. */
   gezaehlt?: Bildzaehler,
+  /** Was mit dem Kennzeichen geschehen soll. */
+  schild: SchildModus = 'name',
 ): Promise<StudioErgebnis | null> {
   const key = process.env.GEMINI_API_KEY;
   letzterGrund = '';
@@ -343,7 +350,7 @@ export async function studioBildMitGemini(
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: anweisung(firma) },
+              { text: anweisung(firma, schild) },
               { inline_data: { mime_type: 'image/jpeg', data: auto.toString('base64') } },
               { inline_data: { mime_type: 'image/jpeg', data: halle.toString('base64') } },
             ],
