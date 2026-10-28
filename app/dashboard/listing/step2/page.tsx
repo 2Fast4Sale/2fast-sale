@@ -761,10 +761,9 @@ function Step2Inner() {
      * Im Browser eins nach dem anderen. Drei Fotos gleichzeitig durch das
      * Modell zu schicken ist auf demselben Geraet nicht schneller, braucht
      * aber den dreifachen Speicher — auf einem Handy bricht das ab. Ueber
-     * einen Server oder PhotoRoom bleiben es drei parallel.
+     * einen eigenen Freistell-Server bleiben es drei parallel.
      */
-    const imBrowser = !process.env.NEXT_PUBLIC_FREISTELLER_URL
-      && process.env.NEXT_PUBLIC_FREISTELLEN !== 'photoroom';
+    const imBrowser = !process.env.NEXT_PUBLIC_FREISTELLER_URL;
     const BATCH = imBrowser ? 1 : 3;
 
     if (imBrowser) {

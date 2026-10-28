@@ -96,18 +96,13 @@ export default function DatenschutzPage() {
           <p style={body}><strong style={{ color: '#0f172a' }}>Anthropic (Textverarbeitung)</strong><br />
           Anthropic PBC, San Francisco, USA. Für das Auslesen des Fahrzeugscheins, die
           Ausstattungserkennung aus Fotos sowie Titel und Beschreibung werden das Foto des
-          Fahrzeugscheins, bis zu drei Fahrzeugfotos und die erfassten Fahrzeugdaten übermittelt.
+          Fahrzeugscheins, bis zu acht Fahrzeugfotos und die erfassten Fahrzeugdaten übermittelt.
           Datenschutz:{' '}
           <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>anthropic.com/legal/privacy</a></p>
 
-          <p style={body}><strong style={{ color: '#0f172a' }}>PhotoRoom (Freistellen von Fahrzeugfotos)</strong><br />
-          PhotoRoom SAS, Paris, Frankreich. Wird nur verwendet, wenn das Freistellen nicht im Browser
-          des Nutzers läuft. Übermittelt wird das Fahrzeugfoto. Datenschutz:{' '}
-          <a href="https://www.photoroom.com/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>photoroom.com/privacy</a></p>
-
-          <p style={body}><strong style={{ color: '#0f172a' }}>Google (Bildbearbeitung, optional)</strong><br />
-          Google Ireland Ltd. / Google LLC, USA. Wird nur verwendet, wenn die Studiobilder über die
-          Gemini-Schnittstelle erzeugt werden. Übermittelt wird das Fahrzeugfoto. Datenschutz:{' '}
+          <p style={body}><strong style={{ color: '#0f172a' }}>Google (Bildbearbeitung)</strong><br />
+          Google Ireland Ltd. / Google LLC, USA. Die Studiobilder werden über die
+          Gemini-Schnittstelle erzeugt; übermittelt wird dabei das Fahrzeugfoto. Datenschutz:{' '}
           <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={lnk}>policies.google.com/privacy</a></p>
 
           <p style={body}><strong style={{ color: '#0f172a' }}>Vercel (Betrieb der Website und Reichweitenmessung)</strong><br />

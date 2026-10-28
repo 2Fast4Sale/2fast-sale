@@ -30,8 +30,8 @@
 ### Umgebungsvariablen Produktion
 - [ ] Alle .env.local Variablen ins Hosting (Vercel/etc.) übertragen
 - [ ] NEXT_PUBLIC_APP_URL=https://deine-domain.de
-- [ ] PhotoRoom API Key — echten Key (kein sandbox_) kaufen
-- [ ] REMOVE_BG_API_KEY eintragen (optional, Fallback)
+- [ ] GEMINI_API_KEY eintragen — Schritt 2 laeuft vollstaendig darueber
+      (PhotoRoom ist am 28.10.2026 ausgebaut worden, kein Schluessel noetig)
 
 ### Rechtliches
 - [ ] /impressum Seite erstellen

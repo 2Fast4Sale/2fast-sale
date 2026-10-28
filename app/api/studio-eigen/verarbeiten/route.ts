@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { logApiCost, imageCostMicros, currentUserId } from '../../../../lib/apiCosts';
-import { budget, istSandbox, reservieren, freigeben } from '../../../../lib/photoroomBudget';
 import { komponieren, STANDARD, type KompositorEinstellungen } from '../../../../lib/studio/kompositor';
 import { schattenMitGemini } from '../../../../lib/studio/geminiSchatten';
 import { studioHintergrund, raumAusCode, type StudioHintergrund } from '../../../../lib/studio/hintergrund';
@@ -23,47 +22,20 @@ export const maxDuration = 120;
 /**
  * Ein Fahrzeugfoto zum fertigen Studiobild — der Weg fuer Schritt 2.
  *
- * Loest /api/pixelcut ab. Der Unterschied steht in der Rechnung:
+ * Gemini macht hier alles: freistellen, in die Halle setzen, Schatten,
+ * Licht, Scheiben. Das war die Entscheidung vom 19.10.2026, und seit
+ * dem 28.10. ist PhotoRoom ganz raus — Schluessel, Kontingent,
+ * Sandbox, der Plus-Weg und der Freistell-Aufruf.
  *
- *   pixelcut       PhotoRoom Plus   0,10 EUR   alles bei PhotoRoom
- *   diese Route    PhotoRoom Basic  0,02 EUR   nur Freistellen gekauft
- *
- * Bei zwoelf Bildern je Inserat sind das 1,20 EUR gegen 0,24 EUR.
- * Hintergrund, Schatten und Spiegelung rechnet der Server selbst; das
- * kostet Rechenzeit, aber kein Geld.
- *
- * KEIN Rueckfall auf pixelcut, wenn hier etwas schiefgeht. Ein stiller
- * Rueckfall waere bequem und teuer: Der Haendler bekaeme sein Bild und
- * niemand merkte, dass jedes einzelne das Fuenffache kostet. Lieber
- * eine sichtbare Fehlermeldung.
+ * Was bleibt, wenn Gemini kein Bild liefert: der eigene Kompositor,
+ * aber nur mit einem bereits freigestellten Fahrzeug (eigener
+ * Freistell-Server oder das Modell im Browser). Ohne eines davon gibt
+ * es eine ehrliche Fehlermeldung statt eines schlechten Bildes.
  *
  * Nur der eigene Supabase-Speicher ist als Hallenfoto erlaubt — sonst
  * liesse sich der Server ueber eine untergeschobene Adresse dazu
  * bringen, beliebige Ziele abzurufen.
  */
-const SEGMENT = 'https://sdk.photoroom.com/v1/segment';
-
-/**
- * Fehlermeldung zu einer abgelehnten PhotoRoom-Anfrage.
- *
- * Vorher hiess es bei jedem Fehler "gerade nicht verfuegbar, bitte gleich
- * nochmal versuchen". Als die kostenlosen Bilder aufgebraucht waren, stand
- * das unter jedem Foto — und "nochmal versuchen" half nie, weil es kein
- * voruebergehender Fehler war. 402, 403 und 429 heissen bei PhotoRoom:
- * Kontingent leer, Tarif fehlt oder zu viele Anfragen.
- */
-function photoroomFehler(status: number): { error: string; kontingentErschoepft?: boolean } {
-  if (status === 402 || status === 403) {
-    return {
-      error: 'Das Bildkontingent bei PhotoRoom ist aufgebraucht. Studio-Fotos sind wieder möglich, sobald der Tarif aktiv ist.',
-      kontingentErschoepft: true,
-    };
-  }
-  if (status === 429) {
-    return { error: 'Zu viele Bilder auf einmal. Bitte in einer Minute noch einmal versuchen.' };
-  }
-  return { error: 'Studio-Bearbeitung gerade nicht verfügbar. Bitte gleich nochmal versuchen.' };
-}
 
 function hintergrundErlaubt(adresse: string): boolean {
   try {
@@ -116,17 +88,15 @@ export async function POST(req: NextRequest) {
       ? Buffer.from(reqFreigestellt.replace(/^data:image\/\w+;base64,/, ''), 'base64')
       : null;
 
-    const roherKey = process.env.PHOTOROOM_API_KEY;
-    const apiKey = roherKey && process.env.PHOTOROOM_SANDBOX === 'true'
-      ? `sandbox_${roherKey}`
-      : roherKey;
-    if (!apiKey && !vorab) {
-      return NextResponse.json({ error: 'Studio-Bearbeitung ist nicht konfiguriert.' }, { status: 503 });
-    }
+    /*
+     * PhotoRoom ist raus.
+     *
+     * Hier stand eine Pruefung auf den PhotoRoom-Schluessel, die ohne
+     * ihn mit 503 abbrach — auch dann, wenn Gemini das Bild haette
+     * machen koennen. Mit dem Dienst ist auch sein Schluessel, sein
+     * Kontingent und sein Sandbox-Modus verschwunden.
+     */
 
-    // Ein Schluessel mit sandbox_ kann keinen produktiven Aufruf
-    // erzeugen — dann wird auch nichts gebucht. Siehe pixelcut/route.ts.
-    const sandbox = istSandbox() || (apiKey ?? '').startsWith('sandbox_');
 
     /*
      * ── Welcher Weg ────────────────────────────────────────────────
@@ -158,10 +128,6 @@ export async function POST(req: NextRequest) {
      * das Fahrzeug mit PhotoRooms Raendern fast das ganze Bild fuellte.
      * Ein teurer Weg darf nie der sein, auf den man ohne Einstellung faellt.
      */
-    // Mit vorab freigestelltem Bild gibt es nur den Eigenbau — Plus braucht
-    // das Originalfoto und kostet, beides soll hier gerade nicht passieren.
-    const weg = process.env.STUDIO_WEG === 'plus' && !vorab ? 'plus' : 'eigenbau';
-    const tarif = weg === 'plus' ? 'photoroom' : 'photoroom_basic';
 
 
     /*
@@ -392,104 +358,11 @@ export async function POST(req: NextRequest) {
             fahrzeugGeaendert: 0,
             modell: GENUTZTES_MODELL,
             verfeinertGrund: '',
-            sandbox,
+
           });
         }
         console.warn('[verarbeiten] Gemini lieferte kein Bild, eigener Weg springt ein:', letzterGrund);
       }
-    }
-
-    /*
-     * Die PhotoRoom-Sperre gilt erst hier — nach dem Gemini-Weg.
-     *
-     * Sie zaehlt die zehn kostenlosen PhotoRoom-Bilder im Monat. Seit
-     * Schritt 2 ueber Gemini laeuft, wird PhotoRoom auf diesem Weg gar
-     * nicht mehr angefasst: Die Route kehrt oben mit dem fertigen Bild
-     * zurueck, lange bevor hier jemand freistellt.
-     *
-     * Die Sperre stand trotzdem ganz oben und hat nach zehn Bildern im
-     * Monat ALLES abgeriegelt, auch den Gemini-Weg — mit einer Meldung
-     * ueber ein Kontingent, das mit dem Bild nichts zu tun hatte. Genau
-     * so ist es beim eigenen Gebrauch aufgefallen.
-     *
-     * Jetzt sperrt sie nur noch das, was sie meint: den Rueckfall ueber
-     * PhotoRoom.
-     */
-    let buchung: string | null = null;
-    if (!sandbox && !vorab) {
-      const stand = await budget();
-      if (stand.erschoepft) {
-        return NextResponse.json({
-          error: `Die KI für dieses Bild hat nicht geantwortet, und das Ersatzverfahren ist für diesen Monat aufgebraucht (${stand.verbraucht} von ${stand.limit}). `
-               + 'Bitte später noch einmal versuchen — zum Monatsersten füllt es sich wieder auf.',
-          kontingentErschoepft: true,
-        }, { status: 429 });
-      }
-      buchung = await reservieren(
-        await currentUserId(), draftId ?? null, imageCostMicros(tarif),
-      );
-      if (!buchung) {
-        return NextResponse.json({
-          error: 'Das Kontingent für Studio-Bilder ist aufgebraucht.',
-          kontingentErschoepft: true,
-        }, { status: 429 });
-      }
-    }
-
-    /* ── Weg 1: PhotoRoom Plus macht alles ── */
-    if (weg === 'plus' && halle && !hintergrundUrl) {
-      const plus = new FormData();
-      // new Uint8Array(...) statt des Buffers direkt: TypeScript nimmt
-      // Buffer nicht als BlobPart an, obwohl es zur Laufzeit ginge.
-      plus.append('imageFile', new Blob([new Uint8Array(roh)], { type: 'image/jpeg' }), 'auto.jpg');
-      plus.append(
-        'background.imageFile',
-        new Blob([new Uint8Array(raumBild(halle))], { type: 'image/jpeg' }),
-        'raum.jpg',
-      );
-      plus.append('background.scaling', 'fill');
-      /*
-       * Gueltig sind nur ai.soft, ai.hard, ai.floating und
-       * ai.auto-with-overrides; alles andere quittiert die API mit 400.
-       * ai.floating waere hier falsch — das laesst das Fahrzeug schweben.
-       */
-      plus.append('shadow.mode', process.env.PHOTOROOM_SHADOW_MODE || 'ai.soft');
-      plus.append('outputSize', `${zielBreite}x${zielHoehe}`);
-      plus.append('paddingTop', '0.12');
-      plus.append('paddingRight', '0.10');
-      plus.append('paddingBottom', '0.08');
-      plus.append('paddingLeft', '0.10');
-      plus.append('verticalAlignment', 'bottom');
-      plus.append('horizontalAlignment', 'center');
-
-      const a = await fetch('https://image-api.photoroom.com/v2/edit', {
-        // Plus laeuft nur ohne Vorab-Bild, und dann ist der Schluessel oben geprueft.
-        method: 'POST', headers: { 'x-api-key': apiKey! }, body: plus,
-      });
-      if (!a.ok) {
-        const text = await a.text();
-        console.error('[verarbeiten] PhotoRoom Plus fehlgeschlagen:', a.status, text.slice(0, 300));
-        await freigeben(buchung);
-        return NextResponse.json(photoroomFehler(a.status), { status: 503 });
-      }
-      const fertig = Buffer.from(await a.arrayBuffer());
-
-      if (sandbox) {
-        await logApiCost({
-          userId: await currentUserId(), draftId: draftId ?? null,
-          service: 'photoroom', operation: 'studio-plus-sandbox',
-          unitsIn: 1, costMicros: imageCostMicros('photoroom'),
-        });
-      }
-
-      return NextResponse.json({
-        result: `data:image/jpeg;base64,${fertig.toString('base64')}`,
-        kennzeichenErsetzt,
-        kennzeichenQuelle,
-        weg: 'plus',
-        raum: halle.name,
-        sandbox,
-      });
     }
 
     /* ── Weg 2: nur freistellen, Rest selbst rechnen ── */
@@ -602,14 +475,21 @@ export async function POST(req: NextRequest) {
         freigestellt = vorab;
       }
     } else {
-      const antwort = await fetch(SEGMENT, { method: 'POST', headers: { 'x-api-key': apiKey! }, body: form });
-      if (!antwort.ok) {
-        const text = await antwort.text();
-        console.error('[verarbeiten] Freistellen fehlgeschlagen:', antwort.status, text.slice(0, 300));
-        await freigeben(buchung);
-        return NextResponse.json(photoroomFehler(antwort.status), { status: 503 });
-      }
-      freigestellt = Buffer.from(await antwort.arrayBuffer());
+      /*
+       * Hier stand der Freistell-Aufruf bei PhotoRoom. Der Dienst ist
+       * raus, und damit gibt es an dieser Stelle nichts mehr, was ein
+       * Fahrzeug aus einem Foto schneiden koennte: Gemini hat es schon
+       * versucht, der eigene Freistell-Server ebenfalls (er liefert das
+       * Vorab-Bild), und das Modell im Browser ist der Rueckfall davon.
+       *
+       * Eine ehrliche Meldung ist besser als ein Bild, in dem das halbe
+       * Pflaster mitgekommen ist — der Haendler zahlt dafuer.
+       */
+      console.error('[verarbeiten] Kein freigestelltes Bild vorhanden und kein Weg mehr, eines zu bekommen');
+      return NextResponse.json({
+        error: 'Dieses Foto ließ sich nicht bearbeiten. Bitte noch einmal versuchen; '
+             + 'bleibt es dabei, hilft meist ein Foto mit mehr Abstand zum Fahrzeug und ruhigem Untergrund.',
+      }, { status: 503 });
     }
 
     /* ── In den Raum setzen (kostet nichts) ── */
@@ -896,21 +776,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /*
-     * Im Sandbox-Betrieb ist oben nichts reserviert worden, deshalb hier
-     * nachtragen — mit dem Tarif, der zum gewaehlten Weg gehoert.
-     */
-    if (sandbox) {
-      await logApiCost({
-        userId: await currentUserId(),
-        draftId: draftId ?? null,
-        service: tarif,
-        operation: 'studio-sandbox',
-        unitsIn: 1,
-        costMicros: imageCostMicros(tarif),
-      });
-    }
-
     return NextResponse.json({
       result: `data:image/jpeg;base64,${ergebnis.bild.toString('base64')}`,
       kennzeichenErsetzt,
@@ -927,7 +792,7 @@ export async function POST(req: NextRequest) {
       /* Davon an der oberen Fahrzeughaelfte, wo die Scheiben sitzen. */
       fahrzeugGeaendert,
       geminiSchatten,
-      sandbox,
+
     });
   } catch (err) {
     console.error('[verarbeiten] Fehler:', err);
