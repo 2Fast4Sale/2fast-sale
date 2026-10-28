@@ -739,7 +739,24 @@ function Step2Inner() {
         // steht unter dem Foto "Fehler", und niemand weiss, woran es lag.
         const text = await res.text().catch(() => '');
         let meldung = text.slice(0, 200);
-        try { meldung = JSON.parse(text).error ?? meldung; } catch { /* kein JSON, z.B. 413 von Vercel */ }
+        let daten: { keinFahrzeug?: boolean; innenraum?: boolean } = {};
+        try {
+          daten = JSON.parse(text);
+          meldung = (daten as { error?: string }).error ?? meldung;
+        } catch { /* kein JSON, z.B. 413 von Vercel */ }
+
+        /*
+         * Innenraum- oder Detailfoto: Das ist kein Fehler des Haendlers
+         * und auch keiner der Software. Das Foto bleibt, wie es ist, und
+         * wird aus der Studio-Auswahl genommen — damit erscheint an ihm
+         * der Knopf "Scheiben", der hier wirklich hilft.
+         */
+        if (daten.innenraum) {
+          setPhotos(p => p.map(x => x.id === photo.id
+            ? { ...x, processing: false, studio: false, scheibenGrund: 'Kein Studio — Innenraumfoto' }
+            : x));
+          return;
+        }
         throw new Error(`Server ${res.status}: ${meldung}`);
       }
       const data = await res.json();
@@ -1228,12 +1245,17 @@ function Step2Inner() {
         {/* ---- Photo Grid ---- */}
         {photos.length > 0 && (
           <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            {/*
+              Auf dem Handy bricht diese Leiste um, statt sich zu quetschen.
+              Vorher stand links 'Erste Bild = Titelbild' in vier Zeilen
+              untereinander und die Knoepfe rechts liefen aus dem Bild.
+            */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <span style={{ fontSize: '13px', fontWeight: '600', color: TS }}>
-                {photos.length} Foto{photos.length !== 1 ? 's' : ''} · Erste Bild = Titelbild
+                {photos.length} Foto{photos.length !== 1 ? 's' : ''} · erstes Bild ist das Titelbild
               </span>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                 {/*
                   Vergleich für alle Bilder auf einmal.
 

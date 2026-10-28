@@ -303,6 +303,34 @@ export async function POST(req: NextRequest) {
 
       const quelle = roh.length > 0 ? roh : vorab;
       if (quelle && quelle.length > 0) {
+        /*
+         * Ist auf dem Foto ueberhaupt ein Fahrzeug von aussen zu sehen?
+         *
+         * Ein Innenraumfoto gehoert nicht ins Studio: Da ist nichts
+         * freizustellen, und eine Halle dahinterzusetzen ergibt keinen
+         * Sinn — man sitzt ja drin. In der Anweisung steht genau das
+         * (Schritt 0: zeigt Bild 1 kein vollstaendiges Fahrzeug von
+         * aussen, Bild unveraendert zurueckgeben), aber Gemini haelt
+         * sich nicht daran: Im Live-Test kamen Innenraumfotos mit 71
+         * Prozent geaenderter Bildflaeche zurueck — also zum guten Teil
+         * neu gemalt, samt Hof hinter den Scheiben.
+         *
+         * Deshalb entscheidet das hier der eigene Erkenner, bevor
+         * ueberhaupt etwas bezahlt wird. Dieselbe Pruefung lief bisher
+         * nur auf dem anderen Weg.
+         */
+        const fahrzeugDa = await fahrzeugKastenFinden(quelle);
+        if (fahrzeugDa === 'keins') {
+          console.info('[verarbeiten] Kein Fahrzeug von aussen erkannt — kein Studio');
+          return NextResponse.json({
+            error: 'Auf diesem Foto ist kein vollständiges Fahrzeug von außen zu erkennen. '
+                 + 'Innenraum-, Motorraum- und Detailfotos gehören nicht ins Studio — '
+                 + 'für sie gibt es den Knopf „Scheiben".',
+            keinFahrzeug: true,
+            innenraum: true,
+          }, { status: 422 });
+        }
+
         let ki = await studioBildMitGemini(quelle, raumBild(halle), zielBreite, zielHoehe, schildName, bildGebucht, schildModus);
         if (!ki) {
           console.info('[verarbeiten] erster Gemini-Versuch nicht verwendbar (' + letzterGrund + '), zweiter Anlauf');
