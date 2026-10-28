@@ -163,26 +163,6 @@ export async function POST(req: NextRequest) {
     const weg = process.env.STUDIO_WEG === 'plus' && !vorab ? 'plus' : 'eigenbau';
     const tarif = weg === 'plus' ? 'photoroom' : 'photoroom_basic';
 
-    let buchung: string | null = null;
-    if (!sandbox && !vorab) {
-      const stand = await budget();
-      if (stand.erschoepft) {
-        return NextResponse.json({
-          error: `Das Kontingent für Studio-Bilder ist aufgebraucht (${stand.verbraucht} von ${stand.limit} in diesem Monat). `
-               + 'Es füllt sich zum Monatsersten wieder auf.',
-          kontingentErschoepft: true,
-        }, { status: 429 });
-      }
-      buchung = await reservieren(
-        await currentUserId(), draftId ?? null, imageCostMicros(tarif),
-      );
-      if (!buchung) {
-        return NextResponse.json({
-          error: 'Das Kontingent für Studio-Bilder ist aufgebraucht.',
-          kontingentErschoepft: true,
-        }, { status: 429 });
-      }
-    }
 
     /*
      * Mit vorab freigestelltem Bild kommt KEIN Originalfoto mehr mit. Beide
@@ -416,6 +396,43 @@ export async function POST(req: NextRequest) {
           });
         }
         console.warn('[verarbeiten] Gemini lieferte kein Bild, eigener Weg springt ein:', letzterGrund);
+      }
+    }
+
+    /*
+     * Die PhotoRoom-Sperre gilt erst hier — nach dem Gemini-Weg.
+     *
+     * Sie zaehlt die zehn kostenlosen PhotoRoom-Bilder im Monat. Seit
+     * Schritt 2 ueber Gemini laeuft, wird PhotoRoom auf diesem Weg gar
+     * nicht mehr angefasst: Die Route kehrt oben mit dem fertigen Bild
+     * zurueck, lange bevor hier jemand freistellt.
+     *
+     * Die Sperre stand trotzdem ganz oben und hat nach zehn Bildern im
+     * Monat ALLES abgeriegelt, auch den Gemini-Weg — mit einer Meldung
+     * ueber ein Kontingent, das mit dem Bild nichts zu tun hatte. Genau
+     * so ist es beim eigenen Gebrauch aufgefallen.
+     *
+     * Jetzt sperrt sie nur noch das, was sie meint: den Rueckfall ueber
+     * PhotoRoom.
+     */
+    let buchung: string | null = null;
+    if (!sandbox && !vorab) {
+      const stand = await budget();
+      if (stand.erschoepft) {
+        return NextResponse.json({
+          error: `Die KI für dieses Bild hat nicht geantwortet, und das Ersatzverfahren ist für diesen Monat aufgebraucht (${stand.verbraucht} von ${stand.limit}). `
+               + 'Bitte später noch einmal versuchen — zum Monatsersten füllt es sich wieder auf.',
+          kontingentErschoepft: true,
+        }, { status: 429 });
+      }
+      buchung = await reservieren(
+        await currentUserId(), draftId ?? null, imageCostMicros(tarif),
+      );
+      if (!buchung) {
+        return NextResponse.json({
+          error: 'Das Kontingent für Studio-Bilder ist aufgebraucht.',
+          kontingentErschoepft: true,
+        }, { status: 429 });
       }
     }
 
