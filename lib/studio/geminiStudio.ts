@@ -47,13 +47,13 @@ const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-3.1-flash-image';
  * 2K-Bild, davon ein Teil Hochladen ueber eine Hausleitung — auf
  * Vercel sitzt die Funktion im Rechenzentrum und ist schneller.
  *
- * 55 Sekunden sind deshalb knapp, aber nicht willkuerlich: Auf dem
- * Hobby-Tarif beendet Vercel die Funktion nach 60 Sekunden. Wer auf
- * Hobby bleibt, setzt besser GEMINI_BILD_GROESSE=1K — dann reicht die
- * Zeit bequem. Auf dem Pro-Tarif gilt maxDuration aus der Route (120),
- * und dann darf GEMINI_ZEITLIMIT_MS hoeher stehen.
+ * 40 Sekunden passen zur Vorgabe 1K: Gemessen dauert ein 1K-Bild 12
+ * Sekunden, also ist das reichlich Luft fuer einen langsamen Tag, und
+ * auf dem Hobby-Tarif bleiben von den 60 Sekunden noch 20 fuer die
+ * Nachbearbeitung. Wer auf Pro umstellt und GEMINI_BILD_GROESSE=2K
+ * setzt, zieht GEMINI_ZEITLIMIT_MS auf 90000 nach.
  */
-const ZEITLIMIT_MS = Number(process.env.GEMINI_ZEITLIMIT_MS || '55000');
+const ZEITLIMIT_MS = Number(process.env.GEMINI_ZEITLIMIT_MS || '40000');
 
 /**
  * Wie gross Gemini das Bild rechnen soll: 1K, 2K oder 4K.
@@ -81,8 +81,41 @@ const ZEITLIMIT_MS = Number(process.env.GEMINI_ZEITLIMIT_MS || '55000');
  *
  * 2K und nicht 4K: 2K deckt die 2000 Punkte der Anzeige ab, 4K kostet
  * mehr und dauert laenger, ohne dass man es im Inserat sieht.
+ *
+ * ── Warum trotzdem 1K die Vorgabe ist ──────────────────────────────
+ *
+ * Weil der Tarif entscheidet, nicht der Geschmack. Gemessen dauert ein
+ * 2K-Bild 36 Sekunden, ein 1K-Bild 12. Auf dem Hobby-Tarif beendet
+ * Vercel die Funktion nach 60 Sekunden — mit 2K plus Nachbearbeitung
+ * plus einem zweiten Anlauf nach HTTP 429 reicht das nicht, und dann
+ * bekommt der Haendler gar kein Bild statt eines weicheren.
+ *
+ * Sobald das Geschaeftskonto steht und der Pro-Tarif laeuft, gehoert
+ * hier GEMINI_BILD_GROESSE=2K gesetzt. Das ist eine Variable in Vercel,
+ * keine Veroeffentlichung.
  */
-const BILD_GROESSE = process.env.GEMINI_BILD_GROESSE || '2K';
+const BILD_GROESSE = process.env.GEMINI_BILD_GROESSE || '1K';
+
+/**
+ * Wie breit das Bild bei dieser Groesse wirklich ankommt.
+ *
+ * Nicht gerechnet, sondern gemessen (scripts/groesse-vergleich.ts):
+ * 1K liefert 1264 Punkte, 2K liefert 2528 — nicht 1024 und 2048, wie
+ * die Namen nahelegen.
+ *
+ * Die Zahl wird gebraucht, damit die Route das Ergebnis nicht wieder
+ * hochrechnet. Ein echtes Bild mit 1264 Punkten ist schaerfer als
+ * dasselbe Bild auf 2000 aufgeblasen.
+ *
+ * 4K steht hier mit 2048, weil es nicht gemessen ist und die Anzeige
+ * ohnehin nicht mehr als 2000 Punkte zeigt — geschaetzt wird nichts.
+ */
+export const ECHTE_BREITE = ({
+  '512': 632, '512P': 632, '512PX': 632,
+  '1K': 1264,
+  '2K': 2528,
+  '4K': 2048,
+} as Record<string, number>)[BILD_GROESSE] ?? 1264;
 
 /**
  * Wie aehnlich das Fahrzeug dem Original mindestens bleiben muss, 0 bis 1.

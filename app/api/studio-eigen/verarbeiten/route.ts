@@ -9,7 +9,7 @@ import { ersetzeKennzeichen, ersetzeKennzeichenImKasten, istEchtesKennzeichen, t
 import { kennzeichenAufServerFinden, fahrzeugKastenFinden } from '../../../../lib/studio/kennzeichenModell';
 import { freistellGuete } from '../../../../lib/studio/freistellGuete';
 import { freistellenMitGemini, freistellGrund } from '../../../../lib/studio/geminiFreisteller';
-import { studioBildMitGemini, studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten } from '../../../../lib/studio/geminiStudio';
+import { studioBildMitGemini, studioVerfeinernMitGemini, letzterGrund, GENUTZTES_MODELL, anteilGeaendertImKasten, ECHTE_BREITE } from '../../../../lib/studio/geminiStudio';
 
 export const dynamic = 'force-dynamic';
 /*
@@ -259,13 +259,18 @@ export async function POST(req: NextRequest) {
     }
 
     /*
-     * Hoechstens 2048 Punkte, und das ist kein runder Wunschwert: So
-     * breit liefert Gemini ein Bild in 2K. Stand hier 2400, wurde das
-     * Ergebnis um ein Fuenftel hochgerechnet — und hochgerechnet heisst
-     * weicher Lack und verwaschene Spaltmasse. Lieber 2048 echte Punkte
-     * als 2400 gerechnete.
+     * Hoechstens so breit, wie Gemini das Bild wirklich liefert.
+     *
+     * Stand hier 2400, wurde ein 1K-Ergebnis (gemessen 1264 Punkte) auf
+     * fast das Doppelte hochgerechnet — und hochgerechnet heisst weicher
+     * Lack, verwaschene Spaltmasse und Felgenspeichen ohne Kante. Genau
+     * das sah im Inserat "wie gemalt" aus.
+     *
+     * ECHTE_BREITE kommt aus der eingestellten Bildgroesse, ist also
+     * gemessen und nicht geraten. Ein echtes Bild mit 1264 Punkten ist
+     * schaerfer als dasselbe Bild auf 2000 aufgeblasen.
      */
-    const zielBreite = Math.max(600, Math.min(2048, Math.round(breite ?? 2000)));
+    const zielBreite = Math.max(600, Math.min(ECHTE_BREITE, Math.round(breite ?? 2000)));
     const zielHoehe  = Math.round(zielBreite / 1.5);
 
     /*
