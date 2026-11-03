@@ -258,7 +258,14 @@ export async function POST(req: NextRequest) {
       console.error('[verarbeiten] Kennzeichenersatz fehlgeschlagen:', err);
     }
 
-    const zielBreite = Math.max(600, Math.min(2400, Math.round(breite ?? 2000)));
+    /*
+     * Hoechstens 2048 Punkte, und das ist kein runder Wunschwert: So
+     * breit liefert Gemini ein Bild in 2K. Stand hier 2400, wurde das
+     * Ergebnis um ein Fuenftel hochgerechnet — und hochgerechnet heisst
+     * weicher Lack und verwaschene Spaltmasse. Lieber 2048 echte Punkte
+     * als 2400 gerechnete.
+     */
+    const zielBreite = Math.max(600, Math.min(2048, Math.round(breite ?? 2000)));
     const zielHoehe  = Math.round(zielBreite / 1.5);
 
     /*

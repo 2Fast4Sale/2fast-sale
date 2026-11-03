@@ -41,8 +41,48 @@ const MODELL = process.env.GEMINI_BILD_MODELL || 'gemini-3.1-flash-image';
  * nach 60 Sekunden hart ab. Dann kaeme gar keine Antwort beim Haendler
  * an — mit dem kuerzeren Limit bleibt Zeit, wenigstens das eigene Bild
  * zurueckzugeben.
+ *
+ * Mit 2K dauert ein Bild laenger als mit 1K. Gemessen an der echten
+ * Schnittstelle (scripts/bildgroesse-probe.ts): 53,9 Sekunden fuer ein
+ * 2K-Bild, davon ein Teil Hochladen ueber eine Hausleitung — auf
+ * Vercel sitzt die Funktion im Rechenzentrum und ist schneller.
+ *
+ * 55 Sekunden sind deshalb knapp, aber nicht willkuerlich: Auf dem
+ * Hobby-Tarif beendet Vercel die Funktion nach 60 Sekunden. Wer auf
+ * Hobby bleibt, setzt besser GEMINI_BILD_GROESSE=1K — dann reicht die
+ * Zeit bequem. Auf dem Pro-Tarif gilt maxDuration aus der Route (120),
+ * und dann darf GEMINI_ZEITLIMIT_MS hoeher stehen.
  */
-const ZEITLIMIT_MS = 35_000;
+const ZEITLIMIT_MS = Number(process.env.GEMINI_ZEITLIMIT_MS || '55000');
+
+/**
+ * Wie gross Gemini das Bild rechnen soll: 1K, 2K oder 4K.
+ *
+ * ── Warum das der wichtigste Wert in dieser Datei ist ──────────────
+ *
+ * Ohne Angabe liefert Nano Banana 2 die Voreinstellung 1K, also rund
+ * 1024 Punkte Breite. Im Browser wird das Studiobild aber mit bis zu
+ * 2000 Punkten angezeigt — der Rest war hochgerechnet. Genau so sieht
+ * ein hochgerechnetes Bild aus: weicher Lack, verwaschene Spaltmasse,
+ * matschige Embleme, Felgenspeichen ohne Kante. Das ist der Grund,
+ * warum fertige Bilder "wie gemalt" wirkten, obwohl das Modell alles
+ * richtig gemacht hatte. Mehr Saetze in der Anweisung haetten daran
+ * nichts geaendert.
+ *
+ * Welche Werte die Schnittstelle annimmt, ist nicht geraten, sondern
+ * gemessen (scripts/bildgroesse-feldprobe.ts, kostet nichts, weil ein
+ * falscher Wert vor der Berechnung abgelehnt wird):
+ *
+ *   generationConfig.imageConfig.imageSize  → "Supported values are:
+ *   1K, 2K, 4K, 512, 512P, 512PX."
+ *
+ * Das in den Unterlagen genannte response_format auf oberster Ebene
+ * kennt v1beta dagegen nicht ("Unknown name").
+ *
+ * 2K und nicht 4K: 2K deckt die 2000 Punkte der Anzeige ab, 4K kostet
+ * mehr und dauert laenger, ohne dass man es im Inserat sieht.
+ */
+const BILD_GROESSE = process.env.GEMINI_BILD_GROESSE || '2K';
 
 /**
  * Wie aehnlich das Fahrzeug dem Original mindestens bleiben muss, 0 bis 1.
@@ -394,7 +434,15 @@ export async function studioBildMitGemini(
   const start = Date.now();
   try {
     const anfrageSenden = async () => {
-      const auto = await sharp(foto).resize(1536, 1536, { fit: 'inside' }).jpeg({ quality: 90 }).toBuffer();
+      /*
+       * 2048 und Qualitaet 94 fuer das Fahrzeugfoto: Das Modell kann nur
+       * erhalten, was es sieht. Bei 1536/90 waren Spaltmasse, Schrift auf
+       * dem Heck und Kratzer im Lack schon in der EINGABE weich — was
+       * dann im Ergebnis fehlt, hat nie an der Anweisung gelegen.
+       * Die Halle bleibt klein: eine ruhige Flaeche braucht keine
+       * Schaerfe und blaeht die Anfrage nur auf.
+       */
+      const auto = await sharp(foto).resize(2048, 2048, { fit: 'inside' }).jpeg({ quality: 94 }).toBuffer();
       const halle = await sharp(raumBild).resize(1536, 1536, { fit: 'inside' }).jpeg({ quality: 85 }).toBuffer();
 
       return fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELL}:generateContent`, {
@@ -408,7 +456,10 @@ export async function studioBildMitGemini(
               { inline_data: { mime_type: 'image/jpeg', data: halle.toString('base64') } },
             ],
           }],
-          generationConfig: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '3:2' } },
+          generationConfig: {
+            responseModalities: ['IMAGE'],
+            imageConfig: { aspectRatio: '3:2', imageSize: BILD_GROESSE },
+          },
         }),
       });
     };
@@ -641,6 +692,13 @@ export async function studioVerfeinernMitGemini(
               { inline_data: { mime_type: 'image/jpeg', data: eingabe.toString('base64') } },
             ],
           }],
+          /* Auch hier 2K: Das Eingabebild ist schon zusammengesetzt, und
+             ein in 1K zurueckgerechneter Durchgang wuerde die Schaerfe
+             wieder verlieren, die der Kompositor hatte. */
+          generationConfig: {
+            responseModalities: ['IMAGE'],
+            imageConfig: { aspectRatio: '3:2', imageSize: BILD_GROESSE },
+          },
         }),
       },
     ), ZEITLIMIT_MS);
