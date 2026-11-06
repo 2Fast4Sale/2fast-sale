@@ -339,30 +339,65 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
   const [dokumentLaeuft, setDokumentLaeuft] = useState(false);
   const [dokumentMeldung, setDokumentMeldung] = useState<string | null>(null);
   const dokumentFeld = useRef<HTMLInputElement>(null);
+  /*
+   * Der zweite Weg zur Ausstattung, und der einzige, der nichts kostet
+   * und sofort geht: Die alte Anzeige steht noch online. Der Haendler
+   * markiert die Ausstattungsliste, kopiert sie und fuegt sie hier ein —
+   * abgelesen, nicht abgeleitet, und ohne ein Blatt zu suchen.
+   */
+  const [textOffen, setTextOffen] = useState(false);
+  const [textEingabe, setTextEingabe] = useState('');
 
-  const dokumentLesen = async (datei: File) => {
+  /**
+   * Ausstattung aus Unterlagen lesen — mehrere Seiten, Bilder oder PDF.
+   *
+   * ── Was vorher nicht ging ──────────────────────────────────────────
+   *
+   * Der Knopf bot `accept="image/*,.pdf"` an, und ein PDF scheiterte
+   * jedes Mal: Verkleinern laedt die Datei in ein Image-Element, ein PDF
+   * laedt dort nicht, der Fehlerfall gibt sie unveraendert weiter, und
+   * die Route schickte "application/pdf" als Bildtyp an Anthropic. In
+   * der Oberflaeche stand dann "Scan fehlgeschlagen".
+   *
+   * Der Haendler hat die Ausstattungsliste aber fast immer als PDF, weil
+   * sie so aus dem Herstellersystem kommt — und eine Bestellbestaetigung
+   * hat drei bis sechs Seiten, nicht eine.
+   *
+   * Also: PDF geht unveraendert durch, Bilder werden verkleinert, und
+   * alle Seiten gehen in EINEN Aufruf. Ein Aufruf und nicht sechs, weil
+   * jeder bezahlt wird und die Merkmale sich ueber die Seiten verteilen.
+   */
+  const dokumentLesen = async (dateien: File[], text?: string) => {
     setDokumentLaeuft(true);
     setDokumentMeldung(null);
     try {
-      /*
-       * Bei Dokumenten mit viel Text 1600 px statt 1200 — eine
-       * Bestellbestaetigung hat zwanzig Zeilen Kleingedrucktes, die bei
-       * 1200 px auseinanderlaufen.
-       */
-      const bild = await verkleinern(await alsDataUrl(datei), 1600);
+      const teile = await Promise.all(dateien.map(async (datei) => {
+        const roh = await alsDataUrl(datei);
+        /*
+         * Ein PDF ist schon klein und darf nicht durch den Canvas — der
+         * macht aus ihm ein unlesbares Bild oder gar nichts.
+         * Bei Bildern 1600 px statt 1200: Eine Bestellbestaetigung hat
+         * zwanzig Zeilen Kleingedrucktes, die bei 1200 auseinanderlaufen.
+         */
+        return datei.type === 'application/pdf' ? roh : verkleinern(roh, 1600);
+      }));
 
       const res = await fetch('/api/scan-equipment-doc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: bild, draftId: entwurfId() }),
+        body: JSON.stringify({ dateien: teile, text: text ?? '', draftId: entwurfId() }),
       });
       const ergebnis = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(ergebnis.error || `Server ${res.status}`);
 
       const gefunden: string[] = Array.isArray(ergebnis.equipment) ? ergebnis.equipment : [];
       const neu = gefunden.filter(e => typeof e === 'string' && e.trim() && !data.equipment.includes(e));
+      /* Weggefallene Seiten nennen, statt sie still zu schlucken. */
+      const rest = Number(ergebnis.uebersprungen) > 0
+        ? ` ${ergebnis.uebersprungen} Seite(n) wurden nicht gelesen — bitte einzeln nachreichen.`
+        : '';
       if (neu.length === 0) {
-        setDokumentMeldung('Auf dem Dokument wurde keine neue Ausstattung gefunden.');
+        setDokumentMeldung('Darin wurde keine neue Ausstattung gefunden.' + rest);
       } else {
         setzen('equipment', [...data.equipment, ...neu]);
         /*
@@ -370,7 +405,7 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
          * hereinkommt, steht spaeter als Zusicherung im Inserat. Der
          * Haendler soll es einmal anschauen, nicht blind uebernehmen.
          */
-        setDokumentMeldung(`${neu.length} Merkmale übernommen — bitte kurz prüfen und Falsches entfernen.`);
+        setDokumentMeldung(`${neu.length} Merkmale übernommen — bitte kurz prüfen und Falsches entfernen.` + rest);
       }
     } catch (err) {
       setDokumentMeldung(err instanceof Error ? err.message : 'Das Dokument konnte nicht gelesen werden.');
@@ -1165,27 +1200,77 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
                       ref={dokumentFeld}
                       type="file"
                       accept="image/*,.pdf"
+                      multiple
                       style={{ display: 'none' }}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) dokumentLesen(f); }} />
-                    <button
-                      type="button"
-                      disabled={dokumentLaeuft}
-                      onClick={() => dokumentFeld.current?.click()}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7,
-                        padding: '9px 13px', borderRadius: 8,
-                        border: `1px solid ${T.linie}`, background: T.blatt,
-                        cursor: dokumentLaeuft ? 'wait' : 'pointer',
-                        fontFamily: T.schrift, fontSize: 12.5, color: T.gedämpft, fontWeight: 600,
-                      }}>
-                      {dokumentLaeuft
-                        ? <><Loader2 size={14} className="dreht" /> Dokument wird gelesen…</>
-                        : <><FileText size={14} /> Ausstattung aus Dokument übernehmen</>}
-                    </button>
+                      onChange={e => {
+                        const f = Array.from(e.target.files ?? []);
+                        if (f.length) dokumentLesen(f);
+                      }} />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <button
+                        type="button"
+                        disabled={dokumentLaeuft}
+                        onClick={() => dokumentFeld.current?.click()}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 7,
+                          padding: '9px 13px', borderRadius: 8,
+                          border: `1px solid ${T.linie}`, background: T.blatt,
+                          cursor: dokumentLaeuft ? 'wait' : 'pointer',
+                          fontFamily: T.schrift, fontSize: 12.5, color: T.gedämpft, fontWeight: 600,
+                        }}>
+                        {dokumentLaeuft
+                          ? <><Loader2 size={14} className="dreht" /> Wird gelesen…</>
+                          : <><FileText size={14} /> Ausstattung aus Dokument übernehmen</>}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={dokumentLaeuft}
+                        onClick={() => setTextOffen(o => !o)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 7,
+                          padding: '9px 13px', borderRadius: 8,
+                          border: `1px solid ${T.linie}`, background: T.blatt,
+                          cursor: dokumentLaeuft ? 'wait' : 'pointer',
+                          fontFamily: T.schrift, fontSize: 12.5, color: T.gedämpft, fontWeight: 600,
+                        }}>
+                        <Plus size={14} /> Liste einfügen
+                      </button>
+                    </div>
                     <p style={{ margin: '6px 0 0', fontSize: 11.5, color: T.leise, lineHeight: 1.55 }}>
                       Bestellbestätigung, Herstellerbrief, Übergabeprotokoll, Ausdruck aus dem
-                      eigenen System oder ein altes Inserat — abfotografieren genügt.
+                      eigenen System oder ein altes Inserat — abfotografieren genügt, PDF geht
+                      auch, und mehrere Seiten auf einmal. Oder den Text der alten Anzeige
+                      hier einfügen.
                     </p>
+
+                    {textOffen && (
+                      <div style={{ marginTop: 8 }}>
+                        <textarea
+                          value={textEingabe}
+                          onChange={e => setTextEingabe(e.target.value)}
+                          placeholder={'Ausstattungsliste aus der alten Anzeige hier einfügen …'}
+                          rows={6}
+                          style={{
+                            width: '100%', padding: 10, borderRadius: 8,
+                            border: `1px solid ${T.linie}`, background: T.blatt,
+                            fontFamily: T.schrift, fontSize: 12.5, color: T.gedämpft,
+                            lineHeight: 1.5, resize: 'vertical',
+                          }} />
+                        <button
+                          type="button"
+                          disabled={dokumentLaeuft || !textEingabe.trim()}
+                          onClick={() => { dokumentLesen([], textEingabe); setTextOffen(false); }}
+                          style={{
+                            marginTop: 6, padding: '8px 13px', borderRadius: 8,
+                            border: `1px solid ${T.linie}`, background: T.blatt,
+                            cursor: textEingabe.trim() ? 'pointer' : 'not-allowed',
+                            opacity: textEingabe.trim() ? 1 : 0.5,
+                            fontFamily: T.schrift, fontSize: 12.5, color: T.gedämpft, fontWeight: 600,
+                          }}>
+                          Aus diesem Text übernehmen
+                        </button>
+                      </div>
+                    )}
                     {dokumentMeldung && (
                       <p style={{
                         margin: '8px 0 0', fontSize: 12, lineHeight: 1.55,
