@@ -272,3 +272,68 @@ export function searchEquipment(query: string): EquipmentItem[] {
       item.aliases.some(a => a.toLowerCase().includes(q))
   );
 }
+
+/**
+ * Zwei Ausstattungslisten zusammenfuehren, ohne dasselbe Merkmal
+ * zweimal stehen zu lassen.
+ *
+ * ── Woran es aufgefallen ist ───────────────────────────────────────
+ *
+ * Im ersten echten Lauf stand in der Liste:
+ *
+ *   "Anhängerkupplung"   und   "Anhängerkupplung, abnehmbar"
+ *
+ * Fuer einen Menschen ist das ein Merkmal, fuer ein Portal auch — beide
+ * zeigen auf dasselbe Ziel. Im Inserat stuende die Kupplung doppelt,
+ * und je nach Portal waere das ein Fehler statt nur haesslich.
+ *
+ * `normalizeEquipment` faengt den Fall nicht ab: Es vergleicht gegen
+ * den Anzeigenamen und die Aliase, und bei "Anhängerkupplung" steht der
+ * eigene Name nicht unter den Aliasen. "Anhängerkupplung, abnehmbar"
+ * trifft also nichts und bleibt, wie es ist.
+ *
+ * ── Wie entschieden wird ───────────────────────────────────────────
+ *
+ * Doppelt ist, was nach dem Normalisieren gleich ist — oder was mit dem
+ * anderen Eintrag an einer Wortgrenze anfaengt. Es gewinnt der
+ * LAENGERE.
+ *
+ * Der laengere und nicht der kuerzere, aus zwei Gruenden. Er sagt mehr
+ * ("abnehmbar" ist eine Angabe, die der Kaeufer wissen will). Und er
+ * ist der vorsichtigere: Aus "Navigationssystem" und "Navigationssystem
+ * vorbereitet" bleibt die Vorbereitung stehen — ein vorbereitetes
+ * Navi als eingebautes zu fuehren waere eine falsche Zusicherung.
+ *
+ * An einer WORTGRENZE und nicht irgendwo: Sonst verschluckte
+ * "Sitzheizung" auch "Sitzheizungsschalter defekt".
+ */
+export function ausstattungZusammenfuehren(bestehend: string[], neu: string[]): string[] {
+  const ergebnis: string[] = [];
+
+  const gleich = (a: string, b: string) => a.toLowerCase().trim() === b.toLowerCase().trim();
+
+  /** Faengt `lang` mit `kurz` an, und endet `kurz` dort an einer Wortgrenze? */
+  const beginntMit = (lang: string, kurz: string) => {
+    const l = lang.toLowerCase().trim();
+    const k = kurz.toLowerCase().trim();
+    if (!k || l.length <= k.length || !l.startsWith(k)) return false;
+    return /[\s,;(/-]/.test(l[k.length]);
+  };
+
+  for (const roh of [...bestehend, ...neu]) {
+    const eintrag = (roh ?? '').trim();
+    if (!eintrag) continue;
+
+    const vorhanden = ergebnis.findIndex(e =>
+      gleich(e, eintrag) || beginntMit(e, eintrag) || beginntMit(eintrag, e));
+
+    if (vorhanden === -1) {
+      ergebnis.push(eintrag);
+    } else if (eintrag.length > ergebnis[vorhanden].length) {
+      /* Der laengere sagt mehr und sagt es vorsichtiger. */
+      ergebnis[vorhanden] = eintrag;
+    }
+  }
+
+  return ergebnis;
+}

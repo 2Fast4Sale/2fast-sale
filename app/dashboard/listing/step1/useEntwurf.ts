@@ -16,7 +16,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
-import { searchEquipment } from '../../../../lib/equipmentDatabase';
+import { searchEquipment, ausstattungZusammenfuehren } from '../../../../lib/equipmentDatabase';
 import { validateEnvkv, isEnvkvRequired, type EnvkvData } from '../../../../lib/envkv';
 import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
 
@@ -427,8 +427,18 @@ export function useEntwurf() {
       const d = await antwort.json().catch(() => ({} as Record<string, unknown>));
       if (!antwort.ok) throw new Error(String(d.error || `Scan fehlgeschlagen (${antwort.status})`));
 
-      const gefunden: string[] = Array.isArray(d.equipment) ? d.equipment : [];
-      const neu = gefunden.filter(m => typeof m === 'string' && m.trim() && !data.equipment.includes(m));
+      const gefunden: string[] = (Array.isArray(d.equipment) ? d.equipment : [])
+        .filter((m: unknown): m is string => typeof m === 'string' && m.trim() !== '');
+      /*
+       * Zusammenfuehren statt anhaengen.
+       *
+       * Ein blosses `!includes(m)` liess "Anhängerkupplung" und
+       * "Anhängerkupplung, abnehmbar" nebeneinander stehen — fuer ein
+       * Portal dasselbe Merkmal, doppelt gemeldet. Welcher Eintrag
+       * gewinnt, steht in ausstattungZusammenfuehren.
+       */
+      const zusammen = ausstattungZusammenfuehren(data.equipment, gefunden);
+      const neu = zusammen.filter(m => !data.equipment.includes(m));
       /* Weggefallene Seiten nennen, statt sie still zu schlucken. */
       const rest = Number(d.uebersprungen) > 0
         ? ` ${d.uebersprungen} Seite(n) wurden nicht gelesen — bitte einzeln nachreichen.`
@@ -437,7 +447,9 @@ export function useEntwurf() {
       if (neu.length === 0) {
         setDokumentMeldung('Darin wurde keine neue Ausstattung gefunden.' + rest);
       } else {
-        setzen('equipment', [...data.equipment, ...neu]);
+        /* Die zusammengefuehrte Liste, nicht die alte plus die neuen —
+           sonst bliebe der allgemeinere Eintrag daneben stehen. */
+        setzen('equipment', zusammen);
         /*
          * Die Zahl nennen und zum Nachsehen auffordern: Was hier
          * hereinkommt, steht spaeter als Zusicherung im Inserat. Der
