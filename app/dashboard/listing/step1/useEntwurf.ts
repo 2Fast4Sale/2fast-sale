@@ -268,6 +268,19 @@ export function useEntwurf() {
   const [scanBild, setScanBild]       = useState<string | null>(null);
   /** Warum der Scan scheiterte — im Klartext, statt einer Sammelmeldung. */
   const [scanFehler, setScanFehler]   = useState<string | null>(null);
+
+  /*
+   * Ausstattung aus Unterlagen — Zustand.
+   *
+   * Steht hier im gemeinsamen Hook und nicht in einer der beiden
+   * Oberflaechen, weil es Schritt 1 zweimal gibt (Formular und
+   * Showroom). Genau daran ist es schon einmal gescheitert: Der Knopf
+   * wurde in das eine Formular gebaut, der Haendler arbeitet mit dem
+   * anderen, und dort war er schlicht nicht da.
+   */
+  const dokumentFeld = useRef<HTMLInputElement>(null);
+  const [dokumentLaeuft, setDokumentLaeuft]   = useState(false);
+  const [dokumentMeldung, setDokumentMeldung] = useState<string | null>(null);
   const [unterwegs, setUnterwegs]     = useState(false);
   const [schmal, setSchmal]           = useState(false);
 
@@ -370,6 +383,75 @@ export function useEntwurf() {
       leser.onerror = () => fehler(leser.error ?? new Error('Datei nicht lesbar'));
       leser.readAsDataURL(datei);
     });
+
+  /* ── Ausstattung aus Unterlagen lesen ── */
+
+  /**
+   * Bestellbestaetigung, Herstellerbrief, Uebergabeprotokoll, Ausdruck
+   * aus dem eigenen System, altes Inserat — als Bild, als PDF oder als
+   * eingefuegter Text.
+   *
+   * Der Weg ueber die Fahrgestellnummer ist zu: DAT verkauft
+   * Softwareanbietern keine Schnittstelle. Die Unterlagen im
+   * Fahrzeugordner sind damit die einzige Quelle, die bleibt — und sie
+   * ist die bessere, weil abgelesen statt abgeleitet.
+   *
+   * Alle Seiten gehen in EINEN Aufruf: Jeder wird bezahlt, und die
+   * Merkmale verteilen sich ueber die Seiten.
+   */
+  const ausstattungAusUnterlagen = async (dateien: File[], text?: string) => {
+    setDokumentLaeuft(true);
+    setDokumentMeldung(null);
+    try {
+      const teile = await Promise.all(dateien.map(async (datei) => {
+        const roh = await alsDataUrl(datei);
+        /*
+         * Ein PDF darf NICHT durch das Verkleinern: Das laedt die Datei
+         * in ein Image-Element, ein PDF laedt dort nicht, und der
+         * Fehlerfall gaebe sie unveraendert weiter — dann stuende
+         * "application/pdf" als Bildtyp in der Anfrage und Anthropic
+         * antwortete mit 400. Genau so war es monatelang kaputt.
+         *
+         * Bilder bekommen 1600 statt 1200 Punkte: Eine
+         * Bestellbestaetigung hat zwanzig Zeilen Kleingedrucktes, die
+         * bei 1200 auseinanderlaufen.
+         */
+        return datei.type === 'application/pdf' ? roh : verkleinern(roh, 1600);
+      }));
+
+      const antwort = await fetch('/api/scan-equipment-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dateien: teile, text: text ?? '', draftId: entwurfId() }),
+      });
+      const d = await antwort.json().catch(() => ({} as Record<string, unknown>));
+      if (!antwort.ok) throw new Error(String(d.error || `Scan fehlgeschlagen (${antwort.status})`));
+
+      const gefunden: string[] = Array.isArray(d.equipment) ? d.equipment : [];
+      const neu = gefunden.filter(m => typeof m === 'string' && m.trim() && !data.equipment.includes(m));
+      /* Weggefallene Seiten nennen, statt sie still zu schlucken. */
+      const rest = Number(d.uebersprungen) > 0
+        ? ` ${d.uebersprungen} Seite(n) wurden nicht gelesen — bitte einzeln nachreichen.`
+        : '';
+
+      if (neu.length === 0) {
+        setDokumentMeldung('Darin wurde keine neue Ausstattung gefunden.' + rest);
+      } else {
+        setzen('equipment', [...data.equipment, ...neu]);
+        /*
+         * Die Zahl nennen und zum Nachsehen auffordern: Was hier
+         * hereinkommt, steht spaeter als Zusicherung im Inserat. Der
+         * Haendler soll es einmal anschauen, nicht blind uebernehmen.
+         */
+        setDokumentMeldung(`${neu.length} Merkmale übernommen — bitte kurz prüfen und Falsches entfernen.` + rest);
+      }
+    } catch (err) {
+      setDokumentMeldung(err instanceof Error ? err.message : 'Das Dokument konnte nicht gelesen werden.');
+    } finally {
+      setDokumentLaeuft(false);
+      if (dokumentFeld.current) dokumentFeld.current.value = '';
+    }
+  };
 
   const einlesen = async (datei: File) => {
     setScanZustand('laeuft');
@@ -594,6 +676,7 @@ export function useEntwurf() {
     fehler, setFehler, erkannt, herkunft, setHerkunft,
     blattOffen, setBlattOffen,
     scanZustand, scanBild, scanFehler, einlesen, dateiRef,
+    ausstattungAusUnterlagen, dokumentFeld, dokumentLaeuft, dokumentMeldung,
     weiter, unterwegs,
     schmal, offenePflicht, envkvPflicht,
     modelle, markenSuchen, ausstattungSuchen, titelBisher,

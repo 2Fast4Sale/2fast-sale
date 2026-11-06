@@ -32,7 +32,7 @@
 
 import { useState } from 'react';
 import {
-  Camera, Loader2, ArrowRight, ChevronDown, ChevronRight, Search, X, Plus, RotateCcw, AlertCircle, CheckCircle2,
+  Camera, Loader2, ArrowRight, ChevronDown, ChevronRight, Search, X, Plus, RotateCcw, AlertCircle, CheckCircle2, FileText,
 } from 'lucide-react';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
@@ -428,6 +428,9 @@ export default function Showroom() {
   const [ueberZone, setUeberZone]         = useState(false);
   const [ausstattungSuche, setAusstattungSuche] = useState('');
   const [ausstattungOffen, setAusstattungOffen] = useState(false);
+  /* Textfeld zum Einfuegen einer Ausstattungsliste aus einer alten Anzeige. */
+  const [textOffen, setTextOffen] = useState(false);
+  const [textEingabe, setTextEingabe] = useState(''); 
   const [envkvOffen, setEnvkvOffen]       = useState(false);
   /** Der eingelesene Schein in gross, zum Nachlesen einzelner Felder. */
   const [scheinGross, setScheinGross]     = useState(false);
@@ -1388,6 +1391,83 @@ export default function Showroom() {
                 */}
                 Nur, was man auf Fotos <em>nicht</em> sieht — Scheckheft, Standheizung.
               </p>
+
+              {/*
+                Ausstattung aus den Unterlagen.
+                Der schnellste Weg zu einer vollstaendigen Liste, ohne
+                Abtippen und ohne Datenlizenz: Der Haendler hat die
+                Unterlagen ohnehin im Fahrzeugordner. PDF und mehrere
+                Seiten gehen, der Text einer alten Anzeige auch.
+              */}
+              <div style={{ marginBottom: 14 }}>
+                <input
+                  ref={e.dokumentFeld}
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={ev => {
+                    const f = Array.from(ev.target.files ?? []);
+                    if (f.length) e.ausstattungAusUnterlagen(f);
+                  }} />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <button type="button" disabled={e.dokumentLaeuft}
+                    onClick={() => e.dokumentFeld.current?.click()}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7,
+                             padding: '9px 13px', borderRadius: 8,
+                             border: `1px solid ${F.linie}`, background: F.flaeche,
+                             cursor: e.dokumentLaeuft ? 'wait' : 'pointer',
+                             fontFamily: F.schrift, fontSize: 12.5, color: F.gedämpft, fontWeight: 600 }}>
+                    {e.dokumentLaeuft
+                      ? <><Loader2 size={14} style={{ animation: 'drehen .8s linear infinite' }} /> Wird gelesen…</>
+                      : <><FileText size={14} /> Ausstattung aus Dokument übernehmen</>}
+                  </button>
+                  <button type="button" disabled={e.dokumentLaeuft}
+                    onClick={() => setTextOffen(o => !o)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7,
+                             padding: '9px 13px', borderRadius: 8,
+                             border: `1px solid ${F.linie}`, background: F.flaeche,
+                             cursor: e.dokumentLaeuft ? 'wait' : 'pointer',
+                             fontFamily: F.schrift, fontSize: 12.5, color: F.gedämpft, fontWeight: 600 }}>
+                    <Plus size={14} /> Liste einfügen
+                  </button>
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: F.leise, lineHeight: 1.6 }}>
+                  Bestellbestätigung, Herstellerbrief, Übergabeprotokoll oder altes Inserat.
+                  Foto oder PDF, mehrere Seiten auf einmal.
+                </p>
+
+                {textOffen && (
+                  <div style={{ marginTop: 8 }}>
+                    <textarea
+                      value={textEingabe}
+                      onChange={ev => setTextEingabe(ev.target.value)}
+                      placeholder="Ausstattungsliste aus der alten Anzeige hier einfügen …"
+                      rows={6}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 8,
+                               border: `1px solid ${F.linie}`, background: F.flaeche, color: F.text,
+                               fontFamily: F.schrift, fontSize: 12.5, lineHeight: 1.5, resize: 'vertical',
+                               outline: 'none' }} />
+                    <button type="button"
+                      disabled={e.dokumentLaeuft || !textEingabe.trim()}
+                      onClick={() => { e.ausstattungAusUnterlagen([], textEingabe); setTextOffen(false); }}
+                      style={{ marginTop: 6, padding: '8px 13px', borderRadius: 8,
+                               border: `1px solid ${F.linie}`, background: F.flaeche,
+                               cursor: textEingabe.trim() ? 'pointer' : 'not-allowed',
+                               opacity: textEingabe.trim() ? 1 : 0.5,
+                               fontFamily: F.schrift, fontSize: 12.5, color: F.gedämpft, fontWeight: 600 }}>
+                      Aus diesem Text übernehmen
+                    </button>
+                  </div>
+                )}
+
+                {e.dokumentMeldung && (
+                  <p style={{ margin: '8px 0 0', fontSize: 12.5, lineHeight: 1.6,
+                              color: e.dokumentMeldung.includes('übernommen') ? '#047857' : F.gedämpft }}>
+                    {e.dokumentMeldung}
+                  </p>
+                )}
+              </div>
 
               <div style={{ position: 'relative', maxWidth: 420 }}>
                 <Plus size={14} color={F.leise} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }} />
