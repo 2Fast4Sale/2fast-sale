@@ -1,7 +1,29 @@
 # Antwort an die DAT (Herr Weiermann)
 
-Stand: 2. Oktober 2026. Entwurf — vor dem Abschicken einmal selbst
-durchlesen und alles rauswerfen, was sich nicht wie du anhört.
+Stand: 2. Oktober 2026, durchgesehen am 8. November 2026. Entwurf — vor
+dem Abschicken einmal selbst durchlesen und alles rauswerfen, was sich
+nicht wie du anhört.
+
+> **Nachtrag 8.11.2026 — das Wichtigste zuerst.** Dieser Entwurf liegt
+> seit fünf Wochen hier und ist nie abgeschickt worden. Solange das so
+> bleibt, bewegt sich beim Thema Ausstattung nichts, egal wie gut die
+> Software wird.
+>
+> Zwei Zahlen sind inzwischen belegt und ändern die Lage (Quellen und
+> Fristen in `docs/datenbanken-kontakte.md`):
+>
+> - Der Workshop kostet laut DAT-Seite **299 € netto pro Tag**, und nur
+>   **Tag 1 ist Pflicht** — und Tag 1 ist genau die
+>   Fahrzeug-Identifikation. Nicht 950 €. Frag im Telefonat nach dem
+>   Preis für nur dieses Modul.
+> - Die Anmeldung für den deutschen Termin am **16.11.2026** läuft laut
+>   Seite **bis eine Woche vorher**, also bis zum 9.11.2026. Danach erst
+>   wieder 18.01.2027 (englisch) und 15.03.2027.
+>
+> Anmelden solltest du trotzdem erst, wenn die beiden Fragen unten
+> beantwortet sind. Die Fragen kosten nichts, der Workshop 299 €. Und
+> die Frist schafft keine Mail — dafür muss man anrufen:
+> **+49 711 4503-130**.
 
 ## Worum es geht
 
@@ -47,9 +69,15 @@ das ihm nicht gehört.
 > danach 354 € im Monat kann ich im Moment nicht tragen. Bei meinem
 > Preis von 7,50 € je Inserat wären das rund 74 Inserate im Monat, die
 > ausschließlich die Partnerschaft bezahlen. So weit bin ich nicht: Ich
-> fange gerade an, melde das Gewerbe in den nächsten Tagen an und habe
-> noch keine zahlenden Händler. Mit Zahlen, die ich mir ausdenke, wollte
-> ich Ihnen nicht kommen.
+> fange gerade an, die Gewerbeanmeldung ist in Arbeit, zahlende Händler
+> habe ich noch keine. Mit Zahlen, die ich mir ausdenke, wollte ich
+> Ihnen nicht kommen.
+>
+> Zum Workshop eine Rückfrage: Auf Ihrer Anmeldeseite steht ein Preis
+> von 299 € netto pro Tag, und als Pflichtteil ist nur die
+> Fahrzeug-Identifikation ausgewiesen. Genau dieses Modul brauche ich —
+> Bewerten, Kalkulieren und Schadenmanagement spielen bei mir keine
+> Rolle. Reicht für die Schnittstellenpartnerschaft dieser eine Tag?
 >
 > Deshalb zwei Fragen zu Ihrem Punkt 1, den Schnittstellenpartnern:
 >
