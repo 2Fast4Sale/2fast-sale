@@ -281,6 +281,24 @@ export function useEntwurf() {
   const dokumentFeld = useRef<HTMLInputElement>(null);
   const [dokumentLaeuft, setDokumentLaeuft]   = useState(false);
   const [dokumentMeldung, setDokumentMeldung] = useState<string | null>(null);
+
+  /*
+   * Nahaufnahmen aus dem Innenraum.
+   *
+   * Fuer den Haendler mit zehn Autos im Monat, ohne DAT-Lizenz, ohne
+   * Herstellerzugang und oft ohne Bestellbestaetigung — Eintausch,
+   * Auktion, Privatkauf. Fuer den ist jede Datenquelle zu. Was er
+   * immer hat, ist das Auto.
+   *
+   * Je Stelle ein Foto, gesammelt und in EINEM Aufruf ausgewertet:
+   * Sieben einzelne Aufrufe kosten siebenmal, einer kostet einmal.
+   */
+  const nahFeld = useRef<HTMLInputElement>(null);
+  const [nahBilder, setNahBilder]   = useState<Record<string, string>>({});
+  const [nahLaeuft, setNahLaeuft]   = useState(false);
+  const [nahMeldung, setNahMeldung] = useState<string | null>(null);
+  const [nahBelege, setNahBelege]   = useState<{ merkmal: string; beleg: string }[]>([]);
+  const [nahCodes, setNahCodes]     = useState<string[]>([]);
   const [unterwegs, setUnterwegs]     = useState(false);
   const [schmal, setSchmal]           = useState(false);
 
@@ -462,6 +480,67 @@ export function useEntwurf() {
     } finally {
       setDokumentLaeuft(false);
       if (dokumentFeld.current) dokumentFeld.current.value = '';
+    }
+  };
+
+  /** Ein Foto einer Stelle merken. Ausgewertet wird erst spaeter, gesammelt. */
+  const nahaufnahmeMerken = async (stelle: string, datei: File) => {
+    setNahMeldung(null);
+    try {
+      const klein = await verkleinern(await alsDataUrl(datei), 1600);
+      setNahBilder(v => ({ ...v, [stelle]: klein }));
+    } catch {
+      setNahMeldung('Das Foto konnte nicht gelesen werden.');
+    } finally {
+      if (nahFeld.current) nahFeld.current.value = '';
+    }
+  };
+
+  const nahaufnahmeVerwerfen = (stelle: string) =>
+    setNahBilder(v => { const n = { ...v }; delete n[stelle]; return n; });
+
+  const nahaufnahmenAuswerten = async () => {
+    const bilder = Object.entries(nahBilder).map(([stelle, bild]) => ({ stelle, bild }));
+    if (bilder.length === 0) return;
+    setNahLaeuft(true);
+    setNahMeldung(null);
+    try {
+      const antwort = await fetch('/api/ausstattung-nahaufnahme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bilder, draftId: entwurfId() }),
+      });
+      const d = await antwort.json().catch(() => ({} as Record<string, unknown>));
+      if (!antwort.ok) throw new Error(String(d.error || `Erkennung fehlgeschlagen (${antwort.status})`));
+
+      const gefunden: string[] = (Array.isArray(d.equipment) ? d.equipment : [])
+        .filter((m: unknown): m is string => typeof m === 'string' && m.trim() !== '');
+      const zusammen = ausstattungZusammenfuehren(data.equipment, gefunden);
+      const neu = zusammen.filter(m => !data.equipment.includes(m));
+
+      /*
+       * Die Belege mitanzeigen, nicht nur die Merkmale. Was hier
+       * hereinkommt, wird zur Zusicherung im Inserat — und "Taste mit
+       * Sitzsymbol und Wellenlinien" laesst den Haendler in zwei
+       * Sekunden nachsehen, statt glauben zu muessen.
+       */
+      setNahBelege(Array.isArray(d.belege) ? d.belege : []);
+      setNahCodes(Array.isArray(d.codes) ? d.codes : []);
+
+      if (neu.length === 0) {
+        setNahMeldung(
+          gefunden.length === 0
+            ? 'Auf den Fotos war nichts eindeutig ablesbar. Näher heran und bei Bildschirm und Anzeigen die Zündung einschalten.'
+            : 'Nichts Neues — das stand schon in der Liste.',
+        );
+      } else {
+        setzen('equipment', zusammen);
+        setNahMeldung(`${neu.length} Merkmale übernommen — bitte an den Belegen kurz nachprüfen.`);
+      }
+    } catch (err) {
+      setNahMeldung(err instanceof Error ? err.message : 'Die Fotos konnten nicht ausgewertet werden.');
+    } finally {
+      setNahLaeuft(false);
     }
   };
 
@@ -689,6 +768,8 @@ export function useEntwurf() {
     blattOffen, setBlattOffen,
     scanZustand, scanBild, scanFehler, einlesen, dateiRef,
     ausstattungAusUnterlagen, dokumentFeld, dokumentLaeuft, dokumentMeldung,
+    nahaufnahmeMerken, nahaufnahmeVerwerfen, nahaufnahmenAuswerten,
+    nahFeld, nahBilder, nahLaeuft, nahMeldung, nahBelege, nahCodes,
     weiter, unterwegs,
     schmal, offenePflicht, envkvPflicht,
     modelle, markenSuchen, ausstattungSuchen, titelBisher,

@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
+import { STELLEN, STELLEN_REIHE } from '../../../../lib/ausstattungStellen';
 import { BRAND_NAMES } from '../../../../lib/carDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
 import { type VehicleKind } from '../../../../lib/envkv';
@@ -430,7 +431,11 @@ export default function Showroom() {
   const [ausstattungOffen, setAusstattungOffen] = useState(false);
   /* Textfeld zum Einfuegen einer Ausstattungsliste aus einer alten Anzeige. */
   const [textOffen, setTextOffen] = useState(false);
-  const [textEingabe, setTextEingabe] = useState(''); 
+  const [textEingabe, setTextEingabe] = useState('');
+  /* Welche Stelle gerade fotografiert wird — ein Dateifeld fuer alle,
+     damit nicht sieben versteckte Felder im Formular haengen. */
+  const [nahOffen, setNahOffen] = useState(false);
+  const [nahZiel, setNahZiel] = useState<string | null>(null);
   const [envkvOffen, setEnvkvOffen]       = useState(false);
   /** Der eingelesene Schein in gross, zum Nachlesen einzelner Felder. */
   const [scheinGross, setScheinGross]     = useState(false);
@@ -1466,6 +1471,151 @@ export default function Showroom() {
                               color: e.dokumentMeldung.includes('übernommen') ? '#047857' : F.gedämpft }}>
                     {e.dokumentMeldung}
                   </p>
+                )}
+              </div>
+
+              {/*
+                Ausstattung vom Fahrzeug selbst.
+
+                Fuer den Fall, der kein Sonderfall ist: zehn Autos im
+                Monat, keine DAT-Lizenz, kein Herstellerzugang, und beim
+                Eintausch auch keine Bestellbestaetigung. Dann ist jede
+                Quelle zu — ausser dem Auto, das auf dem Platz steht.
+
+                Je Stelle ein Nahfoto. Ausgewertet wird alles in EINEM
+                Aufruf, nicht sieben einzelne. Zu jedem Merkmal kommt ein
+                Beleg zurueck und steht darunter, damit das Nachsehen
+                zwei Sekunden dauert statt eines Rundgangs ums Auto.
+              */}
+              <div style={{ marginBottom: 14 }}>
+                <input
+                  ref={e.nahFeld}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  style={{ display: 'none' }}
+                  onChange={ev => {
+                    const f = ev.target.files?.[0];
+                    if (f && nahZiel) e.nahaufnahmeMerken(nahZiel, f);
+                    setNahZiel(null);
+                  }} />
+
+                <button type="button"
+                  onClick={() => setNahOffen(o => !o)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 7,
+                           padding: '9px 13px', borderRadius: 8,
+                           border: `1px solid ${F.linie}`, background: F.flaeche, cursor: 'pointer',
+                           fontFamily: F.schrift, fontSize: 12.5, color: F.gedämpft, fontWeight: 600 }}>
+                  <Camera size={14} /> Ausstattung am Fahrzeug abfotografieren
+                  {nahOffen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: F.leise, lineHeight: 1.6 }}>
+                  Wenn es keine Unterlagen gibt. Nah an Tasten und Anzeigen —
+                  erkannt wird nur, was wirklich lesbar ist.
+                </p>
+
+                {nahOffen && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {STELLEN_REIHE.map(schluessel => {
+                        const stelle = STELLEN[schluessel];
+                        const da = Boolean(e.nahBilder[schluessel]);
+                        return (
+                          <div key={schluessel}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10,
+                                     padding: '8px 10px', borderRadius: 8,
+                                     border: `1px solid ${da ? '#a7f3d0' : F.linie}`,
+                                     background: da ? '#f0fdf4' : F.flaeche }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12.5, fontWeight: 600, color: F.text }}>
+                                {stelle.titel}
+                              </div>
+                              <div style={{ fontSize: 11.5, color: F.leise, lineHeight: 1.5 }}>
+                                {stelle.hinweis}
+                              </div>
+                            </div>
+                            {da ? (
+                              <button type="button"
+                                onClick={() => e.nahaufnahmeVerwerfen(schluessel)}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                                         padding: '6px 10px', borderRadius: 7, border: '1px solid #a7f3d0',
+                                         background: '#fff', cursor: 'pointer',
+                                         fontFamily: F.schrift, fontSize: 11.5, color: '#047857', fontWeight: 600 }}>
+                                <CheckCircle2 size={13} /> da <X size={12} />
+                              </button>
+                            ) : (
+                              <button type="button"
+                                onClick={() => { setNahZiel(schluessel); e.nahFeld.current?.click(); }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5,
+                                         padding: '6px 10px', borderRadius: 7, border: `1px solid ${F.linie}`,
+                                         background: '#fff', cursor: 'pointer',
+                                         fontFamily: F.schrift, fontSize: 11.5, color: F.gedämpft, fontWeight: 600 }}>
+                                <Camera size={13} /> Foto
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button type="button"
+                      disabled={e.nahLaeuft || Object.keys(e.nahBilder).length === 0}
+                      onClick={() => e.nahaufnahmenAuswerten()}
+                      style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 7,
+                               padding: '9px 14px', borderRadius: 8, border: `1px solid ${F.linie}`,
+                               background: F.flaeche,
+                               cursor: Object.keys(e.nahBilder).length === 0 ? 'not-allowed'
+                                     : e.nahLaeuft ? 'wait' : 'pointer',
+                               opacity: Object.keys(e.nahBilder).length === 0 ? 0.5 : 1,
+                               fontFamily: F.schrift, fontSize: 12.5, color: F.gedämpft, fontWeight: 600 }}>
+                      {e.nahLaeuft
+                        ? <><Loader2 size={14} style={{ animation: 'drehen .8s linear infinite' }} /> Wird gelesen…</>
+                        : <>Fotos auswerten ({Object.keys(e.nahBilder).length})</>}
+                    </button>
+
+                    {e.nahMeldung && (
+                      <p style={{ margin: '8px 0 0', fontSize: 12.5, lineHeight: 1.6,
+                                  color: e.nahMeldung.includes('übernommen') ? '#047857' : F.gedämpft }}>
+                        {e.nahMeldung}
+                      </p>
+                    )}
+
+                    {/* Die Belege. Ohne sie waere die Liste eine Behauptung. */}
+                    {e.nahBelege.length > 0 && (
+                      <ul style={{ margin: '8px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 4 }}>
+                        {e.nahBelege.map(b => (
+                          <li key={b.merkmal} style={{ fontSize: 12, color: F.gedämpft, lineHeight: 1.55 }}>
+                            <strong style={{ color: F.text }}>{b.merkmal}</strong>
+                            <span style={{ color: F.leise }}> — {b.beleg}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {/*
+                      Codes vom Datentraeger: nur abgeschrieben, nicht
+                      uebersetzt. Welcher Code was bedeutet, weiss hier
+                      niemand sicher, und eine geratene Bedeutung waere
+                      eine falsche Zusicherung im Inserat. Der Haendler
+                      kann sie nachschlagen; ins Inserat kommen sie nicht.
+                    */}
+                    {e.nahCodes.length > 0 && (
+                      <div style={{ marginTop: 10, padding: 10, borderRadius: 8,
+                                    border: `1px solid ${F.linie}`, background: F.flaeche }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: F.text, marginBottom: 4 }}>
+                          Werkscodes vom Datenträger ({e.nahCodes.length})
+                        </div>
+                        <div style={{ fontSize: 11.5, color: F.leise, lineHeight: 1.55, marginBottom: 6 }}>
+                          Nur abgeschrieben, nicht übersetzt — was ein Code bedeutet, wird
+                          hier nicht geraten. Zum Nachschlagen beim Hersteller.
+                        </div>
+                        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11.5,
+                                      color: F.gedämpft, lineHeight: 1.7, wordBreak: 'break-word' }}>
+                          {e.nahCodes.join('  ·  ')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
