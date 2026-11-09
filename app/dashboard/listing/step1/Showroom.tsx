@@ -30,13 +30,14 @@
  * Titelvorschlag verhalten sich identisch.
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Camera, Loader2, ArrowRight, ChevronDown, ChevronRight, Search, X, Plus, RotateCcw, AlertCircle, CheckCircle2, FileText,
 } from 'lucide-react';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB } from '../../../../lib/equipmentDatabase';
 import { STELLEN, STELLEN_REIHE } from '../../../../lib/ausstattungStellen';
+import { ABFRAGE, ABFRAGE_IDS } from '../../../../lib/ausstattungAbfrage';
 import { BRAND_NAMES } from '../../../../lib/carDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
 import { type VehicleKind } from '../../../../lib/envkv';
@@ -436,6 +437,14 @@ export default function Showroom() {
      damit nicht sieben versteckte Felder im Formular haengen. */
   const [nahOffen, setNahOffen] = useState(false);
   const [nahZiel, setNahZiel] = useState<string | null>(null);
+  const [abfrageOffen, setAbfrageOffen] = useState(false);
+  /* ID zu Portal-Bezeichnung. Die Abfrage nennt nur IDs, damit es die
+     Schreibweise genau einmal gibt — die aus EQUIPMENT_DB, auf die sich
+     Normalisierung und Portal-Uebersetzung schon stuetzen. */
+  const idZuLabel = useMemo(
+    () => new Map(EQUIPMENT_DB.flatMap(k => k.items.map(p => [p.id, p.label] as const))),
+    [],
+  );
   const [envkvOffen, setEnvkvOffen]       = useState(false);
   /** Der eingelesene Schein in gross, zum Nachlesen einzelner Felder. */
   const [scheinGross, setScheinGross]     = useState(false);
@@ -1654,6 +1663,88 @@ export default function Showroom() {
                   })}
                 </div>
               )}
+
+              {/*
+                Was man nicht sehen kann.
+
+                Die Grenze jeder Erkennung: Luftfahrwerk,
+                Spurhalteassistent, Totwinkelwarner stehen auf keinem
+                Foto und in keinem Fahrzeugschein. Ohne Datenlizenz gibt
+                es dafuer eine Quelle, den Haendler — und sein Problem
+                ist nicht, dass er es nicht weiss, sondern dass er beim
+                Tippen die Haelfte vergisst.
+
+                Die Liste "Alle Merkmale durchgehen" darunter hat 146
+                Zeilen und mischt Sichtbares mit Unsichtbarem; die geht
+                niemand durch. Diese hier hat 48 und nur das, was
+                unsichtbar UND preisrelevant ist. Begruendung und die
+                zwei unverhandelbaren Regeln stehen in
+                lib/ausstattungAbfrage.ts.
+              */}
+              <div style={{ marginTop: 14, padding: 12, borderRadius: 10,
+                            border: `1px solid ${F.linie}`, background: F.flaeche }}>
+                <button type="button" onClick={() => setAbfrageOffen(o => !o)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%',
+                           background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                           textAlign: 'left', fontFamily: F.schrift }}>
+                  <ChevronDown size={14} color={F.gedämpft}
+                    style={{ flexShrink: 0, transform: abfrageOffen ? 'none' : 'rotate(-90deg)' }} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: F.text }}>
+                    Was man nicht sehen kann
+                  </span>
+                  <span style={{ fontSize: 11.5, color: F.leise, flexShrink: 0 }}>
+                    {ABFRAGE_IDS.filter(id => {
+                      const l = idZuLabel.get(id);
+                      return l && data.equipment.includes(l);
+                    }).length} von {ABFRAGE_IDS.length}
+                  </span>
+                </button>
+                <p style={{ margin: '7px 0 0', fontSize: 12, color: F.leise, lineHeight: 1.6 }}>
+                  Luftfahrwerk, Assistenten, Standheizung — steht auf keinem Foto und in
+                  keinem Fahrzeugschein. Einmal durchgehen und antippen, was dieses
+                  Fahrzeug hat. Nichts ist vorausgewählt.
+                </p>
+
+                {abfrageOffen && (
+                  <div style={{ marginTop: 12, display: 'grid', gap: 14 }}>
+                    {ABFRAGE.map(gruppe => (
+                      <div key={gruppe.titel}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: F.text }}>
+                          {gruppe.titel}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: F.leise, lineHeight: 1.5, margin: '2px 0 7px' }}>
+                          {gruppe.frage}
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                          {gruppe.ids.map(id => {
+                            const m = idZuLabel.get(id);
+                            if (!m) return null;
+                            const drin = data.equipment.includes(m);
+                            return (
+                              <button key={id} type="button"
+                                onClick={() => setzen('equipment', drin
+                                  ? data.equipment.filter(x => x !== m)
+                                  : [...data.equipment, m])}
+                                style={{ padding: '6px 11px', borderRadius: 7, cursor: 'pointer',
+                                         border: `1px solid ${drin ? F.akzent : F.linie}`,
+                                         background: drin ? F.akzentSchleier : '#fff',
+                                         color: drin ? F.akzent : F.gedämpft,
+                                         fontFamily: F.schrift, fontSize: 12,
+                                         fontWeight: drin ? 600 : 400 }}>
+                                {drin ? '✓ ' : ''}{m}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    <p style={{ margin: 0, fontSize: 11.5, color: F.leise, lineHeight: 1.6 }}>
+                      Im Zweifel nicht antippen. Ein fehlendes Merkmal kostet dich einen
+                      Anruf, ein falsches eine Nachbesserung.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <button type="button" onClick={() => setAusstattungOffen(o => !o)}
                 style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer',
