@@ -232,6 +232,16 @@ export async function logLlmCost(args: {
   operation: string;
   model: string;
   usage?: { input_tokens?: number; output_tokens?: number } | null;
+  /*
+   * Was der Aufruf herausgefunden hat, nicht nur was er gekostet hat.
+   *
+   * Anlass: Die Frage, ob eine FIN-Datenbank fuer 354 EUR im Monat
+   * noetig ist, haengt an einer Zahl, die niemand kennt — wie oft
+   * liefern die Unterlagen des Haendlers nichts. Ohne dieses Feld laesst
+   * sich das nicht nachzaehlen, weil nur die Tokenkosten in der Tabelle
+   * stehen und die bei einer leeren Liste genauso hoch sind.
+   */
+  meta?: Record<string, unknown>;
 }): Promise<void> {
   const inTok  = args.usage?.input_tokens  ?? 0;
   const outTok = args.usage?.output_tokens ?? 0;
@@ -244,7 +254,7 @@ export async function logLlmCost(args: {
     unitsIn:    inTok,
     unitsOut:   outTok,
     costMicros: llmCostMicros(args.model, inTok, outTok),
-    meta:       { model: args.model },
+    meta:       { model: args.model, ...(args.meta ?? {}) },
   });
 }
 

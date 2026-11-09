@@ -149,20 +149,43 @@ export async function POST(req: Request) {
       messages: [{ role: 'user', content: inhalt }],
     });
 
+    const antwortText = (response.content.find(t => t.type === 'text') as Anthropic.TextBlock | undefined)?.text ?? '';
+    const result = JSON.parse(extractJson(antwortText));
+    const equipment: string[] = Array.isArray(result.equipment) ? result.equipment : [];
+    const fertig = normalizeEquipmentList(equipment);
+
+    /*
+     * Erst hier buchen, nicht vor dem Auswerten: In der Tabelle soll
+     * nicht nur stehen, dass der Aufruf Geld gekostet hat, sondern auch,
+     * ob er etwas gebracht hat.
+     *
+     * Das entscheidet eine Frage, die sonst eine Wette bleibt: Eine
+     * FIN-Datenbank kostet 354 EUR im Monat und wird nur gebraucht, wenn
+     * die Unterlagen des Haendlers oft nichts hergeben. Mit
+     * `merkmale: 0` laesst sich genau das nachzaehlen, statt es zu
+     * schaetzen.
+     *
+     * Faellt das Auswerten mit einer Ausnahme aus, wird nichts gebucht.
+     * Das ist gewollt: Ein Aufruf, dessen Antwort unlesbar war, soll in
+     * der Zaehlung nicht als "nichts gefunden" erscheinen — das waere
+     * ein Grund mehr fuer die Datenbank, den es nicht gibt.
+     */
     await logLlmCost({
       userId: await currentUserId(),
       draftId: draftId ?? null,
       operation: 'scan-equipment-doc',
       model: 'claude-opus-4-8',
       usage: response.usage,
+      meta: {
+        merkmale: fertig.length,
+        seiten: blöcke.length,
+        uebersprungen: Math.max(0, roh.length - blöcke.length),
+        eingefuegterText: typeof text === 'string' && text.trim().length > 0,
+      },
     });
 
-    const antwortText = (response.content.find(t => t.type === 'text') as Anthropic.TextBlock | undefined)?.text ?? '';
-    const result = JSON.parse(extractJson(antwortText));
-    const equipment: string[] = Array.isArray(result.equipment) ? result.equipment : [];
-
     return NextResponse.json({
-      equipment: normalizeEquipmentList(equipment),
+      equipment: fertig,
       /* Wie viele Seiten wirklich angeschaut wurden — sonst merkt niemand,
          dass die neunte Seite stillschweigend weggefallen ist. */
       seiten: blöcke.length,

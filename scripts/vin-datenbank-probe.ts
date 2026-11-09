@@ -88,3 +88,8 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
+
+/* Macht die Datei zu einem Modul. Ohne das liegt `main` im globalen
+   Namensraum und kollidiert mit dem `main` anderer Proben — tsc meldet
+   dann "Duplicate function implementation" in einer fremden Datei. */
+export {};
