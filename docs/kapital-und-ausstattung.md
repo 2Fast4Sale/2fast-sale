@@ -1,5 +1,19 @@
 # 5.000 € und die Ausstattung — wofür das Geld reicht und wofür nicht
 
+> **Nachtrag 9.11.2026, nach Prüfung der Datenherkunft: MrVIN fällt
+> aus.** Die Empfehlung weiter unten war zu früh — sie stand auf der
+> Produktdokumentation, nicht auf der Frage, woher die Daten kommen.
+> Die Prüfung steht in `docs/mrvin-herkunft.md`. Kurz: Der Anbieter
+> nennt für die Ausstattung keine Quelle, listet aber „Werbeportale"
+> und „Auktionsportale" unter seinen Quellen. Ausstattung aus einem
+> fremden Inserat ist abgeleitet, nicht abgelesen — genau das, was in
+> ein Inserat nicht darf. Dazu verbieten die AGB die Nutzung im eigenen
+> Produkt ausdrücklich.
+>
+> Damit bleibt die Lage, die unten ohnehin schon steht: entweder ein
+> Lizenzhaus (DAT, Audatex, JD Power) oder die Fahrzeugmappe. Ein
+> billiger Mittelweg existiert nicht.
+
 Stand: 9. November 2026. Vorgeschichte: `docs/dat-antwort-2.md`,
 `docs/datenbanken-kontakte.md`, Beleg: `scripts/vin-datenbank-probe.ts`.
 
