@@ -44,7 +44,12 @@ Dauer ein, und der Preis rechnet sich anteilig.
   eine Suche ueber Fahrzeug, Kunde und Arbeit.
 - **Timer** — echte Dauer mitschreiben, Abweichung zur Kalkulation anzeigen,
   Ist-Wert ins Preisbuch übernehmen.
-- **Dokument** — zwei getrennte Sorten:
+- **Dokument** — drei getrennte Sorten:
+  - *Kostenvoranschlag* fuer Arbeit, die noch nicht gemacht ist: eigene
+    Nummer, Gueltigkeitsdatum, Summe als "Voraussichtlich", und im Text
+    ausdruecklich "Es wurde noch keine Arbeit ausgefuehrt" samt der ueblichen
+    Klausel zu Abweichungen bis 15 %. Keine Zahlungszeile.
+
   - *Kostenaufstellung* für privat: ohne Steuernummer, ohne
     Umsatzsteuerausweis, mit Vermerk zur privaten Hilfeleistung.
   - *Rechnung* für gewerblich: Rechnungsnummer, Betriebsdaten, 19 % USt oder
@@ -67,6 +72,20 @@ geladen und in den Einstellungen zurücksetzbar.
 Wer als Privatperson Umsatzsteuer auf ein Papier schreibt, schuldet sie dem
 Finanzamt (§ 14c UStG). Darum hat die private Sorte das Feld gar nicht, statt
 es nur leer zu lassen.
+
+## Haftung
+
+Die private Kostenaufstellung kann einen Haftungshinweis tragen (in den
+Einstellungen abschaltbar): Gefaelligkeit ohne Gewinnerzielungsabsicht, keine
+Gewaehrleistung, Haftung fuer Sachschaeden auf Vorsatz und grobe
+Fahrlaessigkeit beschraenkt, Koerperschaeden ausgenommen. Das wirkt nur, wenn
+die Arbeit wirklich privat und ohne Gewinn erfolgt; ein Betrieb kann die
+Gewaehrleistung gegenueber Privatkunden nicht ausschliessen.
+
+Nicht gebaut und nicht vorgesehen: ein Papier, das nach erledigter Arbeit
+aussieht, obwohl nichts gemacht wurde. Das taeuscht den Leser, und es
+schuetzt auch nicht -- Haftung entsteht aus der Arbeit, nicht aus dem
+Dokument. Wer nichts gemacht hat, schreibt einen Kostenvoranschlag.
 
 ## Zahlung
 

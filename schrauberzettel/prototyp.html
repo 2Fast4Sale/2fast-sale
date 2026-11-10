@@ -410,7 +410,8 @@ function seed(){
       betrieb:{name:'',strasse:'',ort:'',tel:'',steuernr:'',iban:'',bank:''},
       privatName:'Max Beispiel',
       saetze:[{id:s1,name:'Mechanik',rate:60},{id:s2,name:'Elektrik',rate:75}],
-      mwst:'privat', rnrPrefix:'2026-', rnrNext:1, oeffnung:{von:'08:00',bis:'17:00'}, aufschlag:0, zahlungsziel:14
+      mwst:'privat', rnrPrefix:'2026-', rnrNext:1, oeffnung:{von:'08:00',bis:'17:00'}, aufschlag:0, zahlungsziel:14,
+      kvPrefix:'KV-2026-', kvNext:1, kvGueltig:30, haftungPrivat:true
     },
     preisbuch:[
       {id:uid(),name:'Ölwechsel mit Filter',dauer:30,satzId:s1,teile:[
@@ -483,7 +484,7 @@ function seed(){
         {id:uid(),typ:'arbeit',name:'Ölwechsel mit Filter',dauer:40,satzId:s1,ist:38,start:null},
         {id:uid(),typ:'teil',name:'Motoröl 5W-30, 7 l',preis:54,ek:null,menge:1,hinweis:''},
         {id:uid(),typ:'teil',name:'Ölfilter',preis:11,ek:null,menge:1,hinweis:''}]}],
-    aktiv:a1, view:'kalender', docArt:'privat', calMode:'woche', vModus:'datum', suche:'',
+    aktiv:a1, view:'kalender', docArt:'kv', calMode:'woche', vModus:'datum', suche:'',
     woche:montag(heute()), tag:heute(), monat:heute().slice(0,7), addMode:'preisbuch'
   };
 }
@@ -521,6 +522,9 @@ function lernePreis(name,preis){
   }));
   return getroffen;
 }
+const HAFTUNGSTEXT='Die Arbeiten wurden als private Gefälligkeit ohne Gewinnerzielungsabsicht ausgeführt. '+
+  'Eine Gewährleistung wird nicht übernommen. Die Haftung für Sachschäden ist auf Vorsatz und grobe Fahrlässigkeit '+
+  'beschränkt; für Schäden an Leben, Körper und Gesundheit bleibt die Haftung unberührt.';
 const kurzDatum=d=>d?D(d).getDate()+'.'+(D(d).getMonth()+1)+'.':'';
 const fzText=f=>[f.hersteller,f.modell,f.jahr?'('+f.jahr+')':''].filter(Boolean).join(' ')||'Ohne Fahrzeug';
 
@@ -877,6 +881,16 @@ function renderEinstellungen(){
   h+='<button class="ghost mini" data-a="satz-neu">+ Satz hinzufügen</button>'+
     '<div class="hint">Deine eigenen Sätze. Dauer × Satz ergibt den Preis — keine fremden Arbeitswerte.</div></div></div>';
 
+  h+='<div class="sec"><div class="sechead"><h2>Kostenvoranschlag</h2></div><div class="card">'+
+    '<div class="grid g2"><div><label class="lbl" for="kv-g">Gültig für (Tage)</label>'+
+    '<input id="kv-g" type="number" inputmode="numeric" min="1" step="1" data-b="kvGueltig" value="'+esc(st.kvGueltig||30)+'"></div>'+
+    '<div><label class="lbl" for="kv-p">Nummer ab</label><input id="kv-p" data-b="kvPrefix" value="'+esc(st.kvPrefix||'')+'"></div></div>'+
+    '<label class="row" style="gap:9px;cursor:pointer;margin-top:12px"><input type="checkbox" data-a="haftung" style="width:auto"'+
+    (st.haftungPrivat?' checked':'')+'><span class="small">Haftungshinweis auf die private Kostenaufstellung drucken</span></label>'+
+    '<div class="hint">„'+esc(HAFTUNGSTEXT)+'"<br><br>Das ist der übliche Weg, eine Gefälligkeit abzusichern — und er wirkt '+
+    'nur, wenn die Arbeit wirklich privat und ohne Gewinn erfolgt. Ein Betrieb kann die Gewährleistung gegenüber '+
+    'Privatkunden nicht ausschließen. Kein Rechtsrat; im Zweifel einmal kurz prüfen lassen.</div></div></div>';
+
   h+='<div class="sec"><div class="sechead"><h2>Teile</h2></div><div class="card">'+
     '<div style="max-width:220px"><label class="lbl" for="t-auf">Aufschlag auf den Einkauf</label>'+
     '<div class="row" style="flex-wrap:nowrap"><input id="t-auf" type="number" inputmode="decimal" min="0" step="1" '+
@@ -927,6 +941,7 @@ function renderDokument(){
   if(!a) return '<div class="card"><div class="empty">Erst einen Auftrag anlegen.</div></div>';
   const su=summe(a), st=S.settings, art=S.docArt;
   let h='<div class="seg" style="margin-bottom:14px">'+
+    '<button data-a="docart" data-v="kv" aria-pressed="'+(art==='kv')+'">Kostenvoranschlag</button>'+
     '<button data-a="docart" data-v="privat" aria-pressed="'+(art==='privat')+'">Kostenaufstellung</button>'+
     '<button data-a="docart" data-v="rechnung" aria-pressed="'+(art==='rechnung')+'">Rechnung</button></div>';
 
@@ -940,7 +955,30 @@ function renderDokument(){
     grp('Arbeit',a.positionen.filter(p=>p.typ==='arbeit'),su.arbeit)+
     grp('Teile',a.positionen.filter(p=>p.typ==='teil'),su.teile)+'</tbody></table></div>';
 
-  if(art==='privat'){
+  if(art==='kv'){
+    const nr=a.kv?a.kv.nr:(st.kvPrefix+String(st.kvNext).padStart(3,'0'));
+    const gueltig=plus(a.kv?a.kv.datum:heute(),Number(st.kvGueltig||30));
+    const absender=st.mwst==='privat'?(st.privatName||'—'):(st.betrieb.name||'[Betrieb]');
+    h+='<div class="doc"><div class="dh"><div><h2>Kostenvoranschlag</h2>'+
+      '<div class="small muted num">Nr. '+esc(nr)+' · gültig bis '+esc(kurzDatum(gueltig))+esc(D(gueltig).getFullYear())+'</div></div>'+
+      '<div class="small num" style="text-align:right">'+esc(tagLang(heute()))+'<br><span class="muted">'+esc(absender)+'</span></div></div>'+
+      '<div class="small" style="margin-bottom:14px"><strong>Für:</strong> '+esc(a.kunde||'—')+
+      ' · <strong>Fahrzeug:</strong> '+esc(fzText(a.fahrzeug))+
+      (a.fahrzeug.kennzeichen?' · '+esc(a.fahrzeug.kennzeichen):'')+
+      (a.fahrzeug.km?' · '+esc(a.fahrzeug.km)+' km':'')+'</div>'+
+      tabelle+'<div class="gesamt" style="border:0;padding:0;margin-top:12px">'+
+      '<div class="r"><span class="muted">Geschätzte Arbeitszeit</span><span class="num">'+std(su.minuten)+'</span></div>'+
+      (st.mwst==='gewerblich'
+        ?'<div class="r"><span class="muted">Netto</span><span>'+eur(su.netto)+'</span></div>'+
+         '<div class="r"><span class="muted">zzgl. 19 % USt</span><span>'+eur(su.mwst)+'</span></div>':'')+
+      '<div class="r t"><span>Voraussichtlich</span><span>'+eur(su.brutto)+'</span></div></div>'+
+      '<div class="note"><strong>Es wurde noch keine Arbeit ausgeführt.</strong> Dieser Kostenvoranschlag ist '+
+      'unverbindlich und beruht auf einer Sichtprüfung. Zeigt sich beim Zerlegen ein weiterer Mangel, melde ich '+
+      'mich vor der Arbeit. Überschreitungen bis 15 % sind ohne neue Zusage möglich, darüber hinaus nur nach '+
+      'Rücksprache.</div></div>'+
+      (su.offen?'<div class="note">'+su.offen+' Teil'+(su.offen>1?'e haben':' hat')+' noch keinen Preis — '+
+        'im Kostenvoranschlag fehlt der Betrag dann. Preis im Auftrag nachtragen.</div>':'');
+  } else if(art==='privat'){
     h+='<div class="doc"><div class="dh"><div><h2>Kostenaufstellung</h2>'+
       '<div class="small muted">Keine Rechnung — Aufstellung über eine privat erbrachte Hilfeleistung</div></div>'+
       '<div class="small num" style="text-align:right">'+esc(tagLang(a.datum))+'<br><span class="muted">'+esc(st.privatName||'—')+'</span></div></div>'+
@@ -954,7 +992,9 @@ function renderDokument(){
           (zahlung(a).art==='bar'?'dankend bar':esc(zahlName(zahlung(a).art).toLowerCase())+' ')+
           ' erhalten am '+esc(kurzDatum(zahlung(a).datum))+esc(D(zahlung(a).datum).getFullYear())+'.</strong></div>':'')+
       '<div class="note"><strong>Private Hilfeleistung, keine gewerbliche Leistung.</strong> '+
-      'Diese Aufstellung weist keine Umsatzsteuer aus und ist keine Rechnung im Sinne des § 14 UStG.</div></div>'+
+      'Diese Aufstellung weist keine Umsatzsteuer aus und ist keine Rechnung im Sinne des § 14 UStG.</div>'+
+      (st.haftungPrivat?'<div class="note"><strong>Gewährleistung.</strong> '+esc(HAFTUNGSTEXT)+'</div>':'')+
+      '</div>'+
       '<div class="note">Warum ohne Umsatzsteuer: wer als Privatperson USt auf ein Papier schreibt, schuldet sie dem Finanzamt (§ 14c UStG) — '+
       'auch wenn es nur für die Familie war. Darum hat diese Sorte das Feld gar nicht.</div>';
   } else {
@@ -994,11 +1034,13 @@ function renderDokument(){
       (miss.length?'<div class="hint">Fehlendes in den Einstellungen nachtragen.</div>':'<div class="hint">Vollständig.</div>')+'</div></div>';
   }
   h+='<div class="row" style="margin-top:14px"><button class="primary" data-a="pdf">'+
-     (art==='privat'?'Kostenaufstellung als PDF':'Rechnung als PDF')+'</button>'+
+     (art==='kv'?'Kostenvoranschlag als PDF':art==='privat'?'Kostenaufstellung als PDF':'Rechnung als PDF')+'</button>'+
      '<button class="ghost" data-a="copy">Als Text kopieren</button>'+
      '<span class="small muted" id="copy-hint"></span></div>'+
      '<div class="hint" id="pdf-hint">DIN-A4, Anschriftenfeld nach DIN 5008'+
-     (art==='privat'?'. Ohne Steuernummer und ohne Umsatzsteuer.':', mit allen Pflichtangaben nach § 14 UStG.')+'</div>';
+     (art==='kv'?'. Unverbindlich, mit Gültigkeitsdatum — keine Rechnung.'
+      :art==='privat'?'. Ohne Steuernummer und ohne Umsatzsteuer.'
+      :', mit allen Pflichtangaben nach § 14 UStG.')+'</div>';
   return h;
 }
 
@@ -1008,7 +1050,7 @@ const dmy=d=>{const x=D(d);return String(x.getDate()).padStart(2,'0')+'.'+String
 
 function pdfErzeugen(){
   const a=auftrag(); if(!a) return;
-  const st=S.settings, su=summe(a), rech=S.docArt==='rechnung';
+  const st=S.settings, su=summe(a), art=S.docArt, rech=art==='rechnung', kv=art==='kv';
   const sag=t=>{const el=document.getElementById('pdf-hint');if(el)el.innerHTML=t};
 
   if(rech){
@@ -1030,6 +1072,10 @@ function pdfErzeugen(){
   if(rech&&!a.rechnung){
     a.rechnung={nr:st.rnrPrefix+String(st.rnrNext).padStart(3,'0'),datum:heute()};
     st.rnrNext=Number(st.rnrNext||1)+1; save();
+  }
+  if(kv&&!a.kv){
+    a.kv={nr:st.kvPrefix+String(st.kvNext).padStart(3,'0'),datum:heute()};
+    st.kvNext=Number(st.kvNext||1)+1; save();
   }
 
   const d=new lib({unit:'mm',format:'a4'});
@@ -1089,13 +1135,15 @@ function pdfErzeugen(){
 
   /* Titel und Eckdaten */
   d.setFont('helvetica','bold'); d.setFontSize(17);
-  d.text(rech?'Rechnung':'Kostenaufstellung',M,78);
+  d.text(rech?'Rechnung':kv?'Kostenvoranschlag':'Kostenaufstellung',M,78);
   d.setFont('helvetica','normal'); d.setFontSize(9.5);
 
   const eck=[];
   if(rech) eck.push(['Rechnungsnummer',a.rechnung.nr]);
-  eck.push([rech?'Rechnungsdatum':'Datum',dmy(rech?a.rechnung.datum:a.datum)]);
-  eck.push(['Leistungsdatum',dmy(a.datum)]);
+  if(kv) eck.push(['Nummer',a.kv.nr]);
+  eck.push([rech?'Rechnungsdatum':'Datum',dmy(rech?a.rechnung.datum:kv?a.kv.datum:a.datum)]);
+  if(kv) eck.push(['Gültig bis',dmy(plus(a.kv.datum,Number(st.kvGueltig||30)))]);
+  else eck.push(['Leistungsdatum',dmy(a.datum)]);
   eck.push(['Fahrzeug',fzText(a.fahrzeug)]);
   if(a.fahrzeug.kennzeichen) eck.push(['Kennzeichen',a.fahrzeug.kennzeichen]);
   if(a.fahrzeug.km) eck.push(['Kilometerstand',Number(a.fahrzeug.km).toLocaleString('de-DE')+' km']);
@@ -1142,22 +1190,28 @@ function pdfErzeugen(){
     d.setFont('helvetica','normal'); d.setFontSize(9.5);
     y+=fett?6:5;
   };
-  zeileS('Arbeit ('+std(su.minuten).replace(' h',' Std.')+')',zahl(su.arbeit)+' €');
+  zeileS((kv?'Arbeit geschätzt (':'Arbeit (')+std(su.minuten).replace(' h',' Std.')+')',zahl(su.arbeit)+' €');
   zeileS('Teile',zahl(su.teile)+' €');
   d.setDrawColor(60); d.line(120,y-3,R,y-3); y+=1.5;
   if(rech&&st.mwst==='gewerblich'){
     zeileS('Nettobetrag',zahl(su.netto)+' €');
     zeileS('zzgl. 19 % USt',zahl(su.mwst)+' €');
     d.setDrawColor(60); d.line(120,y-3,R,y-3); y+=1.5;
-    zeileS('Gesamtbetrag',zahl(su.brutto)+' €',true);
+    zeileS(kv?'Voraussichtlich':'Gesamtbetrag',zahl(su.brutto)+' €',true);
   } else {
-    zeileS(rech?'Gesamtbetrag':'Gesamt',zahl(su.brutto)+' €',true);
+    zeileS(rech?'Gesamtbetrag':kv?'Voraussichtlich':'Gesamt',zahl(su.brutto)+' €',true);
   }
 
   /* Hinweise */
   y+=6; d.setFontSize(9);
   const hinweise=[];
-  if(rech){
+  if(kv){
+    hinweise.push('Es wurde noch keine Arbeit ausgeführt.');
+    hinweise.push('Dieser Kostenvoranschlag ist unverbindlich und beruht auf einer Sichtprüfung. Zeigt sich beim '+
+      'Zerlegen ein weiterer Mangel, melde ich mich vor der Arbeit. Überschreitungen bis 15 % sind ohne neue '+
+      'Zusage möglich, darüber hinaus nur nach Rücksprache.');
+    hinweise.push('Gültig bis '+dmy(plus(a.kv.datum,Number(st.kvGueltig||30)))+'.');
+  } else if(rech){
     if(st.mwst==='klein') hinweise.push('Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.');
     const z=zahlung(a), tage=Number(st.zahlungsziel||0);
     if(z.status==='bezahlt'){
@@ -1180,6 +1234,7 @@ function pdfErzeugen(){
     if(z.status==='bezahlt') hinweise.push('Betrag '+(z.art==='bar'?'bar':z.art==='ec'?'per EC-Karte':'per Überweisung')+
       ' erhalten am '+dmy(z.datum)+'.');
     hinweise.push('Private Hilfeleistung, keine gewerbliche Leistung.');
+    if(st.haftungPrivat) hinweise.push(HAFTUNGSTEXT);
     hinweise.push('Diese Aufstellung weist keine Umsatzsteuer aus und ist keine Rechnung im Sinne des § 14 UStG.');
   }
   hinweise.forEach(t=>{
@@ -1195,11 +1250,12 @@ function pdfErzeugen(){
   } else if(st.privatName) fusszeilen.push(st.privatName);
   fuss();
 
-  const name=(rech?'Rechnung_'+a.rechnung.nr:'Kostenaufstellung_'+a.datum)
+  const name=(rech?'Rechnung_'+a.rechnung.nr:kv?'Kostenvoranschlag_'+a.kv.nr:'Kostenaufstellung_'+a.datum)
     .replace(/[^A-Za-z0-9_.-]/g,'_')+'.pdf';
   try{ d.save(name); }catch(e){}
   render();
-  sag('<strong>'+esc(name)+'</strong> erzeugt'+(rech?', Rechnungsnummer '+esc(a.rechnung.nr)+' vergeben':'')+
+  sag('<strong>'+esc(name)+'</strong> erzeugt'+(rech?', Rechnungsnummer '+esc(a.rechnung.nr)+' vergeben':
+    kv?', Nummer '+esc(a.kv.nr)+' vergeben':'')+
     '. Lädt der Download hier nicht, liegt das an der Vorschau — als eigene Seite gespeichert läuft er normal.');
 }
 
@@ -1429,6 +1485,7 @@ document.addEventListener('change',e=>{
     save(); return;
   }
   if(t.dataset.a==='mwst'){S.settings.mwst=t.value;save();render();return}
+  if(t.dataset.a==='haftung'){S.settings.haftungPrivat=t.checked;save();render();return}
 });
 
 render();
