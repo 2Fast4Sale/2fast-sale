@@ -175,6 +175,16 @@ details .inner{padding:15px}
   background:repeating-linear-gradient(135deg,transparent 0 7px,var(--surface-2) 7px 14px)}
 .frei span:first-child{font-family:var(--font-d);font-size:12.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
+/* Kleine Felder in Zeilen */
+.fieldlet{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-d);font-size:12.5px;
+  font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.inp-mini{width:76px;padding:4px 7px;font-family:var(--font-m);font-size:13px;border-radius:3px;
+  background:var(--bg);text-transform:none;letter-spacing:-.02em}
+.inp-mini.leer{border-color:var(--warn)}
+.teileliste{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.tl{font-size:13px;color:var(--fg)}
+.tl .num{font-size:12.5px}
+
 /* Positionen */
 .pos{display:grid;grid-template-columns:1fr auto;gap:1px 12px;padding:11px 0;border-top:1px solid var(--line)}
 .pos:first-child{border-top:0;padding-top:0}
@@ -248,6 +258,7 @@ footer{border-top:1px solid var(--hair);margin-top:28px;padding-top:15px;font-si
   </div>
   <main id="main"></main>
   <datalist id="dl-arbeit"></datalist>
+  <datalist id="dl-teile"></datalist>
   <footer>
     Prototyp zum Durchklicken. Die Dauer-Vorschläge kommen aus einer eingebauten Tabelle mit Erfahrungswerten —
     nicht aus DAT oder Audatex. Alles bleibt in diesem Browser.
@@ -367,7 +378,7 @@ const minVon=t=>{const[h,m]=(t||'0:00').split(':').map(Number);return h*60+(m||0
 const zeitVon=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m%60)).padStart(2,'0');
 
 /* ---------- Zustand ---------- */
-const KEY='schrauberzettel.v2';
+const KEY='schrauberzettel.v3';
 const uid=()=>Math.random().toString(36).slice(2,9);
 function seed(){
   const s1=uid(),s2=uid(),a1=uid();
@@ -376,15 +387,24 @@ function seed(){
       betrieb:{name:'',strasse:'',ort:'',tel:'',steuernr:''},
       privatName:'Max Beispiel',
       saetze:[{id:s1,name:'Mechanik',rate:60},{id:s2,name:'Elektrik',rate:75}],
-      mwst:'privat', rnrPrefix:'2026-', rnrNext:1, oeffnung:{von:'08:00',bis:'17:00'}
+      mwst:'privat', rnrPrefix:'2026-', rnrNext:1, oeffnung:{von:'08:00',bis:'17:00'}, aufschlag:0
     },
     preisbuch:[
-      {id:uid(),name:'Ölwechsel mit Filter',dauer:30,satzId:s1,teile:[{name:'Motoröl 5W-30, 5 l',preis:38,menge:1},{name:'Ölfilter',preis:9,menge:1}]},
-      {id:uid(),name:'Bremsbeläge + Scheiben hinten',dauer:60,satzId:s1,teile:[{name:'Bremsscheiben hinten (Paar)',preis:55,menge:1},{name:'Bremsbeläge hinten',preis:30,menge:1}]},
-      {id:uid(),name:'Bremsbeläge + Scheiben vorne',dauer:65,satzId:s1,teile:[{name:'Bremsscheiben vorne (Paar)',preis:72,menge:1},{name:'Bremsbeläge vorne',preis:38,menge:1}]},
-      {id:uid(),name:'Generator / Lichtmaschine',dauer:95,satzId:s2,teile:[{name:'Generator (überholt)',preis:210,menge:1}]},
-      {id:uid(),name:'Zündkerzen (4 Zylinder)',dauer:40,satzId:s2,teile:[{name:'Zündkerzen, Satz',preis:34,menge:1}]},
-      {id:uid(),name:'Innenraumfilter',dauer:20,satzId:s1,teile:[{name:'Innenraumfilter',preis:14,menge:1}]},
+      {id:uid(),name:'Ölwechsel mit Filter',dauer:30,satzId:s1,teile:[
+        {name:'Motoröl 5W-30, 5 l',menge:1,letzt:38,datum:plus(heute(),-12)},
+        {name:'Ölfilter',menge:1,letzt:9,datum:plus(heute(),-12)}]},
+      {id:uid(),name:'Bremsbeläge + Scheiben hinten',dauer:60,satzId:s1,teile:[
+        {name:'Bremsscheiben hinten (Paar)',menge:1,letzt:55,datum:plus(heute(),-29)},
+        {name:'Bremsbeläge hinten',menge:1,letzt:30,datum:plus(heute(),-29)}]},
+      {id:uid(),name:'Bremsbeläge + Scheiben vorne',dauer:65,satzId:s1,teile:[
+        {name:'Bremsscheiben vorne (Paar)',menge:1,letzt:72,datum:plus(heute(),-54)},
+        {name:'Bremsbeläge vorne',menge:1,letzt:38,datum:plus(heute(),-54)}]},
+      {id:uid(),name:'Generator / Lichtmaschine',dauer:95,satzId:s2,teile:[
+        {name:'Generator (überholt)',menge:1,letzt:null,datum:null}]},
+      {id:uid(),name:'Zündkerzen (4 Zylinder)',dauer:40,satzId:s2,teile:[
+        {name:'Zündkerzen, Satz',menge:1,letzt:34,datum:plus(heute(),-78)}]},
+      {id:uid(),name:'Innenraumfilter',dauer:20,satzId:s1,teile:[
+        {name:'Innenraumfilter',menge:1,letzt:14,datum:plus(heute(),-6)}]},
       {id:uid(),name:'HU-Vorbereitung / Durchsicht',dauer:45,satzId:s1,teile:[]},
       {id:uid(),name:'Fehlerspeicher auslesen',dauer:20,satzId:s2,teile:[]}
     ],
@@ -401,10 +421,10 @@ function seed(){
       fahrzeug:{hersteller:'VW',modell:'Passat B8',jahr:'2017',klasse:'mittel',kennzeichen:'DO-XY 471',km:'142500'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Generator / Lichtmaschine',dauer:95,satzId:s2,ist:null,start:null},
-        {id:uid(),typ:'teil',name:'Generator (überholt)',preis:210,menge:1},
+        {id:uid(),typ:'teil',name:'Generator (überholt)',preis:0,ek:null,menge:1,hinweis:'offen'},
         {id:uid(),typ:'arbeit',name:'Bremsbeläge + Scheiben hinten',dauer:60,satzId:s1,ist:null,start:null},
-        {id:uid(),typ:'teil',name:'Bremsscheiben hinten (Paar)',preis:55,menge:1},
-        {id:uid(),typ:'teil',name:'Bremsbeläge hinten',preis:30,menge:1}
+        {id:uid(),typ:'teil',name:'Bremsscheiben hinten (Paar)',preis:62,ek:null,menge:1,hinweis:''},
+        {id:uid(),typ:'teil',name:'Bremsbeläge hinten',preis:30,ek:null,menge:1,hinweis:''}
       ]
     }],
     aktiv:a1, view:'kalender', docArt:'privat', calMode:'woche',
@@ -432,8 +452,17 @@ function summe(a){
     else teile+=(Number(p.preis)||0)*(Number(p.menge)||1);
   });
   const netto=arbeit+teile, mwst=S.settings.mwst==='gewerblich'?netto*0.19:0;
-  return {arbeit,teile,netto,mwst,brutto:netto+mwst,minuten};
+  const offen=(a?a.positionen:[]).filter(p=>p.typ==='teil'&&!(Number(p.preis)>0)).length;
+  return {arbeit,teile,netto,mwst,brutto:netto+mwst,minuten,offen};
 }
+function lernePreis(name,preis){
+  const n=norm(name); let getroffen=0;
+  S.preisbuch.forEach(e=>(e.teile||[]).forEach(t=>{
+    if(norm(t.name)===n){t.letzt=preis;t.datum=heute();getroffen++}
+  }));
+  return getroffen;
+}
+const kurzDatum=d=>d?D(d).getDate()+'.'+(D(d).getMonth()+1)+'.':'';
 const fzText=f=>[f.hersteller,f.modell,f.jahr?'('+f.jahr+')':''].filter(Boolean).join(' ')||'Ohne Fahrzeug';
 
 /* ---------- Kalender ---------- */
@@ -580,13 +609,26 @@ function renderAuftrag(){
 
   h+='<div class="sec"><div class="sechead"><h2>Teile</h2><span class="small muted num">'+teile.length+' Position'+(teile.length===1?'':'en')+'</span></div><div class="card">';
   if(!teile.length) h+='<div class="empty">Keine Teile erfasst.</div>';
+  const auf=Number(S.settings.aufschlag)||0;
   teile.forEach(p=>{
-    h+='<div class="pos"><div class="nm">'+esc(p.name)+'</div>'+
-      '<div class="amt">'+eur((Number(p.preis)||0)*(Number(p.menge)||1))+'</div>'+
-      '<div class="sub"><span class="num">'+(Number(p.menge)||1)+' × '+eur(p.preis)+'</span></div>'+
+    const offen=!(Number(p.preis)>0);
+    h+='<div class="pos"><div class="nm">'+esc(p.name)+
+      (offen?' <span class="badge warn">Preis offen</span>'
+            :(p.hinweis?' <span class="badge">'+esc(p.hinweis)+'</span>':''))+'</div>'+
+      '<div class="amt'+(offen?' muted':'')+'">'+(offen?'—':eur((Number(p.preis)||0)*(Number(p.menge)||1)))+'</div>'+
+      '<div class="sub">'+
+        '<span class="fieldlet">Menge <input class="inp-mini" type="number" inputmode="numeric" min="1" step="1" '+
+          'data-tp="menge" data-id="'+p.id+'" value="'+(Number(p.menge)||1)+'" aria-label="Menge"></span>'+
+        (auf>0?'<span class="fieldlet">EK € <input class="inp-mini" type="number" inputmode="decimal" step="0.01" '+
+          'data-tp="ek" data-id="'+p.id+'" value="'+(p.ek!=null&&p.ek!==''?p.ek:'')+'" aria-label="Einkaufspreis" placeholder="—"></span>':'')+
+        '<span class="fieldlet">'+(auf>0?'VK €':'Preis €')+' <input class="inp-mini'+(offen?' leer':'')+'" type="number" inputmode="decimal" step="0.01" '+
+          'data-tp="preis" data-id="'+p.id+'" value="'+(Number(p.preis)>0?p.preis:'')+'" aria-label="Preis" placeholder="0,00"></span>'+
+      '</div>'+
       '<div class="acts"><button class="icon" data-a="pos-del" data-id="'+p.id+'" aria-label="Position löschen">✕</button></div></div>';
   });
   if(teile.length) h+='<div class="zwisum"><span>Summe Teile</span><span>'+eur(su.teile)+'</span></div>';
+  h+='<div class="hint">Teilepreise schwanken — darum steht hier nie ein fester Wert. '+
+    'Vorbelegt ist, was du zuletzt bezahlt hast; was du änderst, merkt sich das Preisbuch.</div>';
   h+='</div></div>';
 
   h+='<div class="gesamt">'+
@@ -595,7 +637,9 @@ function renderAuftrag(){
     (S.settings.mwst==='gewerblich'
       ?'<div class="r"><span class="muted">Netto</span><span>'+eur(su.netto)+'</span></div>'+
        '<div class="r"><span class="muted">zzgl. 19 % USt</span><span>'+eur(su.mwst)+'</span></div>':'')+
-    '<div class="r t"><span>Gesamt</span><span>'+eur(su.brutto)+'</span></div></div>';
+    '<div class="r t"><span>Gesamt</span><span>'+eur(su.brutto)+'</span></div>'+
+    (su.offen?'<div class="hint" style="color:var(--warn)">'+su.offen+' Teil'+(su.offen>1?'e':'')+
+      ' noch ohne Preis — die Summe ist noch nicht vollständig.</div>':'')+'</div>';
 
   const am=S.addMode;
   h+='<div class="sec" style="margin-top:18px"><div class="sechead"><h2>Position hinzufügen</h2></div><div class="card">'+
@@ -619,11 +663,16 @@ function renderAuftrag(){
       '<button class="ghost" data-a="ins-preisbuch">Auch ins Preisbuch</button></div>'+
       '<div class="hint" id="s-hint">Schätzung nach Arbeit und Fahrzeugklasse ('+esc((KLASSEN.find(k=>k.id===a.fahrzeug.klasse)||KLASSEN[1]).n)+') — immer prüfen.</div>';
   } else {
+    const auf2=Number(S.settings.aufschlag)||0;
     h+='<div class="grid g3 keep">'+
-      '<div><label class="lbl" for="n-tname">Bezeichnung</label><input id="n-tname" placeholder="z. B. Ölfilter"></div>'+
-      '<div><label class="lbl" for="n-tpreis">Preis (€)</label><input id="n-tpreis" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>'+
+      '<div><label class="lbl" for="n-tname">Bezeichnung</label><input id="n-tname" list="dl-teile" placeholder="z. B. Ölfilter"></div>'+
+      '<div><label class="lbl" for="n-tpreis">'+(auf2>0?'Einkauf (€)':'Preis (€)')+'</label>'+
+        '<input id="n-tpreis" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>'+
       '<div><label class="lbl" for="n-tmenge">Menge</label><input id="n-tmenge" type="number" inputmode="numeric" min="1" step="1" value="1"></div></div>'+
-      '<div class="row" style="margin-top:10px"><button class="primary" data-a="teil-add">Hinzufügen</button></div>';
+      '<div class="row" style="margin-top:10px"><button class="primary" data-a="teil-add">Hinzufügen</button></div>'+
+      '<div class="hint">'+(auf2>0
+        ?'Einkauf eintragen — der Verkaufspreis rechnet sich mit '+auf2+' % Aufschlag und bleibt änderbar.'
+        :'Ohne Preis hinzufügen geht auch: das Teil steht dann als „Preis offen" im Auftrag, bis die Rechnung vom Händler da ist.')+'</div>';
   }
   h+='</div></div>';
 
@@ -638,12 +687,21 @@ function renderPreisbuch(){
     '<span class="small muted">'+S.preisbuch.length+' angelegt</span></div><div class="card">';
   if(!S.preisbuch.length) h+='<div class="empty">Noch nichts angelegt.</div>';
   S.preisbuch.forEach(p=>{
-    const r=satz(p.satzId), teile=(p.teile||[]).reduce((x,t)=>x+(Number(t.preis)||0)*(Number(t.menge)||1),0);
+    const r=satz(p.satzId), tl=p.teile||[];
+    const bekannt=tl.filter(t=>Number(t.letzt)>0);
+    const teileSum=bekannt.reduce((x,t)=>x+Number(t.letzt)*(Number(t.menge)||1),0);
     h+='<div class="pb"><div><strong>'+esc(p.name)+'</strong>'+
-      '<div class="small muted num">'+p.dauer+' min · '+esc(r.name)+' '+eur(r.rate)+'/h'+
-      ((p.teile||[]).length?' · '+p.teile.length+' Teil'+(p.teile.length>1?'e':'')+' '+eur(teile):'')+'</div></div>'+
-      '<div style="text-align:right"><div class="num"><strong>'+eur((Number(p.dauer)||0)/60*r.rate+teile)+'</strong></div>'+
-      '<button class="mini ghost" data-a="pb-del" data-id="'+p.id+'" style="margin-top:5px">Löschen</button></div></div>';
+      '<div class="small muted num">'+p.dauer+' min · '+esc(r.name)+' '+eur(r.rate)+'/h · Arbeit '+
+      eur((Number(p.dauer)||0)/60*r.rate)+'</div>'+
+      (tl.length?'<div class="teileliste">'+tl.map(t=>'<span class="tl">'+esc(t.name)+
+        (Number(t.menge)>1?' <span class="muted">×'+t.menge+'</span>':'')+
+        (Number(t.letzt)>0
+          ?' <span class="num">'+eur(t.letzt)+'</span> <span class="muted">'+esc(kurzDatum(t.datum))+'</span>'
+          :' <span class="badge warn">kein Preis</span>')+'</span>').join('')+'</div>':'')+
+      '</div>'+
+      '<div style="text-align:right">'+
+      (bekannt.length?'<div class="small muted">Teile zuletzt</div><div class="num">'+eur(teileSum)+'</div>':'<div class="small muted">nur Arbeit</div>')+
+      '<button class="mini ghost" data-a="pb-del" data-id="'+p.id+'" style="margin-top:6px">Löschen</button></div></div>';
   });
   h+='</div><details><summary>Neue Position anlegen</summary><div class="inner">'+
     '<div><label class="lbl" for="p-name">Arbeit</label><input id="p-name" list="dl-arbeit" placeholder="z. B. Bremsbeläge vorne"></div>'+
@@ -653,7 +711,11 @@ function renderPreisbuch(){
         S.settings.saetze.map(s=>'<option value="'+s.id+'">'+esc(s.name)+' · '+eur(s.rate)+'/h</option>').join('')+'</select></div></div>'+
     '<div class="row" style="margin-top:10px"><button class="ghost" data-a="p-schaetz">Dauer schätzen</button>'+
     '<button class="primary" data-a="pb-neu">Anlegen</button></div>'+
-    '<div class="hint" id="p-hint">Teile hängst du im Auftrag dran.</div></div></details></div>';
+    '<div class="hint" id="p-hint">Teile hängst du im Auftrag dran — das Preisbuch merkt sich dann, '+
+    'was du zuletzt dafür bezahlt hast.</div></div></details>'+
+    '<div class="note">Im Preisbuch steht für Teile <strong>kein fester Preis</strong>, sondern nur der zuletzt bezahlte '+
+    'mit Datum. Beim Übernehmen in den Auftrag ist er vorbelegt und in einem Feld änderbar — Teilepreise schwanken '+
+    'je nach Händler und Tag.</div></div>';
   return h;
 }
 
@@ -670,6 +732,13 @@ function renderEinstellungen(){
   });
   h+='<button class="ghost mini" data-a="satz-neu">+ Satz hinzufügen</button>'+
     '<div class="hint">Deine eigenen Sätze. Dauer × Satz ergibt den Preis — keine fremden Arbeitswerte.</div></div></div>';
+
+  h+='<div class="sec"><div class="sechead"><h2>Teile</h2></div><div class="card">'+
+    '<div style="max-width:220px"><label class="lbl" for="t-auf">Aufschlag auf den Einkauf</label>'+
+    '<div class="row" style="flex-wrap:nowrap"><input id="t-auf" type="number" inputmode="decimal" min="0" step="1" '+
+    'data-b="aufschlag" value="'+esc(st.aufschlag||0)+'"><span class="muted small">%</span></div></div>'+
+    '<div class="hint">Bei 0 trägst du den Verkaufspreis direkt ein. Ab 1 % bekommt jede Teile-Zeile zusätzlich ein '+
+    'Feld für den Einkauf, und der Verkaufspreis wird daraus vorgeschlagen — änderbar bleibt er immer.</div></div></div>';
 
   h+='<div class="sec"><div class="sechead"><h2>Abrechnungsart</h2></div><div class="card"><div class="grid">'+
     [['privat','Privat — nur Kostenaufstellung, keine Umsatzsteuer'],
@@ -772,6 +841,9 @@ function render(){
   document.querySelectorAll('#tabs .tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.v===S.view)));
   const hd=document.getElementById('today');
   if(hd){const d=D(heute());hd.textContent=WTK[(d.getDay()+6)%7]+' '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()}
+  const dt=document.getElementById('dl-teile');
+  if(dt) dt.innerHTML=[...new Set(S.preisbuch.flatMap(p=>(p.teile||[]).map(t=>t.name)))]
+    .map(n=>'<option value="'+esc(n)+'">').join('');
   document.getElementById('dl-arbeit').innerHTML=
     [...new Set([...S.preisbuch.map(p=>p.name),...JOBS.map(j=>j.n)])].map(n=>'<option value="'+esc(n)+'">').join('');
   document.getElementById('main').innerHTML =
@@ -854,7 +926,9 @@ document.addEventListener('click',e=>{
   if(act==='pb-add'&&a){
     const p=S.preisbuch.find(x=>x.id===id); if(!p) return;
     a.positionen.push({id:uid(),typ:'arbeit',name:p.name,dauer:p.dauer,satzId:p.satzId,ist:null,start:null});
-    (p.teile||[]).forEach(t=>a.positionen.push({id:uid(),typ:'teil',name:t.name,preis:t.preis,menge:t.menge}));
+    (p.teile||[]).forEach(t=>a.positionen.push({id:uid(),typ:'teil',name:t.name,
+      preis:Number(t.letzt)>0?Number(t.letzt):0, ek:null, menge:t.menge||1,
+      hinweis:Number(t.letzt)>0?('zuletzt '+kurzDatum(t.datum)):''}));
     render();return;
   }
   if(act==='schaetz'&&a){
@@ -878,7 +952,11 @@ document.addEventListener('click',e=>{
   }
   if(act==='teil-add'&&a){
     const n=val('n-tname'); if(!n) return;
-    a.positionen.push({id:uid(),typ:'teil',name:n,preis:Number(val('n-tpreis').replace(',','.'))||0,menge:Number(val('n-tmenge'))||1});
+    const auf=Number(S.settings.aufschlag)||0, eing=Number(val('n-tpreis').replace(',','.'))||0;
+    const ek=auf>0&&eing>0?eing:null;
+    const preis=auf>0&&eing>0?Math.round(eing*(1+auf/100)*100)/100:eing;
+    a.positionen.push({id:uid(),typ:'teil',name:n,preis,ek,menge:Number(val('n-tmenge'))||1,hinweis:''});
+    if(preis>0) lernePreis(n,preis);
     render();return;
   }
   if(act==='pos-del'&&a){a.positionen=a.positionen.filter(p=>p.id!==id);render();return}
@@ -940,6 +1018,18 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const t=e.target, a=auftrag();
   if(t.dataset.a2==='switch'){S.aktiv=t.value;render();return}
+  if(t.dataset.tp&&a){
+    const p=a.positionen.find(x=>x.id===t.dataset.id); if(!p) return;
+    const v=Number(String(t.value).replace(',','.'));
+    if(t.dataset.tp==='menge') p.menge=Math.max(1,Math.round(v)||1);
+    else if(t.dataset.tp==='ek'){
+      p.ek=v>0?v:null;
+      const auf=Number(S.settings.aufschlag)||0;
+      if(p.ek&&auf>0){p.preis=Math.round(p.ek*(1+auf/100)*100)/100;p.hinweis=''}
+    } else {p.preis=v>0?v:0;p.hinweis=''}
+    if(Number(p.preis)>0) lernePreis(p.name,Number(p.preis));
+    save(); render(); return;
+  }
   if(t.dataset.f&&a){
     const f=t.dataset.f;
     if(f.startsWith('fz.')) a.fahrzeug[f.slice(3)]=t.value; else a[f]=t.value;

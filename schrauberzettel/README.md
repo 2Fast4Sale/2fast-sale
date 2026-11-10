@@ -23,8 +23,16 @@ Dauer ein, und der Preis rechnet sich anteilig.
 - **Auftrag** — Kopf mit Fahrzeug, Kunde und Gesamtbetrag; Arbeit und Teile
   als getrennte Abschnitte mit Zwischensummen; eine Eingabekarte mit
   Umschalter Preisbuch / Arbeit / Teil.
-- **Preisbuch** — eigene Positionen mit Dauer, Stundensatz und Teilen.
+- **Preisbuch** — eigene Positionen mit Dauer, Stundensatz und Teileliste.
   Ein Tipp setzt Arbeit und Teile zusammen in den Auftrag.
+- **Teilepreise** — fuer Teile gibt es bewusst *keinen* festen Preis.
+  Gespeichert wird nur, was zuletzt dafuer bezahlt wurde, mit Datum. Beim
+  Uebernehmen in den Auftrag ist dieser Wert vorbelegt und in der Zeile
+  aenderbar; ein Teil ohne bekannten Preis steht als "Preis offen" drin und
+  die Gesamtsumme sagt, dass sie noch unvollstaendig ist. Jeder eingetragene
+  Preis wandert als neuer "zuletzt"-Wert ins Preisbuch zurueck. Optional ein
+  Aufschlag in Prozent: dann bekommt jede Teile-Zeile ein Feld fuer den
+  Einkauf und der Verkaufspreis wird daraus vorgeschlagen.
 - **Dauer-Schätzung** — Arbeit + Fahrzeugklasse ergibt einen Vorschlag in
   Minuten. Die Werte stehen in `JOBS` in der Datei (Erfahrungswerte, rund 48
   Arbeiten), die Fahrzeugklasse wird aus dem Modellnamen geraten und
