@@ -1,4 +1,4 @@
-<title>Schrauberzettel</title>
+<title>Bordbuch</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -266,7 +266,7 @@ footer{border-top:1px solid var(--hair);margin-top:28px;padding-top:15px;font-si
 <div class="wrap">
   <div class="head">
     <div class="brandrow">
-      <h1>Schrauberzettel</h1>
+      <h1>Bordbuch</h1>
       <span class="proto">Prototyp</span>
       <span class="today num" id="today"></span>
     </div>
@@ -401,7 +401,7 @@ const minVon=t=>{const[h,m]=(t||'0:00').split(':').map(Number);return h*60+(m||0
 const zeitVon=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.round(m%60)).padStart(2,'0');
 
 /* ---------- Zustand ---------- */
-const KEY='schrauberzettel.v3';
+const KEY='bordbuch.v1';
 const uid=()=>Math.random().toString(36).slice(2,9);
 function seed(){
   const s1=uid(),s2=uid(),a1=uid();
