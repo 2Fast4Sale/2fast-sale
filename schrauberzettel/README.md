@@ -37,6 +37,11 @@ Dauer ein, und der Preis rechnet sich anteilig.
   Minuten. Die Werte stehen in `JOBS` in der Datei (Erfahrungswerte, rund 48
   Arbeiten), die Fahrzeugklasse wird aus dem Modellnamen geraten und
   multipliziert (Kleinwagen 0,9 bis Oldtimer 1,45).
+- **Verlauf** — alle bisherigen Reparaturen, wahlweise nach Datum (nach
+  Jahren gruppiert) oder nach Fahrzeug. Die Fahrzeug-Ansicht ist das
+  digitale Scheckheft: je Fahrzeug die Anzahl der Reparaturen, die Summe
+  und der hoechste erfasste Kilometerstand. Dazu drei Kennzahlen oben und
+  eine Suche ueber Fahrzeug, Kunde und Arbeit.
 - **Timer** — echte Dauer mitschreiben, Abweichung zur Kalkulation anzeigen,
   Ist-Wert ins Preisbuch übernehmen.
 - **Dokument** — zwei getrennte Sorten:
