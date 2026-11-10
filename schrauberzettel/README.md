@@ -50,6 +50,15 @@ Dauer ein, und der Preis rechnet sich anteilig.
   - *Rechnung* für gewerblich: Rechnungsnummer, Betriebsdaten, 19 % USt oder
     Hinweis nach § 19 UStG, plus Prüfliste der Pflichtangaben nach § 14 UStG.
 
+  Beide gibt es als **PDF** (jsPDF, A4, Anschriftenfeld nach DIN 5008):
+  Absenderblock, Empfänger mit Anschrift, Eckdaten mit Fahrzeug und
+  Kilometerstand, Positionen nach Arbeit und Teilen, Summenblock, Zahlungsziel
+  und IBAN, Fußzeile mit Steuernummer auf jeder Seite, Seitenumbruch mit
+  wiederholtem Tabellenkopf. Die Rechnungsnummer wird **einmal** beim ersten
+  Erzeugen vergeben, am Auftrag gespeichert und ändert sich danach nicht mehr;
+  der Zähler in den Einstellungen rückt dabei weiter. Ohne vollständige
+  Pflichtangaben verweigert der Knopf die Rechnung und nennt, was fehlt.
+
 Zustand liegt in `localStorage`, Beispieldaten sind beim ersten Öffnen
 geladen und in den Einstellungen zurücksetzbar.
 
@@ -58,6 +67,15 @@ geladen und in den Einstellungen zurücksetzbar.
 Wer als Privatperson Umsatzsteuer auf ein Papier schreibt, schuldet sie dem
 Finanzamt (§ 14c UStG). Darum hat die private Sorte das Feld gar nicht, statt
 es nur leer zu lassen.
+
+## Offen vor echtem Einsatz
+
+Sobald ein Betrieb damit wirklich abrechnet, gelten die GoBD: fortlaufende
+Nummern ohne Lücken, keine nachträgliche Änderung oder Löschung erstellter
+Rechnungen, zehn Jahre Aufbewahrung, Export für die Betriebsprüfung. Der
+Prototyp vergibt die Nummer zwar schon fest, erfüllt den Rest aber nicht --
+das gehört gebaut, bevor dafür Geld genommen wird. Für Kleinunternehmer nach
+§ 19 ist die Hürde niedriger.
 
 ## Als nächstes
 

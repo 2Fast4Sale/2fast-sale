@@ -1,5 +1,6 @@
 <title>Schrauberzettel</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: Auftragsblock aus der Werkstatt — Haarlinien und Flaechen in Graphit,
@@ -70,7 +71,7 @@ main{padding-block:20px}
 .card+.card{margin-top:9px}
 .lbl{display:block;font-family:var(--font-d);font-size:12px;font-weight:600;letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted);margin-bottom:4px}
-input,select,textarea{font-family:var(--font-b);font-size:15px;color:var(--fg);background:var(--bg);
+input,select,textarea{min-height:58px;resize:vertical;font-family:var(--font-b);font-size:15px;color:var(--fg);background:var(--bg);
   border:1px solid var(--line);border-radius:4px;padding:8px 10px;width:100%;min-width:0}
 input[type=number],input[type=date],input[type=time]{font-family:var(--font-m);font-size:14px}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{
@@ -400,10 +401,10 @@ function seed(){
   const s1=uid(),s2=uid(),a1=uid();
   return {
     settings:{
-      betrieb:{name:'',strasse:'',ort:'',tel:'',steuernr:''},
+      betrieb:{name:'',strasse:'',ort:'',tel:'',steuernr:'',iban:'',bank:''},
       privatName:'Max Beispiel',
       saetze:[{id:s1,name:'Mechanik',rate:60},{id:s2,name:'Elektrik',rate:75}],
-      mwst:'privat', rnrPrefix:'2026-', rnrNext:1, oeffnung:{von:'08:00',bis:'17:00'}, aufschlag:0
+      mwst:'privat', rnrPrefix:'2026-', rnrNext:1, oeffnung:{von:'08:00',bis:'17:00'}, aufschlag:0, zahlungsziel:14
     },
     preisbuch:[
       {id:uid(),name:'Ölwechsel mit Filter',dauer:30,satzId:s1,teile:[
@@ -433,7 +434,7 @@ function seed(){
       {id:uid(),datum:plus(heute(),-2),zeit:'09:30',kunde:'Herr Peters',fahrzeug:'Audi A4 B8, 2013',arbeit:'Zahnriemen mit Wasserpumpe',dauer:260,status:'erledigt',auftragId:null}
     ],
     auftraege:[{
-      id:a1,kunde:'Schwager (privat)',datum:heute(),
+      id:a1,kunde:'Schwager (privat)',kundeAdr:'',datum:heute(),
       fahrzeug:{hersteller:'VW',modell:'Passat B8',jahr:'2017',klasse:'mittel',kennzeichen:'DO-XY 471',km:'142500'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Generator / Lichtmaschine',dauer:95,satzId:s2,ist:null,start:null},
@@ -624,7 +625,11 @@ function renderAuftrag(){
   h+='<details><summary>Kunde &amp; Fahrzeug bearbeiten</summary><div class="inner"><div class="grid g2">'+
     '<div><label class="lbl" for="f-kunde">Kunde</label><input id="f-kunde" data-f="kunde" value="'+esc(a.kunde)+'"></div>'+
     '<div><label class="lbl" for="f-datum">Datum</label><input id="f-datum" type="date" data-f="datum" value="'+esc(a.datum)+'"></div>'+
-    '</div><div class="grid g3 keep" style="margin-top:10px">'+
+    '</div>'+
+    '<div style="margin-top:10px"><label class="lbl" for="f-kadr">Anschrift des Kunden</label>'+
+    '<textarea id="f-kadr" rows="2" data-f="kundeAdr" placeholder="Straße Nr.&#10;PLZ Ort">'+esc(a.kundeAdr||'')+'</textarea>'+
+    '<div class="hint">Für eine gewerbliche Rechnung Pflicht (§ 14 UStG). Für die private Kostenaufstellung nicht nötig.</div></div>'+
+    '<div class="grid g2" style="margin-top:10px"><div class="grid g3 keep" style="margin-top:10px">'+
     '<div><label class="lbl" for="f-hersteller">Hersteller</label><input id="f-hersteller" data-f="fz.hersteller" value="'+esc(a.fahrzeug.hersteller)+'"></div>'+
     '<div><label class="lbl" for="f-modell">Modell</label><input id="f-modell" data-f="fz.modell" value="'+esc(a.fahrzeug.modell)+'"></div>'+
     '<div><label class="lbl" for="f-jahr">Baujahr</label><input id="f-jahr" inputmode="numeric" data-f="fz.jahr" value="'+esc(a.fahrzeug.jahr)+'"></div>'+
@@ -879,6 +884,12 @@ function renderEinstellungen(){
     '<div class="grid g2" style="margin-top:10px">'+
       '<div><label class="lbl" for="b-steuer">Steuernummer / USt-IdNr.</label><input id="b-steuer" data-b="betrieb.steuernr" value="'+esc(st.betrieb.steuernr)+'"></div>'+
       '<div><label class="lbl" for="b-rnr">Rechnungsnummer ab</label><input id="b-rnr" data-b="rnrPrefix" value="'+esc(st.rnrPrefix)+'"></div></div>'+
+    '<div class="grid g2" style="margin-top:10px">'+
+      '<div><label class="lbl" for="b-iban">IBAN</label><input id="b-iban" data-b="betrieb.iban" value="'+esc(st.betrieb.iban||'')+'" placeholder="DE00 0000 0000 0000 0000 00"></div>'+
+      '<div><label class="lbl" for="b-bank">Bank</label><input id="b-bank" data-b="betrieb.bank" value="'+esc(st.betrieb.bank||'')+'"></div></div>'+
+    '<div class="grid g2" style="margin-top:10px">'+
+      '<div><label class="lbl" for="b-ziel">Zahlungsziel (Tage)</label><input id="b-ziel" type="number" inputmode="numeric" min="0" step="1" data-b="zahlungsziel" value="'+esc(st.zahlungsziel!=null?st.zahlungsziel:14)+'"></div>'+
+      '<div></div></div>'+
     '</div></details>'+
     '<details><summary>Daten</summary><div class="inner"><div class="row">'+
     '<button class="ghost" data-a="reset">Beispieldaten zurücksetzen</button>'+
@@ -925,12 +936,14 @@ function renderDokument(){
     if(!st.betrieb.strasse||!st.betrieb.ort) miss.push('Vollständige Anschrift');
     if(!st.betrieb.steuernr) miss.push('Steuernummer oder USt-IdNr.');
     if(!a.kunde) miss.push('Name des Empfängers');
-    const nr=st.rnrPrefix+String(st.rnrNext).padStart(3,'0');
+    if(!(a.kundeAdr||'').trim()) miss.push('Anschrift des Empfängers');
+    const nr=a.rechnung?a.rechnung.nr:(st.rnrPrefix+String(st.rnrNext).padStart(3,'0'));
     h+='<div class="doc"><div class="dh"><div><h2>Rechnung</h2><div class="small muted num">Nr. '+esc(nr)+'</div></div>'+
       '<div class="small" style="text-align:right">'+esc(st.betrieb.name||'[Betrieb]')+'<br><span class="muted">'+
       esc(st.betrieb.strasse||'[Straße]')+'<br>'+esc(st.betrieb.ort||'[PLZ, Ort]')+'<br>St.-Nr. '+esc(st.betrieb.steuernr||'[fehlt]')+
       '</span></div></div>'+
       '<div class="small" style="margin-bottom:14px"><strong>Empfänger:</strong> '+esc(a.kunde||'[fehlt]')+
+      ((a.kundeAdr||'').trim()?'<br>'+esc(a.kundeAdr).replace(/\n/g,'<br>'):'<br><span style="color:var(--warn)">[Anschrift fehlt]</span>')+
       '<br><strong>Leistungsdatum:</strong> '+esc(tagLang(a.datum))+
       '<br><strong>Fahrzeug:</strong> '+esc(fzText(a.fahrzeug))+(a.fahrzeug.kennzeichen?' · '+esc(a.fahrzeug.kennzeichen):'')+'</div>'+
       tabelle+'<div class="gesamt" style="border:0;padding:0;margin-top:12px">'+
@@ -941,15 +954,208 @@ function renderDokument(){
       (st.mwst==='klein'?'<div class="note">Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.</div>':'')+
       (st.mwst==='privat'?'<div class="note"><strong>Achtung:</strong> In den Einstellungen steht „Privat". Für eine echte Rechnung dort auf Kleinunternehmer oder gewerblich umstellen.</div>':'')+
       '</div><div class="sec" style="margin-top:14px"><div class="sechead"><h2>Pflichtangaben § 14 UStG</h2></div><div class="card"><ul class="check">'+
-      ['Name des Betriebs','Vollständige Anschrift','Steuernummer oder USt-IdNr.','Name des Empfängers']
+      ['Name des Betriebs','Vollständige Anschrift','Steuernummer oder USt-IdNr.','Name des Empfängers','Anschrift des Empfängers']
         .map(x=>'<li class="'+(miss.includes(x)?'miss':'')+'">'+esc(x)+'</li>').join('')+
       '<li>Rechnungsnummer, fortlaufend</li><li>Leistungsdatum</li><li>Art und Umfang der Leistung</li>'+
       (st.mwst==='gewerblich'?'<li>Steuersatz und Steuerbetrag</li>':'<li>Hinweis auf § 19 UStG</li>')+'</ul>'+
       (miss.length?'<div class="hint">Fehlendes in den Einstellungen nachtragen.</div>':'<div class="hint">Vollständig.</div>')+'</div></div>';
   }
-  h+='<div class="row" style="margin-top:12px"><button class="primary" data-a="copy">Als Text kopieren</button>'+
-     '<span class="small muted" id="copy-hint"></span></div>';
+  h+='<div class="row" style="margin-top:14px"><button class="primary" data-a="pdf">'+
+     (art==='privat'?'Kostenaufstellung als PDF':'Rechnung als PDF')+'</button>'+
+     '<button class="ghost" data-a="copy">Als Text kopieren</button>'+
+     '<span class="small muted" id="copy-hint"></span></div>'+
+     '<div class="hint" id="pdf-hint">DIN-A4, Anschriftenfeld nach DIN 5008'+
+     (art==='privat'?'. Ohne Steuernummer und ohne Umsatzsteuer.':', mit allen Pflichtangaben nach § 14 UStG.')+'</div>';
   return h;
+}
+
+/* ---------- PDF ---------- */
+const zahl=n=>(Number(n)||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const dmy=d=>{const x=D(d);return String(x.getDate()).padStart(2,'0')+'.'+String(x.getMonth()+1).padStart(2,'0')+'.'+x.getFullYear()};
+
+function pdfErzeugen(){
+  const a=auftrag(); if(!a) return;
+  const st=S.settings, su=summe(a), rech=S.docArt==='rechnung';
+  const sag=t=>{const el=document.getElementById('pdf-hint');if(el)el.innerHTML=t};
+
+  if(rech){
+    const fehlt=[];
+    if(!st.betrieb.name) fehlt.push('Betrieb');
+    if(!st.betrieb.strasse||!st.betrieb.ort) fehlt.push('Anschrift');
+    if(!st.betrieb.steuernr) fehlt.push('Steuernummer');
+    if(!a.kunde) fehlt.push('Empfänger');
+    if(!(a.kundeAdr||'').trim()) fehlt.push('Anschrift des Empfängers');
+    if(fehlt.length){
+      sag('<span style="color:var(--warn)">Noch keine gültige Rechnung: '+fehlt.join(', ')+
+        ' fehlt. In den Einstellungen nachtragen — ohne diese Angaben darf keine Rechnung raus.</span>');
+      return;
+    }
+  }
+  const lib=window.jspdf&&window.jspdf.jsPDF;
+  if(!lib){sag('<span style="color:var(--warn)">PDF-Bibliothek nicht geladen.</span>');return}
+
+  if(rech&&!a.rechnung){
+    a.rechnung={nr:st.rnrPrefix+String(st.rnrNext).padStart(3,'0'),datum:heute()};
+    st.rnrNext=Number(st.rnrNext||1)+1; save();
+  }
+
+  const d=new lib({unit:'mm',format:'a4'});
+  const M=20, R=190, grau=[110,110,110], hell=[190,190,190];
+  const absender=rech
+    ? [st.betrieb.name,st.betrieb.strasse,st.betrieb.ort].filter(Boolean).join(' · ')
+    : (st.privatName||'');
+  const fusszeilen=[];
+  let seite=1;
+
+  function fuss(){
+    d.setFontSize(7.5); d.setTextColor.apply(d,grau);
+    d.setDrawColor.apply(d,hell); d.line(M,277,R,277);
+    fusszeilen.forEach((z,i)=>d.text(z,M,281.5+i*3.5));
+    d.text('Seite '+seite,R,281.5,{align:'right'});
+    d.setTextColor(0);
+  }
+  function kopfTabelle(y){
+    d.setFontSize(8); d.setTextColor.apply(d,grau); d.setFont('helvetica','bold');
+    d.text('BEZEICHNUNG',M,y); d.text('MENGE',126,y,{align:'right'});
+    d.text('EINZEL',156,y,{align:'right'}); d.text('BETRAG',R,y,{align:'right'});
+    d.setDrawColor(60); d.line(M,y+1.5,R,y+1.5);
+    d.setFont('helvetica','normal'); d.setTextColor(0); d.setFontSize(9.5);
+    return y+7;
+  }
+  function umbruch(y,braucht){
+    if(y+braucht<=268) return y;
+    fuss(); d.addPage(); seite++;
+    return kopfTabelle(25);
+  }
+
+  /* Kopf */
+  d.setFontSize(9.5);
+  if(rech){
+    d.setFont('helvetica','bold'); d.text(st.betrieb.name,R,25,{align:'right'});
+    d.setFont('helvetica','normal'); d.setFontSize(8.5); d.setTextColor.apply(d,grau);
+    [st.betrieb.strasse,st.betrieb.ort,st.betrieb.tel?'Tel. '+st.betrieb.tel:'',
+     'St.-Nr. '+st.betrieb.steuernr].filter(Boolean)
+      .forEach((z,i)=>d.text(z,R,30+i*4,{align:'right'}));
+  } else {
+    d.setFont('helvetica','bold'); d.text(st.privatName||'',R,25,{align:'right'});
+  }
+  d.setTextColor(0); d.setFont('helvetica','normal');
+
+  /* Anschriftenfeld nach DIN 5008 */
+  if(absender){
+    d.setFontSize(7); d.setTextColor.apply(d,grau);
+    d.text(absender,M,42);
+    d.setDrawColor.apply(d,hell); d.line(M,43,M+80,43);
+    d.setTextColor(0);
+  }
+  d.setFontSize(11);
+  d.text(a.kunde||'',M,50);
+  const adr=(a.kundeAdr||'').split(/[\n,]+/).map(z=>z.trim()).filter(Boolean);
+  d.setFontSize(10.5);
+  adr.slice(0,4).forEach((z,i)=>d.text(z,M,55.5+i*5));
+
+  /* Titel und Eckdaten */
+  d.setFont('helvetica','bold'); d.setFontSize(17);
+  d.text(rech?'Rechnung':'Kostenaufstellung',M,78);
+  d.setFont('helvetica','normal'); d.setFontSize(9.5);
+
+  const eck=[];
+  if(rech) eck.push(['Rechnungsnummer',a.rechnung.nr]);
+  eck.push([rech?'Rechnungsdatum':'Datum',dmy(rech?a.rechnung.datum:a.datum)]);
+  eck.push(['Leistungsdatum',dmy(a.datum)]);
+  eck.push(['Fahrzeug',fzText(a.fahrzeug)]);
+  if(a.fahrzeug.kennzeichen) eck.push(['Kennzeichen',a.fahrzeug.kennzeichen]);
+  if(a.fahrzeug.km) eck.push(['Kilometerstand',Number(a.fahrzeug.km).toLocaleString('de-DE')+' km']);
+  eck.forEach((z,i)=>{
+    d.setTextColor.apply(d,grau); d.text(z[0],M,88+i*5);
+    d.setTextColor(0); d.text(String(z[1]),M+42,88+i*5);
+  });
+
+  /* Tabelle */
+  let y=kopfTabelle(92+eck.length*5);
+  const gruppe=(titel,ps)=>{
+    if(!ps.length) return;
+    y=umbruch(y,12);
+    d.setFont('helvetica','bold'); d.setFontSize(8); d.setTextColor.apply(d,grau);
+    d.text(titel.toUpperCase(),M,y);
+    d.setFont('helvetica','normal'); d.setTextColor(0); d.setFontSize(9.5);
+    y+=5;
+    ps.forEach(pz=>{
+      const arbeit=pz.typ==='arbeit', r=arbeit?satz(pz.satzId):null;
+      const menge=arbeit?(Number(pz.dauer)||0)+' min':(Number(pz.menge)||1)+' Stk';
+      const einzel=arbeit?zahl(r.rate)+' €/h':zahl(pz.preis)+' €';
+      const betrag=arbeit?(Number(pz.dauer)||0)/60*r.rate:(Number(pz.preis)||0)*(Number(pz.menge)||1);
+      const txt=d.splitTextToSize(pz.name,78);
+      y=umbruch(y,txt.length*4.6+3);
+      d.text(txt,M,y);
+      d.text(menge,126,y,{align:'right'});
+      d.text(einzel,156,y,{align:'right'});
+      d.text(zahl(betrag)+' €',R,y,{align:'right'});
+      if(arbeit&&r){d.setFontSize(7.5);d.setTextColor.apply(d,grau);
+        d.text(r.name,M,y+3.4);d.setFontSize(9.5);d.setTextColor(0);y+=3}
+      y+=txt.length*4.6+2.6;
+      d.setDrawColor(226); d.line(M,y-1.8,R,y-1.8);
+    });
+  };
+  gruppe('Arbeit',a.positionen.filter(x=>x.typ==='arbeit'));
+  gruppe('Teile',a.positionen.filter(x=>x.typ==='teil'));
+
+  /* Summen */
+  y=umbruch(y,34)+4;
+  const zeileS=(l,v,fett)=>{
+    d.setFont('helvetica',fett?'bold':'normal');
+    d.setFontSize(fett?11:9.5);
+    d.text(l,140,y,{align:'right'}); d.text(v,R,y,{align:'right'});
+    d.setFont('helvetica','normal'); d.setFontSize(9.5);
+    y+=fett?6:5;
+  };
+  zeileS('Arbeit ('+std(su.minuten).replace(' h',' Std.')+')',zahl(su.arbeit)+' €');
+  zeileS('Teile',zahl(su.teile)+' €');
+  d.setDrawColor(60); d.line(120,y-3,R,y-3); y+=1.5;
+  if(rech&&st.mwst==='gewerblich'){
+    zeileS('Nettobetrag',zahl(su.netto)+' €');
+    zeileS('zzgl. 19 % USt',zahl(su.mwst)+' €');
+    d.setDrawColor(60); d.line(120,y-3,R,y-3); y+=1.5;
+    zeileS('Gesamtbetrag',zahl(su.brutto)+' €',true);
+  } else {
+    zeileS(rech?'Gesamtbetrag':'Gesamt',zahl(su.brutto)+' €',true);
+  }
+
+  /* Hinweise */
+  y+=6; d.setFontSize(9);
+  const hinweise=[];
+  if(rech){
+    if(st.mwst==='klein') hinweise.push('Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.');
+    const tage=Number(st.zahlungsziel||0);
+    hinweise.push(tage>0
+      ? 'Zahlbar ohne Abzug bis zum '+dmy(plus(a.rechnung.datum,tage))+' ('+tage+' Tage).'
+      : 'Zahlbar sofort nach Erhalt ohne Abzug.');
+    if(st.betrieb.iban) hinweise.push('Bitte überweisen Sie auf '+st.betrieb.iban+
+      (st.betrieb.bank?' ('+st.betrieb.bank+')':'')+' unter Angabe der Rechnungsnummer.');
+    hinweise.push('Vielen Dank für Ihren Auftrag.');
+  } else {
+    hinweise.push('Private Hilfeleistung, keine gewerbliche Leistung.');
+    hinweise.push('Diese Aufstellung weist keine Umsatzsteuer aus und ist keine Rechnung im Sinne des § 14 UStG.');
+  }
+  hinweise.forEach(t=>{
+    const zl=d.splitTextToSize(t,R-M);
+    y=umbruch(y,zl.length*4.6+2);
+    d.text(zl,M,y); y+=zl.length*4.6+1.5;
+  });
+
+  if(rech){
+    fusszeilen.push([st.betrieb.name,st.betrieb.strasse,st.betrieb.ort].filter(Boolean).join(', '));
+    fusszeilen.push(['St.-Nr. '+st.betrieb.steuernr,st.betrieb.tel?'Tel. '+st.betrieb.tel:'',
+      st.betrieb.iban?'IBAN '+st.betrieb.iban:''].filter(Boolean).join('  ·  '));
+  } else if(st.privatName) fusszeilen.push(st.privatName);
+  fuss();
+
+  const name=(rech?'Rechnung_'+a.rechnung.nr:'Kostenaufstellung_'+a.datum)
+    .replace(/[^A-Za-z0-9_.-]/g,'_')+'.pdf';
+  try{ d.save(name); }catch(e){}
+  render();
+  sag('<strong>'+esc(name)+'</strong> erzeugt'+(rech?', Rechnungsnummer '+esc(a.rechnung.nr)+' vergeben':'')+
+    '. Lädt der Download hier nicht, liegt das an der Vorschau — als eigene Seite gespeichert läuft er normal.');
 }
 
 /* ---------- Zeichnen ---------- */
@@ -1031,7 +1237,7 @@ document.addEventListener('click',e=>{
       const pb=S.preisbuch.find(p=>norm(p.name)===norm(t.arbeit));
       const teile=(pb?pb.teile:[]).map(x=>({id:uid(),typ:'teil',name:x.name,preis:x.preis,menge:x.menge}));
       const txt=t.fahrzeug||'', teil=txt.split(/[, ]+/);
-      const na={id:uid(),kunde:t.kunde,datum:t.datum,
+      const na={id:uid(),kunde:t.kunde,kundeAdr:'',datum:t.datum,
         fahrzeug:{hersteller:teil[0]||'',modell:teil.slice(1).filter(x=>!/^\d{4}$/.test(x)).join(' '),
           jahr:(txt.match(/\b(19|20)\d{2}\b/)||[''])[0],klasse:klasseVon(txt),kennzeichen:'',km:''},
         positionen:[{id:uid(),typ:'arbeit',name:t.arbeit||'Arbeit',dauer:Number(t.dauer)||60,
@@ -1042,7 +1248,7 @@ document.addEventListener('click',e=>{
   }
 
   if(act==='a-neu'){
-    const na={id:uid(),kunde:'',datum:S.tag||heute(),
+    const na={id:uid(),kunde:'',kundeAdr:'',datum:S.tag||heute(),
       fahrzeug:{hersteller:'',modell:'',jahr:'',klasse:'kompakt',kennzeichen:'',km:''},positionen:[]};
     S.auftraege.push(na); S.aktiv=na.id; S.view='auftrag'; render(); return;
   }
@@ -1112,6 +1318,7 @@ document.addEventListener('click',e=>{
   if(act==='satz-del'){S.settings.saetze=S.settings.saetze.filter(s=>s.id!==id);render();return}
   if(act==='reset'){S=seed();render();return}
   if(act==='leeren'){S.termine=[];S.auftraege=[];S.aktiv=null;render();return}
+  if(act==='pdf'){pdfErzeugen();return}
   if(act==='copy'){
     const a2=auftrag(); if(!a2) return;
     const su=summe(a2);
