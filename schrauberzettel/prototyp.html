@@ -526,6 +526,12 @@ const HAFTUNGSTEXT='Die Arbeiten wurden als private Gefälligkeit ohne Gewinnerz
   'Eine Gewährleistung wird nicht übernommen. Die Haftung für Sachschäden ist auf Vorsatz und grobe Fahrlässigkeit '+
   'beschränkt; für Schäden an Leben, Körper und Gesundheit bleibt die Haftung unberührt.';
 const kurzDatum=d=>d?D(d).getDate()+'.'+(D(d).getMonth()+1)+'.':'';
+function kvAbweichung(a){
+  if(!a||!a.kv||!a.kv.angenommen||!(Number(a.kv.summe)>0)) return null;
+  const jetzt=summe(a).brutto, basis=Number(a.kv.summe);
+  const p=Math.round((jetzt-basis)/basis*1000)/10;
+  return {basis,jetzt,p,drueber:p>15};
+}
 const fzText=f=>[f.hersteller,f.modell,f.jahr?'('+f.jahr+')':''].filter(Boolean).join(' ')||'Ohne Fahrzeug';
 
 /* ---------- Kalender ---------- */
@@ -707,6 +713,11 @@ function renderAuftrag(){
     '<div class="r t"><span>Gesamt</span><span>'+eur(su.brutto)+'</span></div>'+
     (su.offen?'<div class="hint" style="color:var(--warn)">'+su.offen+' Teil'+(su.offen>1?'e':'')+
       ' noch ohne Preis — die Summe ist noch nicht vollständig.</div>':'')+
+    (function(){const ab=kvAbweichung(a); if(!ab) return '';
+      return '<div class="hint'+(ab.drueber?'" style="color:var(--warn)':'')+'">Kostenvoranschlag '+
+        esc(a.kv.nr)+': '+eur(ab.basis)+' · jetzt '+eur(ab.jetzt)+' · '+
+        (ab.p>=0?'+':'')+String(ab.p).replace('.',',')+' %'+
+        (ab.drueber?' — über der 15-%-Grenze, vor dem Weitermachen Rücksprache halten.':'')+'</div>';})()+
     '<div class="zahlzeile">'+
       '<div class="seg">'+ZAHLARTEN.map(z=>'<button data-a="zahlart" data-v="'+z.id+'" aria-pressed="'+
         (zahlung(a).art===z.id)+'">'+z.n+'</button>').join('')+'</div>'+
@@ -755,6 +766,20 @@ function renderAuftrag(){
   h+='<div class="row"><button class="ghost" data-a="a-neu">Neuer Auftrag</button>'+
      '<button class="ghost" data-a="tab" data-v="dokument">Dokument erzeugen →</button></div>';
   return h;
+}
+
+function freierPlatz(dauer){
+  const von=minVon(S.settings.oeffnung.von), bis=minVon(S.settings.oeffnung.bis);
+  for(let i=1;i<=28;i++){
+    const d=plus(heute(),i), wt=(D(d).getDay()+6)%7;
+    if(wt>4) continue;
+    let cursor=von;
+    tagTermine(d).filter(t=>t.status!=='erledigt').forEach(t=>{
+      cursor=Math.max(cursor,minVon(t.zeit)+(Number(t.dauer)||0));
+    });
+    if(cursor+dauer<=bis) return {datum:d,zeit:zeitVon(cursor)};
+  }
+  return {datum:plus(heute(),1),zeit:S.settings.oeffnung.von};
 }
 
 /* ---------- Verlauf ---------- */
@@ -972,6 +997,9 @@ function renderDokument(){
         ?'<div class="r"><span class="muted">Netto</span><span>'+eur(su.netto)+'</span></div>'+
          '<div class="r"><span class="muted">zzgl. 19 % USt</span><span>'+eur(su.mwst)+'</span></div>':'')+
       '<div class="r t"><span>Voraussichtlich</span><span>'+eur(su.brutto)+'</span></div></div>'+
+      (a.kv&&a.kv.angenommen
+        ?'<div class="note"><strong>Angenommen am '+esc(kurzDatum(a.kv.angenommen))+esc(D(a.kv.angenommen).getFullYear())+
+          '.</strong> Der Termin steht im Kalender.</div>':'')+
       '<div class="note"><strong>Es wurde noch keine Arbeit ausgeführt.</strong> Dieser Kostenvoranschlag ist '+
       'unverbindlich und beruht auf einer Sichtprüfung. Zeigt sich beim Zerlegen ein weiterer Mangel, melde ich '+
       'mich vor der Arbeit. Überschreitungen bis 15 % sind ohne neue Zusage möglich, darüber hinaus nur nach '+
@@ -1009,6 +1037,9 @@ function renderDokument(){
       '<div class="small" style="text-align:right">'+esc(st.betrieb.name||'[Betrieb]')+'<br><span class="muted">'+
       esc(st.betrieb.strasse||'[Straße]')+'<br>'+esc(st.betrieb.ort||'[PLZ, Ort]')+'<br>St.-Nr. '+esc(st.betrieb.steuernr||'[fehlt]')+
       '</span></div></div>'+
+      ((a.kv&&a.kv.angenommen)?'<div class="small muted" style="margin-bottom:8px">Grundlage: Kostenvoranschlag '+
+        esc(a.kv.nr)+' vom '+esc(kurzDatum(a.kv.datum))+esc(D(a.kv.datum).getFullYear())+
+        ', angenommen am '+esc(kurzDatum(a.kv.angenommen))+esc(D(a.kv.angenommen).getFullYear())+'</div>':'')+
       '<div class="small" style="margin-bottom:14px"><strong>Empfänger:</strong> '+esc(a.kunde||'[fehlt]')+
       ((a.kundeAdr||'').trim()?'<br>'+esc(a.kundeAdr).replace(/\n/g,'<br>'):'<br><span style="color:var(--warn)">[Anschrift fehlt]</span>')+
       '<br><strong>Leistungsdatum:</strong> '+esc(tagLang(a.datum))+
@@ -1033,7 +1064,14 @@ function renderDokument(){
       (st.mwst==='gewerblich'?'<li>Steuersatz und Steuerbetrag</li>':'<li>Hinweis auf § 19 UStG</li>')+'</ul>'+
       (miss.length?'<div class="hint">Fehlendes in den Einstellungen nachtragen.</div>':'<div class="hint">Vollständig.</div>')+'</div></div>';
   }
-  h+='<div class="row" style="margin-top:14px"><button class="primary" data-a="pdf">'+
+  if(art==='kv') h+='<div class="row" style="margin-top:14px">'+
+    (a.kv&&a.kv.angenommen
+      ?'<button class="ghost" data-a="kv-zurueck">Annahme zurücknehmen</button>'+
+       '<span class="small muted">Termin und Auftrag bleiben bestehen.</span>'
+      :'<button class="primary" data-a="kv-an">Angenommen — Termin anlegen</button>'+
+       '<span class="small muted">Legt den Termin auf den nächsten freien Platz und merkt sich die Summe.</span>')+
+    '</div>';
+  h+='<div class="row" style="margin-top:14px"><button class="'+(art==='kv'&&a.kv&&a.kv.angenommen?'ghost':'primary')+'" data-a="pdf">'+
      (art==='kv'?'Kostenvoranschlag als PDF':art==='privat'?'Kostenaufstellung als PDF':'Rechnung als PDF')+'</button>'+
      '<button class="ghost" data-a="copy">Als Text kopieren</button>'+
      '<span class="small muted" id="copy-hint"></span></div>'+
@@ -1147,6 +1185,7 @@ function pdfErzeugen(){
   eck.push(['Fahrzeug',fzText(a.fahrzeug)]);
   if(a.fahrzeug.kennzeichen) eck.push(['Kennzeichen',a.fahrzeug.kennzeichen]);
   if(a.fahrzeug.km) eck.push(['Kilometerstand',Number(a.fahrzeug.km).toLocaleString('de-DE')+' km']);
+  if(!kv&&a.kv&&a.kv.angenommen) eck.push(['Kostenvoranschlag',a.kv.nr+' vom '+dmy(a.kv.datum)]);
   eck.forEach((z,i)=>{
     d.setTextColor.apply(d,grau); d.text(z[0],M,88+i*5);
     d.setTextColor(0); d.text(String(z[1]),M+42,88+i*5);
@@ -1422,6 +1461,22 @@ document.addEventListener('click',e=>{
   if(act==='satz-del'){S.settings.saetze=S.settings.saetze.filter(s=>s.id!==id);render();return}
   if(act==='reset'){S=seed();render();return}
   if(act==='leeren'){S.termine=[];S.auftraege=[];S.aktiv=null;render();return}
+  if(act==='kv-an'&&a){
+    const st=S.settings, su2=summe(a);
+    if(!a.kv){a.kv={nr:st.kvPrefix+String(st.kvNext).padStart(3,'0'),datum:heute()};
+      st.kvNext=Number(st.kvNext||1)+1}
+    a.kv.angenommen=heute(); a.kv.summe=su2.brutto;
+    const dauer=Math.max(15,su2.minuten||60);
+    const platz=freierPlatz(dauer);
+    const arb=a.positionen.filter(x=>x.typ==='arbeit');
+    S.termine.push({id:uid(),datum:platz.datum,zeit:platz.zeit,kunde:a.kunde||'Ohne Namen',
+      fahrzeug:fzText(a.fahrzeug)+(a.fahrzeug.kennzeichen?', '+a.fahrzeug.kennzeichen:''),
+      arbeit:arb.length?arb.map(x=>x.name).join(' · '):'Aus Kostenvoranschlag',
+      dauer,status:'offen',auftragId:a.id});
+    S.tag=platz.datum; S.woche=montag(platz.datum); S.monat=platz.datum.slice(0,7);
+    S.view='kalender'; render(); return;
+  }
+  if(act==='kv-zurueck'&&a&&a.kv){a.kv.angenommen=null;a.kv.summe=null;render();return}
   if(act==='pdf'){pdfErzeugen();return}
   if(act==='copy'){
     const a2=auftrag(); if(!a2) return;

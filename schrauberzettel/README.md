@@ -49,6 +49,12 @@ Dauer ein, und der Preis rechnet sich anteilig.
     Nummer, Gueltigkeitsdatum, Summe als "Voraussichtlich", und im Text
     ausdruecklich "Es wurde noch keine Arbeit ausgefuehrt" samt der ueblichen
     Klausel zu Abweichungen bis 15 %. Keine Zahlungszeile.
+    Der Knopf *Angenommen* legt den Termin auf den naechsten freien Platz
+    (Werktag, nach dem letzten Termin des Tages, passend zur geschaetzten
+    Dauer), haengt ihn an den Auftrag und merkt sich die Summe. Danach zeigt
+    der Auftrag die Abweichung gegenueber dem Voranschlag in Prozent und warnt
+    ab 15 %. Rechnung und Kostenaufstellung nennen den Voranschlag als
+    Grundlage, im PDF als eigene Zeile.
 
   - *Kostenaufstellung* für privat: ohne Steuernummer, ohne
     Umsatzsteuerausweis, mit Vermerk zur privaten Hilfeleistung.
