@@ -16,9 +16,13 @@ Dauer ein, und der Preis rechnet sich anteilig.
 
 `prototyp.html` — eine Datei, ohne Build, im Browser öffnen.
 
-- **Kalender** — Terminbuch mit Tagesauslastung gegen die Öffnungszeiten.
-  Aus einem Termin entsteht per Knopf ein Auftrag.
-- **Auftrag** — Fahrzeug, Positionen aus Arbeit und Teilen, Summe.
+- **Kalender** — Wochenleiste mit Wochentagen und Auslastungsbalken pro Tag,
+  Monatsübersicht mit Punkten je Termin, Kalenderwoche und Blättern.
+  Der gewählte Tag zeigt seine Termine mit Von-Bis-Zeit und die freien
+  Fenster dazwischen. Aus einem Termin entsteht per Knopf ein Auftrag.
+- **Auftrag** — Kopf mit Fahrzeug, Kunde und Gesamtbetrag; Arbeit und Teile
+  als getrennte Abschnitte mit Zwischensummen; eine Eingabekarte mit
+  Umschalter Preisbuch / Arbeit / Teil.
 - **Preisbuch** — eigene Positionen mit Dauer, Stundensatz und Teilen.
   Ein Tipp setzt Arbeit und Teile zusammen in den Auftrag.
 - **Dauer-Schätzung** — Arbeit + Fahrzeugklasse ergibt einen Vorschlag in
