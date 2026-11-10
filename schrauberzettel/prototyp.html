@@ -177,11 +177,17 @@ details .inner{padding:15px}
 .frei span:first-child{font-family:var(--font-d);font-size:12.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
 
 /* Verlauf */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.stat.warnstat{border-color:var(--warn)}
+.stat.warnstat .v{color:var(--warn)}
+.zahlzeile{display:flex;align-items:center;gap:9px;flex-wrap:wrap;border-top:1px solid var(--line);
+  margin-top:13px;padding-top:12px}
+.zahlzeile .seg{margin-right:auto}
+@media (max-width:520px){.zahlzeile .seg{margin-right:0;width:100%}.zahlzeile .seg button{flex:1}}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px}
 .stat .k{font-family:var(--font-d);font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .stat .v{font-family:var(--font-m);font-size:21px;font-weight:500;letter-spacing:-.03em;margin-top:2px;line-height:1.15}
-@media (max-width:520px){.stats{grid-template-columns:1fr 1fr}.stats .stat:first-child{grid-column:1/-1}}
+@media (max-width:520px){.stats{grid-template-columns:1fr 1fr}}
 .vgh{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--hair)}
 .vgh h3{font-family:var(--font-d);font-size:18px;font-weight:600;letter-spacing:.02em}
 .vgh .num,.vgh span.num{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
@@ -434,7 +440,7 @@ function seed(){
       {id:uid(),datum:plus(heute(),-2),zeit:'09:30',kunde:'Herr Peters',fahrzeug:'Audi A4 B8, 2013',arbeit:'Zahnriemen mit Wasserpumpe',dauer:260,status:'erledigt',auftragId:null}
     ],
     auftraege:[{
-      id:a1,kunde:'Schwager (privat)',kundeAdr:'',datum:heute(),
+      id:a1,kunde:'Schwager (privat)',kundeAdr:'',datum:heute(),zahlung:{art:'bar',status:'offen',datum:null},
       fahrzeug:{hersteller:'VW',modell:'Passat B8',jahr:'2017',klasse:'mittel',kennzeichen:'DO-XY 471',km:'142500'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Generator / Lichtmaschine',dauer:95,satzId:s2,ist:null,start:null},
@@ -444,7 +450,7 @@ function seed(){
         {id:uid(),typ:'teil',name:'Bremsbeläge hinten',preis:30,ek:null,menge:1,hinweis:''}
       ]
     },
-    {id:uid(),kunde:'Schwager (privat)',datum:plus(heute(),-186),
+    {id:uid(),kunde:'Schwager (privat)',datum:plus(heute(),-186),zahlung:{art:'bar',status:'bezahlt',datum:plus(heute(),-186)},
       fahrzeug:{hersteller:'VW',modell:'Passat B8',jahr:'2017',klasse:'mittel',kennzeichen:'DO-XY 471',km:'125400'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Ölwechsel mit Filter',dauer:35,satzId:s1,ist:35,start:null},
@@ -452,26 +458,26 @@ function seed(){
         {id:uid(),typ:'teil',name:'Ölfilter',preis:9,ek:null,menge:1,hinweis:''},
         {id:uid(),typ:'arbeit',name:'Innenraumfilter',dauer:20,satzId:s1,ist:null,start:null},
         {id:uid(),typ:'teil',name:'Innenraumfilter',preis:14,ek:null,menge:1,hinweis:''}]},
-    {id:uid(),kunde:'Yilmaz',datum:plus(heute(),-54),
+    {id:uid(),kunde:'Yilmaz',datum:plus(heute(),-54),zahlung:{art:'bar',status:'bezahlt',datum:plus(heute(),-54)},
       fahrzeug:{hersteller:'VW',modell:'Golf 7',jahr:'2015',klasse:'kompakt',kennzeichen:'DO-AB 12',km:'98200'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Bremsbeläge + Scheiben vorne',dauer:70,satzId:s1,ist:82,start:null},
         {id:uid(),typ:'teil',name:'Bremsscheiben vorne (Paar)',preis:72,ek:null,menge:1,hinweis:''},
         {id:uid(),typ:'teil',name:'Bremsbeläge vorne',preis:38,ek:null,menge:1,hinweis:''}]},
-    {id:uid(),kunde:'Herr Brandt',datum:plus(heute(),-96),
+    {id:uid(),kunde:'Herr Brandt',datum:plus(heute(),-96),zahlung:{art:'bar',status:'bezahlt',datum:plus(heute(),-96)},
       fahrzeug:{hersteller:'VW',modell:'Käfer 1303',jahr:'1973',klasse:'oldtimer',kennzeichen:'DO-H 73H',km:'86750'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Zündkerzen (4 Zylinder)',dauer:55,satzId:s2,ist:68,start:null},
         {id:uid(),typ:'teil',name:'Zündkerzen, Satz',preis:34,ek:null,menge:1,hinweis:''},
         {id:uid(),typ:'arbeit',name:'Ölwechsel mit Filter',dauer:45,satzId:s1,ist:null,start:null},
         {id:uid(),typ:'teil',name:'Motoröl 20W-50, 3 l',preis:29,ek:null,menge:1,hinweis:''}]},
-    {id:uid(),kunde:'Frau Özkan',datum:plus(heute(),-21),
+    {id:uid(),kunde:'Frau Özkan',datum:plus(heute(),-21),zahlung:{art:'bar',status:'bezahlt',datum:plus(heute(),-21)},
       fahrzeug:{hersteller:'Opel',modell:'Corsa D',jahr:'2012',klasse:'klein',kennzeichen:'UN-KO 204',km:'164300'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'HU-Vorbereitung / Durchsicht',dauer:45,satzId:s1,ist:52,start:null},
         {id:uid(),typ:'arbeit',name:'Fehlerspeicher auslesen',dauer:20,satzId:s2,ist:null,start:null},
         {id:uid(),typ:'teil',name:'Bremsleitung hinten rechts',preis:24,ek:null,menge:1,hinweis:''}]},
-    {id:uid(),kunde:'Kleinmann GmbH',datum:plus(heute(),-12),
+    {id:uid(),kunde:'Kleinmann GmbH',datum:plus(heute(),-12),zahlung:{art:'bar',status:'bezahlt',datum:plus(heute(),-12)},
       fahrzeug:{hersteller:'Ford',modell:'Transit',jahr:'2019',klasse:'suv',kennzeichen:'DO-KG 881',km:'211900'},
       positionen:[
         {id:uid(),typ:'arbeit',name:'Ölwechsel mit Filter',dauer:40,satzId:s1,ist:38,start:null},
@@ -492,6 +498,9 @@ const eur=n=>(Number(n)||0).toLocaleString('de-DE',{style:'currency',currency:'E
 const std=m=>((Number(m)||0)/60).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' h';
 const satz=id=>S.settings.saetze.find(s=>s.id===id)||S.settings.saetze[0]||{name:'—',rate:0};
 const auftrag=()=>S.auftraege.find(a=>a.id===S.aktiv)||null;
+const ZAHLARTEN=[{id:'bar',n:'Bar'},{id:'ueberweisung',n:'Überweisung'},{id:'ec',n:'EC-Karte'}];
+const zahlung=a=>(a&&a.zahlung)||{art:'bar',status:'offen',datum:null};
+const zahlName=id=>(ZAHLARTEN.find(z=>z.id===id)||ZAHLARTEN[0]).n;
 const kapazitaet=()=>Math.max(60,minVon(S.settings.oeffnung.bis)-minVon(S.settings.oeffnung.von));
 const tagTermine=d=>S.termine.filter(t=>t.datum===d).sort((a,b)=>a.zeit.localeCompare(b.zeit));
 const belegt=d=>tagTermine(d).filter(t=>t.status!=='erledigt').reduce((x,t)=>x+(Number(t.dauer)||0),0);
@@ -693,7 +702,16 @@ function renderAuftrag(){
        '<div class="r"><span class="muted">zzgl. 19 % USt</span><span>'+eur(su.mwst)+'</span></div>':'')+
     '<div class="r t"><span>Gesamt</span><span>'+eur(su.brutto)+'</span></div>'+
     (su.offen?'<div class="hint" style="color:var(--warn)">'+su.offen+' Teil'+(su.offen>1?'e':'')+
-      ' noch ohne Preis — die Summe ist noch nicht vollständig.</div>':'')+'</div>';
+      ' noch ohne Preis — die Summe ist noch nicht vollständig.</div>':'')+
+    '<div class="zahlzeile">'+
+      '<div class="seg">'+ZAHLARTEN.map(z=>'<button data-a="zahlart" data-v="'+z.id+'" aria-pressed="'+
+        (zahlung(a).art===z.id)+'">'+z.n+'</button>').join('')+'</div>'+
+      (zahlung(a).status==='bezahlt'
+        ?'<span class="badge ok">bezahlt '+esc(kurzDatum(zahlung(a).datum))+'</span>'+
+         '<button class="mini ghost" data-a="offen">Doch offen</button>'
+        :'<span class="badge warn">offen</span>'+
+         '<button class="mini primary" data-a="bezahlt">Bezahlt erhalten</button>')+
+    '</div></div>';
 
   const am=S.addMode;
   h+='<div class="sec" style="margin-top:18px"><div class="sechead"><h2>Position hinzufügen</h2></div><div class="card">'+
@@ -745,11 +763,15 @@ function renderVerlauf(){
     .sort((x,y)=>y.datum.localeCompare(x.datum));
   const ges=liste.reduce((x,a)=>x+summe(a).brutto,0);
   const min=liste.reduce((x,a)=>x+summe(a).minuten,0);
+  const offenB=liste.filter(a=>zahlung(a).status!=='bezahlt').reduce((x,a)=>x+summe(a).brutto,0);
+  const offenN=liste.filter(a=>zahlung(a).status!=='bezahlt').length;
 
   let h='<div class="stats">'+
     '<div class="stat"><div class="k">Reparaturen</div><div class="v">'+liste.length+'</div></div>'+
     '<div class="stat"><div class="k">Summe</div><div class="v">'+eur(ges)+'</div></div>'+
-    '<div class="stat"><div class="k">Arbeitszeit</div><div class="v">'+std(min)+'</div></div></div>';
+    '<div class="stat"><div class="k">Arbeitszeit</div><div class="v">'+std(min)+'</div></div>'+
+    '<div class="stat'+(offenN?' warnstat':'')+'"><div class="k">Offen</div><div class="v">'+eur(offenB)+
+    (offenN?'<span class="small muted"> · '+offenN+'×</span>':'')+'</div></div></div>';
 
   h+='<div class="row spread" style="margin-bottom:12px">'+
     '<div class="seg"><button data-a="vmodus" data-v="datum" aria-pressed="'+(S.vModus==='datum')+'">Nach Datum</button>'+
@@ -766,7 +788,8 @@ function renderVerlauf(){
     return '<div class="vz"><div class="z1"><span class="dat">'+esc(kurzDatum(a.datum))+esc(D(a.datum).getFullYear())+'</span>'+
       '<strong>'+esc(kompakt?arbTxt:fzText(a.fahrzeug))+'</strong>'+
       (!kompakt&&a.fahrzeug.kennzeichen?'<span class="badge">'+esc(a.fahrzeug.kennzeichen)+'</span>':'')+
-      (a.id===S.aktiv?'<span class="badge acc">offen</span>':'')+
+      (zahlung(a).status!=='bezahlt'?'<span class="badge warn">unbezahlt</span>':'')+
+      (a.id===S.aktiv?'<span class="badge acc">geöffnet</span>':'')+
       '<span class="su">'+eur(su.brutto)+'</span></div>'+
       '<div class="small muted" style="margin-top:3px">'+esc(a.kunde||'—')+
       (kompakt?'':' · '+esc(arbTxt))+
@@ -926,6 +949,10 @@ function renderDokument(){
       tabelle+'<div class="gesamt" style="border:0;padding:0;margin-top:12px">'+
       '<div class="r"><span class="muted">Arbeitszeit</span><span class="num">'+std(su.minuten)+'</span></div>'+
       '<div class="r t"><span>Gesamt</span><span>'+eur(su.netto)+'</span></div></div>'+
+      (zahlung(a).status==='bezahlt'
+        ?'<div class="small" style="margin-top:12px"><strong>Betrag '+
+          (zahlung(a).art==='bar'?'dankend bar':esc(zahlName(zahlung(a).art).toLowerCase())+' ')+
+          ' erhalten am '+esc(kurzDatum(zahlung(a).datum))+esc(D(zahlung(a).datum).getFullYear())+'.</strong></div>':'')+
       '<div class="note"><strong>Private Hilfeleistung, keine gewerbliche Leistung.</strong> '+
       'Diese Aufstellung weist keine Umsatzsteuer aus und ist keine Rechnung im Sinne des § 14 UStG.</div></div>'+
       '<div class="note">Warum ohne Umsatzsteuer: wer als Privatperson USt auf ein Papier schreibt, schuldet sie dem Finanzamt (§ 14c UStG) — '+
@@ -951,6 +978,12 @@ function renderDokument(){
         ?'<div class="r"><span class="muted">Netto</span><span>'+eur(su.netto)+'</span></div><div class="r"><span class="muted">19 % USt</span><span>'+eur(su.mwst)+'</span></div>'
         :'<div class="r"><span class="muted">Summe</span><span>'+eur(su.netto)+'</span></div>')+
       '<div class="r t"><span>Zu zahlen</span><span>'+eur(su.brutto)+'</span></div></div>'+
+      '<div class="small" style="margin-top:12px">'+(zahlung(a).status==='bezahlt'
+        ? '<strong>Betrag '+(zahlung(a).art==='bar'?'dankend bar':esc(zahlName(zahlung(a).art).toLowerCase()))+
+          ' erhalten am '+esc(kurzDatum(zahlung(a).datum))+esc(D(zahlung(a).datum).getFullYear())+'.</strong> Diese Rechnung gilt als Quittung.'
+        : (zahlung(a).art==='bar'?'Zahlbar bar bei Übergabe des Fahrzeugs.'
+          :zahlung(a).art==='ec'?'Zahlbar per EC-Karte bei Übergabe des Fahrzeugs.'
+          :'Zahlbar per Überweisung.'))+'</div>'+
       (st.mwst==='klein'?'<div class="note">Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.</div>':'')+
       (st.mwst==='privat'?'<div class="note"><strong>Achtung:</strong> In den Einstellungen steht „Privat". Für eine echte Rechnung dort auf Kleinunternehmer oder gewerblich umstellen.</div>':'')+
       '</div><div class="sec" style="margin-top:14px"><div class="sechead"><h2>Pflichtangaben § 14 UStG</h2></div><div class="card"><ul class="check">'+
@@ -1126,14 +1159,26 @@ function pdfErzeugen(){
   const hinweise=[];
   if(rech){
     if(st.mwst==='klein') hinweise.push('Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.');
-    const tage=Number(st.zahlungsziel||0);
-    hinweise.push(tage>0
-      ? 'Zahlbar ohne Abzug bis zum '+dmy(plus(a.rechnung.datum,tage))+' ('+tage+' Tage).'
-      : 'Zahlbar sofort nach Erhalt ohne Abzug.');
-    if(st.betrieb.iban) hinweise.push('Bitte überweisen Sie auf '+st.betrieb.iban+
-      (st.betrieb.bank?' ('+st.betrieb.bank+')':'')+' unter Angabe der Rechnungsnummer.');
+    const z=zahlung(a), tage=Number(st.zahlungsziel||0);
+    if(z.status==='bezahlt'){
+      hinweise.push('Betrag '+(z.art==='bar'?'dankend bar':z.art==='ec'?'per EC-Karte':'per Überweisung')+
+        ' erhalten am '+dmy(z.datum)+'. Diese Rechnung gilt zugleich als Quittung.');
+    } else if(z.art==='bar'){
+      hinweise.push('Zahlbar bar bei Übergabe des Fahrzeugs.');
+    } else if(z.art==='ec'){
+      hinweise.push('Zahlbar per EC-Karte bei Übergabe des Fahrzeugs.');
+    } else {
+      hinweise.push(tage>0
+        ? 'Zahlbar ohne Abzug bis zum '+dmy(plus(a.rechnung.datum,tage))+' ('+tage+' Tage).'
+        : 'Zahlbar sofort nach Erhalt ohne Abzug.');
+      if(st.betrieb.iban) hinweise.push('Bitte überweisen Sie auf '+st.betrieb.iban+
+        (st.betrieb.bank?' ('+st.betrieb.bank+')':'')+' unter Angabe der Rechnungsnummer.');
+    }
     hinweise.push('Vielen Dank für Ihren Auftrag.');
   } else {
+    const z=zahlung(a);
+    if(z.status==='bezahlt') hinweise.push('Betrag '+(z.art==='bar'?'bar':z.art==='ec'?'per EC-Karte':'per Überweisung')+
+      ' erhalten am '+dmy(z.datum)+'.');
     hinweise.push('Private Hilfeleistung, keine gewerbliche Leistung.');
     hinweise.push('Diese Aufstellung weist keine Umsatzsteuer aus und ist keine Rechnung im Sinne des § 14 UStG.');
   }
@@ -1203,6 +1248,9 @@ document.addEventListener('click',e=>{
   if(act==='tab'){S.view=b.dataset.v;render();return}
   if(act==='docart'){S.docArt=b.dataset.v;render();return}
   if(act==='addmode'){S.addMode=b.dataset.v;render();return}
+  if(act==='zahlart'&&a){a.zahlung=zahlung(a);a.zahlung.art=b.dataset.v;render();return}
+  if(act==='bezahlt'&&a){a.zahlung=zahlung(a);a.zahlung.status='bezahlt';a.zahlung.datum=heute();render();return}
+  if(act==='offen'&&a){a.zahlung=zahlung(a);a.zahlung.status='offen';a.zahlung.datum=null;render();return}
   if(act==='vmodus'){S.vModus=b.dataset.v;S.sucheAktiv=false;render();return}
   if(act==='v-open'){S.aktiv=id;S.view='auftrag';S.sucheAktiv=false;render();return}
   if(act==='calmode'){S.calMode=b.dataset.v;S.monat=S.tag.slice(0,7);render();return}
@@ -1237,7 +1285,7 @@ document.addEventListener('click',e=>{
       const pb=S.preisbuch.find(p=>norm(p.name)===norm(t.arbeit));
       const teile=(pb?pb.teile:[]).map(x=>({id:uid(),typ:'teil',name:x.name,preis:x.preis,menge:x.menge}));
       const txt=t.fahrzeug||'', teil=txt.split(/[, ]+/);
-      const na={id:uid(),kunde:t.kunde,kundeAdr:'',datum:t.datum,
+      const na={id:uid(),kunde:t.kunde,kundeAdr:'',datum:t.datum,zahlung:{art:'bar',status:'offen',datum:null},
         fahrzeug:{hersteller:teil[0]||'',modell:teil.slice(1).filter(x=>!/^\d{4}$/.test(x)).join(' '),
           jahr:(txt.match(/\b(19|20)\d{2}\b/)||[''])[0],klasse:klasseVon(txt),kennzeichen:'',km:''},
         positionen:[{id:uid(),typ:'arbeit',name:t.arbeit||'Arbeit',dauer:Number(t.dauer)||60,
@@ -1248,7 +1296,7 @@ document.addEventListener('click',e=>{
   }
 
   if(act==='a-neu'){
-    const na={id:uid(),kunde:'',kundeAdr:'',datum:S.tag||heute(),
+    const na={id:uid(),kunde:'',kundeAdr:'',datum:S.tag||heute(),zahlung:{art:'bar',status:'offen',datum:null},
       fahrzeug:{hersteller:'',modell:'',jahr:'',klasse:'kompakt',kennzeichen:'',km:''},positionen:[]};
     S.auftraege.push(na); S.aktiv=na.id; S.view='auftrag'; render(); return;
   }

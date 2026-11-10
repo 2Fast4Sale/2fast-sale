@@ -68,6 +68,20 @@ Wer als Privatperson Umsatzsteuer auf ein Papier schreibt, schuldet sie dem
 Finanzamt (§ 14c UStG). Darum hat die private Sorte das Feld gar nicht, statt
 es nur leer zu lassen.
 
+## Zahlung
+
+Je Auftrag eine Zahlungsart (Bar, Überweisung, EC-Karte) und ein Status.
+"Bezahlt erhalten" setzt Status und Datum. Daraus folgt, was auf dem Papier
+steht: bei bezahlter Barzahlung "Betrag dankend bar erhalten am TT.MM.JJJJ.
+Diese Rechnung gilt zugleich als Quittung", sonst der passende Zahlungshinweis
+-- Zahlungsziel und IBAN erscheinen nur bei Überweisung. Der Verlauf zeigt
+offene Betraege als eigene Kennzahl und markiert unbezahlte Auftraege.
+
+Barzahlung ist dabei ein normaler Zahlungsweg mit Beleg, kein Weg daran
+vorbei. Funktionen, die Umsaetze verschwinden lassen, gibt es hier nicht und
+sollen auch nicht dazukommen: ein Betrieb koennte die Software sonst nicht
+einsetzen.
+
 ## Offen vor echtem Einsatz
 
 Sobald ein Betrieb damit wirklich abrechnet, gelten die GoBD: fortlaufende
