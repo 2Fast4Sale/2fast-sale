@@ -71,7 +71,14 @@ tools/texturen/
 # Das Urus-Foto gehoert dem Haendler, von dessen Seite es stammt - es ist
 # Vergleichsmaterial fuer die Entwicklung und gehoert weder ins Repository
 # noch in den oeffentlichen Ordner, aus dem es jeder abrufen koennte.
-tools/proben/
+# Probefotos bleiben lokal: Fahrzeugscheine enthalten FIN und moeglicherweise
+# Halterdaten, die Fahrzeugfotos gehoeren den Haendlern. Versioniert werden
+# nur die Anleitung und die Wahrheitslisten.
+tools/proben/**
+!tools/proben/
+!tools/proben/LIESMICH.md
+!tools/proben/*/
+!tools/proben/*/wahrheit*.csv
 
 # ONNX-Modelle - 224 MB, jederzeit neu ladbar von huggingface.co
 tools/modelle/
