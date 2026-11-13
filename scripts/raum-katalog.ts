@@ -13,6 +13,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
+/* Seit sharp 0.35 gibt es den Typ-Namensraum `sharp` nicht mehr —
+   die Typen sind benannte Exporte. */
+import type { OverlayOptions } from 'sharp';
 import { komponieren, STANDARD } from '../lib/studio/kompositor';
 
 const auto   = process.argv[2];
@@ -71,7 +74,7 @@ async function main() {
   const zeilen = Math.ceil(kacheln.length / SPALTEN);
   const beschriftung = 26;
 
-  const teile: sharp.OverlayOptions[] = [];
+  const teile: OverlayOptions[] = [];
   for (let i = 0; i < kacheln.length; i++) {
     const sx = (i % SPALTEN) * KACHEL;
     const sy = Math.floor(i / SPALTEN) * (kachelH + beschriftung);

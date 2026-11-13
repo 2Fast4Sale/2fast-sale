@@ -4,7 +4,7 @@ import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 /* Die Stellenliste liegt in lib/, weil die Oberflaeche dieselbe braucht.
    Zwei Fassungen wuerden auseinanderlaufen. */
-import { STELLEN, belegePruefen, codesPruefen } from '../../../lib/ausstattungStellen';
+import { STELLEN, belegePruefen, codesPruefen, fotosAuswaehlen } from '../../../lib/ausstattungStellen';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -65,13 +65,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ equipment: [], belege: [], codes: [] });
     }
 
-    /* Hoechstens acht Nahaufnahmen je Aufruf — mehr Stellen gibt es
-       nicht, und jedes Bild wird bezahlt. */
-    const gueltig = bilder
-      .filter(b => b && typeof b.bild === 'string' && STELLEN[b.stelle])
-      .slice(0, 8);
+    /*
+     * Hoechstens acht Nahaufnahmen je Aufruf — mehr Stellen gibt es
+     * nicht, und jedes Bild wird bezahlt. Je Stelle nur das erste Bild.
+     *
+     * Wichtig ist die Reihenfolge: Der Bildblock wird HIER gebaut, nicht
+     * erst beim Zusammenstellen der Anfrage. Sonst entsteht genau die
+     * Luecke, die bei den PDFs monatelang unbemerkt blieb: Ein Format,
+     * das nicht durchgeht (iPhone liefert HEIC), faellt still aus der
+     * Anfrage — die Stelle bliebe aber in der Liste der erlaubten
+     * Merkmale stehen. Dann waere fuer eine Stelle etwas zugelassen,
+     * die das Modell nie gesehen hat.
+     *
+     * Und was wegfaellt, wird gemeldet statt geschluckt: Ein Haendler,
+     * der ein Foto macht und "nichts gefunden" liest, sucht den Fehler
+     * sonst an der Kamera.
+     */
+    const { gueltig, uebersprungen } = fotosAuswaehlen(bilder, alsBildBlock);
     if (gueltig.length === 0) {
-      return NextResponse.json({ equipment: [], belege: [], codes: [] });
+      return NextResponse.json({ equipment: [], belege: [], codes: [], uebersprungen });
     }
 
     const inhalt: Anthropic.ContentBlockParam[] = [{
@@ -118,9 +130,7 @@ Antworte NUR als pures JSON, ohne Markdown:
 Wenn nichts eindeutig belegbar ist: {"equipment": [], "codes": []}`,
     }];
 
-    for (const { stelle, bild } of gueltig) {
-      const block = alsBildBlock(bild);
-      if (!block) continue;
+    for (const { stelle, block } of gueltig) {
       inhalt.push({ type: 'text', text: `Stelle: ${stelle} — ${STELLEN[stelle].titel}` });
       inhalt.push(block);
     }
@@ -154,6 +164,7 @@ Wenn nichts eindeutig belegbar ist: {"equipment": [], "codes": []}`,
            verworfen hat. Steigt diese Zahl, stimmt etwas mit der
            Anweisung nicht. */
         verworfen: Math.max(0, (Array.isArray(ergebnis.equipment) ? ergebnis.equipment.length : 0) - treffer.length),
+        uebersprungen,
       },
     });
 
@@ -161,6 +172,9 @@ Wenn nichts eindeutig belegbar ist: {"equipment": [], "codes": []}`,
       equipment: normalizeEquipmentList(treffer.map(t => t.merkmal)),
       belege: treffer,
       codes,
+      /* Stellen, deren Foto in einem Format kam, das nicht gelesen
+         werden konnte. Gehoert in die Antwort, nicht nur ins Protokoll. */
+      uebersprungen,
     });
   } catch (error: any) {
     console.error('[ausstattung-nahaufnahme]', error);

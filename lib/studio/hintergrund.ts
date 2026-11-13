@@ -18,6 +18,9 @@
  */
 
 import sharp from 'sharp';
+/* Seit sharp 0.35 gibt es den Typ-Namensraum `sharp` nicht mehr —
+   die Typen sind benannte Exporte. */
+import type { OverlayOptions } from 'sharp';
 import { bodenTextur, wandTextur } from './bodentextur';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -605,7 +608,7 @@ ${strahlerSvg}
    * "overlay" laesst mittleres Grau unveraendert und verschiebt den
    * Rest; deshalb liegen die Rauschwerte um 128.
    */
-  const ebenen: sharp.OverlayOptions[] = [];
+  const ebenen: OverlayOptions[] = [];
 
   if (v.wandKorn > 0) {
     ebenen.push({

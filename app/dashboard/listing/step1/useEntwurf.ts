@@ -488,6 +488,29 @@ export function useEntwurf() {
     setNahMeldung(null);
     try {
       const klein = await verkleinern(await alsDataUrl(datei), 1600);
+      /*
+       * Hier NICHT blind weitergeben.
+       *
+       * `verkleinern` gibt im Fehlerfall die Datei unveraendert zurueck
+       * (bild.onerror → fertig(b64)). Ein iPhone liefert standardmaessig
+       * HEIC, und HEIC laedt in keinem Image-Element: Dann kaeme die
+       * HEIC-Datei hier unveraendert an, der Server koennte sie nicht
+       * lesen und wuerde sie wegwerfen. Der Haendler liest "nichts
+       * gefunden" und sucht den Fehler an der Kamera.
+       *
+       * Genau diese stille Weitergabe war der PDF-Fehler, der
+       * monatelang niemandem auffiel. Ein erfolgreiches Verkleinern
+       * liefert immer ein JPEG — alles andere ist ein Fehlschlag und
+       * wird als solcher gesagt.
+       */
+      if (!klein.startsWith('data:image/jpeg')) {
+        setNahMeldung(
+          'Dieses Bildformat lässt sich im Browser nicht verarbeiten (meist HEIC vom iPhone). '
+          + 'Am iPhone unter Einstellungen › Kamera › Formate auf „Maximale Kompatibilität" stellen, '
+          + 'oder das Foto als JPEG oder PNG auswählen.',
+        );
+        return;
+      }
       setNahBilder(v => ({ ...v, [stelle]: klein }));
     } catch {
       setNahMeldung('Das Foto konnte nicht gelesen werden.');
@@ -527,15 +550,22 @@ export function useEntwurf() {
       setNahBelege(Array.isArray(d.belege) ? d.belege : []);
       setNahCodes(Array.isArray(d.codes) ? d.codes : []);
 
+      /* Weggefallene Fotos nennen, statt sie zu schlucken — sonst
+         suchte der Haendler den Fehler an der Kamera. */
+      const weg: string[] = Array.isArray(d.uebersprungen) ? d.uebersprungen : [];
+      const rest = weg.length > 0
+        ? ` ${weg.length} Foto(s) konnten nicht gelesen werden und wurden übersprungen.`
+        : '';
+
       if (neu.length === 0) {
         setNahMeldung(
-          gefunden.length === 0
+          (gefunden.length === 0
             ? 'Auf den Fotos war nichts eindeutig ablesbar. Näher heran und bei Bildschirm und Anzeigen die Zündung einschalten.'
-            : 'Nichts Neues — das stand schon in der Liste.',
+            : 'Nichts Neues — das stand schon in der Liste.') + rest,
         );
       } else {
         setzen('equipment', zusammen);
-        setNahMeldung(`${neu.length} Merkmale übernommen — bitte an den Belegen kurz nachprüfen.`);
+        setNahMeldung(`${neu.length} Merkmale übernommen — bitte an den Belegen kurz nachprüfen.` + rest);
       }
     } catch (err) {
       setNahMeldung(err instanceof Error ? err.message : 'Die Fotos konnten nicht ausgewertet werden.');

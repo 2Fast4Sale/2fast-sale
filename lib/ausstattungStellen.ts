@@ -184,3 +184,36 @@ export function codesPruefen(roh: unknown): string[] {
     .filter((c, i, a) => a.indexOf(c) === i)
     .slice(0, 120);
 }
+
+/**
+ * Welche Fotos gehen in die Anfrage, und welche fallen weg?
+ *
+ * Steht hier und nicht in der Route, weil daran die eigentliche
+ * Zusicherung haengt: Erlaubt sind nur Merkmale von Stellen, deren Foto
+ * TATSAECHLICH mitgeschickt wurde. Baut man den Bildblock erst beim
+ * Zusammenstellen der Anfrage, faellt ein unlesbares Format (iPhone
+ * liefert HEIC) still heraus — die Stelle bliebe aber erlaubt, und
+ * damit waere fuer ein Bild etwas zugelassen, das das Modell nie
+ * gesehen hat. Genau diese stille Luecke war der PDF-Fehler.
+ *
+ * `lesbar` entscheidet, ob das Format durchgeht. Je Stelle zaehlt das
+ * erste Foto; mehr als `hoechstens` werden nicht geschickt, weil jedes
+ * Bild bezahlt wird.
+ */
+export function fotosAuswaehlen<T>(
+  bilder: { stelle: string; bild: string }[] | unknown,
+  lesbar: (bild: string) => T | null,
+  hoechstens = 8,
+): { gueltig: { stelle: string; block: T }[]; uebersprungen: string[] } {
+  const gueltig: { stelle: string; block: T }[] = [];
+  const uebersprungen: string[] = [];
+  for (const b of (Array.isArray(bilder) ? bilder : [])) {
+    if (!b || typeof b.bild !== 'string' || !STELLEN[b.stelle]) continue;
+    if (gueltig.some(g => g.stelle === b.stelle)) continue;
+    if (gueltig.length >= hoechstens) break;
+    const block = lesbar(b.bild);
+    if (block === null) { uebersprungen.push(b.stelle); continue; }
+    gueltig.push({ stelle: b.stelle, block });
+  }
+  return { gueltig, uebersprungen };
+}

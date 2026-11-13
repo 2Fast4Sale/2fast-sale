@@ -21,7 +21,7 @@
  * Fall hier ist eine Antwort, wie ein Modell sie wirklich liefern kann.
  */
 
-import { belegePruefen, codesPruefen, STELLEN, STELLEN_REIHE } from '../lib/ausstattungStellen';
+import { belegePruefen, codesPruefen, fotosAuswaehlen, STELLEN, STELLEN_REIHE } from '../lib/ausstattungStellen';
 
 type Fall = {
   was: string;
@@ -156,6 +156,67 @@ for (const fall of CODE_FAELLE) {
     console.log(`       bekommen: ${JSON.stringify(ist)}`);
     fehler++;
   }
+}
+
+console.log('\n── Fotoauswahl ─────────────────────────────────────────');
+/*
+ * Der Fall, der sonst still passiert: Ein iPhone liefert HEIC, das
+ * Format geht nicht durch, das Foto faellt weg — und die Stelle muss
+ * dann AUCH aus den erlaubten Merkmalen fallen. Sonst waere fuer ein
+ * Bild etwas zugelassen, das das Modell nie gesehen hat.
+ */
+const lesbar = (b: string) => (b.startsWith('data:image/jpeg') ? { da: b } : null);
+
+{
+  const { gueltig, uebersprungen } = fotosAuswaehlen([
+    { stelle: 'mittelkonsole',   bild: 'data:image/jpeg;base64,AAA' },
+    { stelle: 'klimabedienteil', bild: 'data:image/heic;base64,BBB' },
+  ], lesbar);
+  const ok = gueltig.length === 1 && gueltig[0].stelle === 'mittelkonsole'
+    && uebersprungen.length === 1 && uebersprungen[0] === 'klimabedienteil';
+  console.log(`${ok ? 'OK   ' : 'FEHLER'} HEIC faellt weg und wird gemeldet`);
+  if (!ok) { console.log(`       ${JSON.stringify({ gueltig: gueltig.map(g => g.stelle), uebersprungen })}`); fehler++; }
+
+  /* Und die Nachkontrolle darf fuer die weggefallene Stelle nichts
+     mehr durchlassen — das ist der eigentliche Punkt. */
+  const durch = belegePruefen(
+    [{ merkmal: 'Klimaautomatik', stelle: 'klimabedienteil',
+       beleg: 'Taste AUTO und zwei getrennte Temperaturanzeigen' }],
+    gueltig.map(g => g.stelle),
+  );
+  console.log(`${durch.length === 0 ? 'OK   ' : 'FEHLER'} Weggefallene Stelle laesst kein Merkmal mehr durch`);
+  if (durch.length !== 0) fehler++;
+}
+
+{
+  const { gueltig } = fotosAuswaehlen([
+    { stelle: 'lenkrad', bild: 'data:image/jpeg;base64,AAA' },
+    { stelle: 'lenkrad', bild: 'data:image/jpeg;base64,BBB' },
+  ], lesbar);
+  console.log(`${gueltig.length === 1 ? 'OK   ' : 'FEHLER'} Dieselbe Stelle zweimal wird einmal geschickt`);
+  if (gueltig.length !== 1) fehler++;
+}
+
+{
+  const viele = STELLEN_REIHE.map(s => ({ stelle: s, bild: 'data:image/jpeg;base64,AAA' }));
+  const { gueltig } = fotosAuswaehlen(viele, lesbar, 3);
+  console.log(`${gueltig.length === 3 ? 'OK   ' : 'FEHLER'} Obergrenze wird eingehalten`);
+  if (gueltig.length !== 3) fehler++;
+}
+
+{
+  const { gueltig, uebersprungen } = fotosAuswaehlen([
+    { stelle: 'gibtsnicht', bild: 'data:image/jpeg;base64,AAA' },
+  ], lesbar);
+  const ok = gueltig.length === 0 && uebersprungen.length === 0;
+  console.log(`${ok ? 'OK   ' : 'FEHLER'} Unbekannte Stelle wird verworfen, nicht gemeldet`);
+  if (!ok) fehler++;
+}
+
+{
+  const { gueltig } = fotosAuswaehlen(null, lesbar);
+  console.log(`${gueltig.length === 0 ? 'OK   ' : 'FEHLER'} Kaputte Eingabe stuerzt nicht ab`);
+  if (gueltig.length !== 0) fehler++;
 }
 
 console.log('\n── Katalog ─────────────────────────────────────────────');

@@ -30,6 +30,9 @@
  */
 
 import sharp from 'sharp';
+/* Seit sharp 0.35 gibt es den Typ-Namensraum `sharp` nicht mehr —
+   die Typen sind benannte Exporte. */
+import type { OverlayOptions } from 'sharp';
 
 export interface KompositorEinstellungen {
   /** Anteil der Bildbreite, den das Fahrzeug einnimmt. 0,80 = 80 %. */
@@ -983,7 +986,7 @@ export async function komponieren(
   const fahrzeugY = Math.max(0, bodenY - fHoehe);
   const fahrzeugX = Math.max(0, Math.round((zielBreite - fBreite) * e.ausrichtung));
 
-  const ebenen: sharp.OverlayOptions[] = [];
+  const ebenen: OverlayOptions[] = [];
 
   /*
    * Schatten zuerst, er liegt unter allem. Zwei Lagen aus derselben

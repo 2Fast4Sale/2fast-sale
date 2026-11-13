@@ -26,6 +26,12 @@
  */
 
 import sharp from 'sharp';
+/*
+ * Seit sharp 0.35 gibt es den Namensraum `sharp` fuer Typen nicht mehr:
+ * Die Typen liegen jetzt als benannte Exporte in einer ESM-Datei.
+ * `sharp.OverlayOptions` meldet deshalb "Cannot find namespace 'sharp'".
+ */
+import type { OverlayOptions } from 'sharp';
 
 /** Wie viele Baender. Mehr ist weicher und langsamer. */
 const BAENDER = 16;
@@ -95,7 +101,7 @@ export async function bodenTextur(
     .png()
     .toBuffer();
 
-  const teile: sharp.OverlayOptions[] = [];
+  const teile: OverlayOptions[] = [];
   let quelleY = 0;
 
   for (let i = 0; i < BAENDER; i++) {
