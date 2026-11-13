@@ -17,6 +17,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
 import { searchEquipment, ausstattungZusammenfuehren } from '../../../../lib/equipmentDatabase';
+import { getriebeAusText } from '../../../../lib/getriebeAusText';
 import { validateEnvkv, isEnvkvRequired, type EnvkvData } from '../../../../lib/envkv';
 import { entwurfId, entwurfNeu } from '../../../../lib/entwurf';
 
@@ -608,6 +609,20 @@ export function useEntwurf() {
          * Markenfeld und das Modell bleibt leer.
          */
         const zerlegt = d.brand ? splitBrandModel(String(d.brand)) : null;
+        /*
+         * Getriebe aus der Handelsbezeichnung.
+         *
+         * Es ist bei mobile.de Pflicht, steht aber nicht im Schein —
+         * also musste es der Haendler bisher bei JEDEM Fahrzeug von
+         * Hand setzen. In Feld D.3 steht es dagegen oft mit drin
+         * ("2.0 TDI DSG", "320d Steptronic"). Das ist Ablesen, nicht
+         * Ableiten.
+         *
+         * Nur Automatik wird erkannt, nie Handschaltung: Fuer die gibt
+         * es kein Kuerzel, und aus dem Fehlen eines Kuerzels zu
+         * schliessen waere geraten. Siehe lib/getriebeAusText.ts.
+         */
+        const getriebe = getriebeAusText(String(d.brand ?? ''));
         const neu = new Set<string>();
 
         setData(p => {
@@ -624,6 +639,7 @@ export function useEntwurf() {
             firstRegistration: nimm('firstRegistration', d.firstRegistration ?? '', p.firstRegistration),
             km:    nimm('km', d.km != null ? String(d.km) : '', p.km),
             fuelType: nimm('fuelType', d.fuelType ?? '', p.fuelType),
+            gearbox: nimm('gearbox', getriebe ?? '', p.gearbox),
             // scan-doc liefert powerPs (bereits aus kW umgerechnet, ×1,3596)
             leistungPs: nimm('leistungPs', (d.powerPs ?? d.powerKw) != null ? String(d.powerPs ?? d.powerKw) : '', p.leistungPs),
             displacementCcm: nimm('displacementCcm', d.displacementCcm != null ? String(d.displacementCcm) : '', p.displacementCcm),
