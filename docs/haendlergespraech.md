@@ -107,3 +107,96 @@ hättest — und zwar bevor du 5.000 € in Datenlizenzen gesteckt hast.
 
 Das ist die billigste Information, die du kaufen kannst, und die
 einzige, die du dir nicht am Rechner ausrechnen kannst.
+
+---
+
+# Nachtrag, 14. November 2026: Fang oben an, nicht unten
+
+Anlass: die Frage, wie wahrscheinlich es ist, damit Geld zu verdienen.
+Die Antwort war 5 bis 10 Prozent für 5.000 € im Monat innerhalb der
+Ausbildung — und fast die ganze Unsicherheit kam aus **einer einzigen
+Zahl im Geschäftsmodell**, nicht aus der Software.
+
+## Die Zahl
+
+5.000 € ÷ 7,50 € = **667 Inserate im Monat.**
+
+| Zielkunde | Inserate je Kunde | Kunden nötig |
+|---|---|---|
+| 10 Fahrzeuge im Monat | 10 | **67** |
+| 40 Fahrzeuge im Monat | 40 | 17 |
+| 100 Fahrzeuge im Monat | 100 | **7** |
+
+67 Händlerbeziehungen neben einer Vollzeitausbildung aufzubauen und zu
+halten, schafft niemand allein. Sieben schon. Dieselbe Software,
+dasselbe Produkt, derselbe Preis — und eine völlig andere
+Wahrscheinlichkeit.
+
+Dazu kommt: Der Kleine hat den Schmerz gar nicht. Zehn Autos im Monat
+fotografiert der Sohn am Sonntag umsonst. Hundert Autos im Monat sind
+**fünfzig Arbeitsstunden**, und die bezahlt jemand.
+
+Die bisherige Begründung für den kleinen Händler war „vom Schlechtesten
+ausgehen". Für die Technik ist das richtig. Für die Zielgruppe ist es
+der teuerste Fehler, den man machen kann: gebaut für den, der am
+wenigsten zahlt und am schwersten zu erreichen ist.
+
+## Der Einwand „ich habe keine Kontakte" stimmt nicht
+
+Er stimmt für jeden, der diese Software vom Schreibtisch aus baut. Für
+einen Azubi im KFZ-Betrieb stimmt er nicht:
+
+- **Der eigene Betrieb.** Hat Lieferanten, Partnerwerkstätten und
+  kennt die Autohäuser im Umkreis. Der Chef oder der Meister kennt
+  Namen, die du nicht kennst.
+- **Die Berufsschulklasse.** Zwanzig bis fünfundzwanzig Azubis aus
+  ebenso vielen verschiedenen Betrieben. Jeder von ihnen sitzt in einem
+  Haus, das Autos verkauft.
+- **Die Teiledienste und Vertreter**, die wöchentlich durch die
+  Werkstatt gehen und jeden Händler der Region beim Vornamen kennen.
+
+Jeder andere Anbieter muss kalt anrufen und wird weggedrückt. Du kannst
+hingehen. **Das ist kein fehlender Zugang, das ist der beste Zugang,
+den man in diesem Markt haben kann.**
+
+## Was beim Großen anders gefragt wird
+
+Die drei Fragen oben bleiben. Zwei kommen dazu, und eine fällt weg.
+
+**Weg: „Wer macht Ihre Fotos?"** Beim Großen ist die Antwort immer
+dieselbe — ein Angestellter oder eine Agentur. Die Frage verrät nichts
+mehr.
+
+**Neu: „Wie viele Fahrzeuge stellen Sie im Monat ein, und wer tippt
+die Inserate?"**
+
+Das ist die ganze Frage. Nennt er eine Person, hast du einen Stundensatz
+und eine Stundenzahl — und damit zum ersten Mal einen Vergleichspreis,
+der nicht deiner ist. Hundert Inserate zu dreißig Minuten sind fünfzig
+Stunden. Was die kosten, rechnet er selbst aus, während er antwortet.
+
+**Neu: „Was passiert, wenn in einem Inserat etwas Falsches steht?"**
+
+Die Frage, auf die deine Software die bessere Antwort hat als jede
+Konkurrenz. Beim Großen ist das kein theoretisches Risiko, sondern ein
+Vorgang, den er schon hatte. Dann erklärst du, was dein Programm tut:
+**Es lässt ein Feld leer, statt es zu raten.** Keine Zusicherung ohne
+Beleg, keine Beschreibung, die etwas behauptet, was die Daten nicht
+decken.
+
+Das ist der einzige Punkt, an dem du einem großen Anbieter überlegen
+bist, und er ist kein Zufall — er steht in `lib/beschreibungPruefen.ts`,
+in `lib/finPruefen.ts`, in `lib/aufbauZuordnen.ts` und in jeder
+Erkennungsroute.
+
+## Und das Argument, das nur dir gehört
+
+Ein Achtzehnjähriger mit einer Website ist für einen Autohaus-Chef
+Rauschen.
+
+**Ein KFZ-Mechatroniker, der selbst Software schreibt, ist jemand, der
+sein Problem von innen kennt.** Das ist ein anderes Gespräch, und es
+ist das einzige Argument in diesem ganzen Dokument, das kein
+Wettbewerber kopieren kann.
+
+Sag es nicht als Entschuldigung. Sag es als Grund.
