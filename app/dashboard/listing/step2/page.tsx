@@ -578,7 +578,36 @@ function Step2Inner() {
     setPhotos(p => p.map(x => x.id === photo.id ? { ...x, processing: true, error: false } : x));
     try {
       const b64 = await fileToBase64(photo.file);
-      const compressed = await aufGrenzeBringen(await resizeImage(b64));
+      const verkleinert = await resizeImage(b64);
+      /*
+       * Pruefen, dass das Verkleinern wirklich etwas getan hat.
+       *
+       * `resizeImage` gibt im Fehlerfall die Datei unveraendert zurueck
+       * (img.onerror → res(b64)). Die Oberflaeche nennt HEIC
+       * ausdruecklich als erlaubtes Format, und auf einem iPhone geht
+       * das auch gut: Safari kann HEIC in einem Image-Element
+       * zeichnen, das Canvas gibt danach ein JPEG heraus.
+       *
+       * Auf einem Windows-Rechner mit Chrome kann es das nicht. Dann
+       * kaeme die HEIC-Datei unveraendert hier an, ginge roh an die
+       * Verarbeitung und scheiterte dort — mit einer Meldung ueber die
+       * Bildgroesse oder einem allgemeinen Fehler, der nicht sagt,
+       * woran es wirklich liegt. Genau diese Art stiller Weitergabe war
+       * der PDF-Fehler in Schritt 1.
+       *
+       * Ein erfolgreiches Verkleinern liefert immer JPEG oder WebP.
+       */
+      const lesbar = verkleinert.startsWith('data:image/jpeg')
+        || verkleinert.startsWith('data:image/webp')
+        || verkleinert.startsWith('data:image/png');
+      if (!lesbar) {
+        throw new Error(
+          'Dieses Bildformat kann dieser Browser nicht öffnen (meist HEIC auf einem Windows-Rechner). '
+          + 'Lade das Foto als JPG hoch, oder stelle am iPhone unter Einstellungen › Kamera › Formate '
+          + 'auf „Maximale Kompatibilität".',
+        );
+      }
+      const compressed = await aufGrenzeBringen(verkleinert);
       const backgroundId = typeof window !== 'undefined'
         ? localStorage.getItem('dealer_background') || 'studio_infinity'
         : 'studio_infinity';
@@ -819,7 +848,11 @@ function Step2Inner() {
        */
       const roh = err instanceof Error ? err.message : String(err);
       const klartext =
-        /Kontingent/i.test(roh)        ? 'Kontingent aufgebraucht'
+        /* Der Formatfehler behaelt seinen vollen Text: Er ist der
+           einzige, bei dem der Haendler selbst etwas umstellen kann,
+           und die Anleitung dazu passt nicht in 60 Zeichen. */
+        /Bildformat/i.test(roh)        ? roh
+        : /Kontingent/i.test(roh)        ? 'Kontingent aufgebraucht'
         : /kein Fahrzeug|keinFahrzeug/i.test(roh) ? 'Kein Fahrzeug erkannt'
         : /Freistell|Guete|Qualitaet/i.test(roh)  ? 'Freistellen misslungen'
         : /50[0-9]|Unerwartet/i.test(roh)         ? 'Serverfehler, bitte nochmal'
