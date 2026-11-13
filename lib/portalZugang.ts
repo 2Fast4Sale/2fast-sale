@@ -137,7 +137,7 @@ export interface Zugang {
   kontoNummer: string | null;
   testmodus: boolean;
   /** Woher die Daten kommen — fuer die Anzeige und die Fehlersuche. */
-  quelle: 'haendler' | 'umgebung';
+  quelle: 'haendler' | 'umgebung' | 'transfer';
 }
 
 /** Was die Oberfläche sehen darf: alles ausser dem Geheimnis. */
@@ -174,20 +174,88 @@ export async function zugangLesen(userId: string, portal: Portal): Promise<Zugan
     console.error('[portalZugang] Lesen fehlgeschlagen:', error.message);
   }
 
-  if (data?.konto_nummer) {
-    return {
-      portal,
-      benutzer: data.benutzer ?? null,
-      geheim: entschluesseln(data.geheim),
-      kontoNummer: data.konto_nummer,
-      testmodus: data.testmodus !== false,
-      quelle: 'haendler',
-    };
+  return zugangWaehlen(
+    portal,
+    data ? { benutzer: data.benutzer, kontoNummer: data.konto_nummer, testmodus: data.testmodus } : null,
+    entschluesseln(data?.geheim ?? null),
+    ausUmgebung(portal),
+    transferErlaubt(portal),
+  );
+}
+
+/**
+ * Welche Anmeldung gilt? — ohne Datenbank und ohne Umgebung, damit eine
+ * Probe jeden Fall durchspielen kann (scripts/portalzugang-probe.ts).
+ *
+ * Hier haengt Geld und Vertrauen dran: Geht es schief, stellt ein
+ * Haendler sein Inserat in ein fremdes Portalkonto, und das faellt
+ * niemandem auf, bis es oeffentlich ist. Deshalb ist die Entscheidung
+ * eine eigene, pruefbare Funktion und keine Verzweigung im Datenzugriff.
+ */
+export function zugangWaehlen(
+  portal: Portal,
+  reihe: { benutzer: string | null; kontoNummer: string | null; testmodus: boolean | null } | null,
+  eigenesGeheim: string | null,
+  traeger: Zugang | null,
+  transferAn: boolean,
+): Zugang | null {
+  if (reihe?.kontoNummer) {
+    if (eigenesGeheim) {
+      return {
+        portal,
+        benutzer: reihe.benutzer ?? null,
+        geheim: eigenesGeheim,
+        kontoNummer: reihe.kontoNummer,
+        testmodus: reihe.testmodus !== false,
+        quelle: 'haendler',
+      };
+    }
+    /*
+     * Transfer-Dienstleister: eigene Anmeldung, fremde Kundennummer.
+     *
+     * Das ist der Weg, den mobile.de neben dem selbst hochladenden
+     * Haendler ausdruecklich vorsieht ("Transfer Service Providers").
+     * Fuer die Haendler, auf die 2Fast4Sale zielt, ist er der einzige
+     * gangbare: Wer zehn Autos im Monat verkauft, beantragt keine
+     * API-Zugangsdaten. Verlangt man sie trotzdem, bricht die Anmeldung
+     * ab, bevor das Produkt je gezeigt wurde — und wer sie hat, braucht
+     * 2Fast4Sale am wenigsten.
+     *
+     * Der Haendler hinterlegt dann nur noch seine Kundennummer. Die
+     * Anmeldung kommt aus der Umgebung, die Kundennummer vom Haendler,
+     * und das Inserat landet in SEINEM Bestand, nicht in meinem.
+     *
+     * Der Schalter ist mit Absicht getrennt und standardmaessig aus:
+     * Ohne Vertrag als Transfer-Dienstleister wuerde mobile.de die
+     * fremde Kundennummer ablehnen — oder, schlimmer, das Inserat
+     * meinem Konto zuschreiben. Erst einschalten, wenn der Zugang
+     * wirklich erteilt ist.
+     */
+    if (traeger?.benutzer && traeger.geheim && transferAn) {
+      return {
+        portal,
+        benutzer: traeger.benutzer,
+        geheim: traeger.geheim,
+        kontoNummer: reihe.kontoNummer,
+        testmodus: reihe.testmodus !== false,
+        quelle: 'transfer',
+      };
+    }
+    /* Kundennummer ohne Geheimnis und ohne Transfer-Zugang: Es gibt
+       keine Anmeldung, mit der hier etwas hochgeladen werden koennte.
+       Null ist richtig — ein Rueckfall auf mein Konto waere falsch. */
+    return null;
   }
 
-  const umgebung = ausUmgebung(portal);
-  if (umgebung && umgebung.testmodus) return umgebung;
+  if (traeger && traeger.testmodus) return traeger;
   return null;
+}
+
+/** Ist 2Fast4Sale fuer dieses Portal als Transfer-Dienstleister zugelassen? */
+function transferErlaubt(portal: Portal): boolean {
+  return portal === 'mobile'
+    ? process.env.MOBILEDE_TRANSFER === 'true'
+    : process.env.AS24_TRANSFER === 'true';
 }
 
 /** Mein eigener Zugang aus der Umgebung — nur zum Testen. */
