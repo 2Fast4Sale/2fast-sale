@@ -1,6 +1,7 @@
 ﻿import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
+import { aufbauZuordnen } from '../../../lib/aufbauZuordnen';
 import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
@@ -221,11 +222,36 @@ export async function POST(req: Request) {
     const response = await getAnthropic().messages.create({
       model:      'claude-opus-4-8',
       max_tokens: 2000,
-      system:     SYSTEM_PROMPT,
+      /*
+       * Zwischenspeicher auf dem konstanten Teil.
+       *
+       * SYSTEM_PROMPT und USER_PROMPT sind zusammen rund 2.800 Tokens und
+       * aendern sich nie — nur das Bild dahinter wechselt. Der Haken sitzt
+       * auf dem letzten konstanten Block, damit alles davor mitgespeichert
+       * wird.
+       *
+       * Was es bringt und was es kostet: Ein Treffer kostet ein Zehntel,
+       * ein Fehlschlag das Anderthalbfache des normalen Preises. Bei einem
+       * Durchlauf mit zehn Scheinen hintereinander ist der erste Aufruf
+       * teurer und die neun danach billig — rund ein Viertel weniger fuer
+       * den ganzen Lauf. Bei einem Haendler, der einmal am Tag ein Auto
+       * einstellt, ist der Speicher laengst abgelaufen (fuenf Minuten) und
+       * jeder Aufruf zahlt den Aufschlag. Das sind drei Zehntel Cent auf
+       * ein Inserat, das 2,39 EUR einkauft — und es macht den Testlauf
+       * bezahlbar, auf den es gerade ankommt.
+       */
+      system: [{
+        type: 'text' as const,
+        text: SYSTEM_PROMPT,
+      }],
       messages:   [{
         role:    'user',
         content: [
-          { type: 'text', text: USER_PROMPT },
+          {
+            type: 'text' as const,
+            text: USER_PROMPT,
+            cache_control: { type: 'ephemeral' as const },
+          },
           toImageBlock(image),
         ],
       }],
@@ -262,42 +288,12 @@ export async function POST(req: Request) {
      * darueber ist ein Lesefehler und wird verworfen — ein leeres Feld ist
      * besser als eine falsche Zahl, die der Haendler ungeprueft uebernimmt.
      */
-    /*
-     * Karosserieform aus Feld 4 — aber nur, wo sie eindeutig ist.
-     *
-     * Der Fahrzeugschein kennt die EU-Aufbauarten AA bis AG. Sie sind
-     * groeber als die Kategorien der Verkaufsportale, und an einer
-     * Stelle gehen sie gar nicht auf: Ein SUV hat keinen eigenen Code.
-     * Ein Tiguan ist als AC (Kombi) oder AF (Mehrzweckfahrzeug)
-     * eingetragen — genau wie ein Passat Variant oder ein Touran.
-     *
-     * Deshalb werden nur die vier eindeutigen Faelle uebernommen. Bei
-     * AB, AC und AF bleibt das Feld leer und der Haendler waehlt
-     * selbst. Das ist unbequemer als eine Vorbelegung, aber eine
-     * falsche Karosserieform im Inserat faellt niemandem auf und steht
-     * am Ende trotzdem drin.
-     */
-    /*
-     * `\bAA\d*\b` statt `\bAA\b`: In Feld 4 steht der Code oft mit
-     * angehaengter Ziffernfolge ("AA0002"). Zwischen Buchstabe und
-     * Ziffer liegt keine Wortgrenze, ein blosses `\bAA\b` findet ihn
-     * dort also nicht.
-     *
-     * "Pritsche" steht bewusst nicht dabei, obwohl es zu AG passt: Ein
-     * Pritschenwagen ist im Verkauf eher ein Transporter als ein
-     * Gelaendewagen. Im Zweifel lieber leer.
-     */
-    const AUFBAU: Array<[RegExp, string]> = [
-      [/\bAE\d*\b|kabrio|cabrio|roadster/i,        'Cabrio / Roadster'],
-      [/\bAD\d*\b|coup[ée]/i,                      'Coupé'],
-      [/\bAG\d*\b|pick.?up/i,                      'SUV / Geländewagen'],
-      [/\bAA\d*\b|stufenheck|(?<!kombi)limousine/i,'Limousine'],
-    ];
+    /* Karosserieform aus Feld 4 — siehe lib/aufbauZuordnen.ts. */
     const aufbau = typeof result.aufbau === 'string' ? result.aufbau.trim() : '';
     delete result.aufbau;
     if (aufbau) {
-      const treffer = AUFBAU.find(([muster]) => muster.test(aufbau));
-      if (treffer) result.bodyType = treffer[1];
+      const form = aufbauZuordnen(aufbau);
+      if (form) result.bodyType = form;
       else console.log('[scan-doc] Aufbau nicht eindeutig, Feld bleibt leer:', aufbau);
     }
 

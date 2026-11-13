@@ -158,10 +158,32 @@ export function vinCostMicros(service: CostService, calls = 1): number {
 }
 
 /** Kosten eines LLM-Aufrufs in Mikro-Euro. */
-export function llmCostMicros(model: string, inputTokens: number, outputTokens: number): number {
+/*
+ * Aufschlaege fuer den Prompt-Zwischenspeicher, Anthropic-Preisliste:
+ * Anlegen kostet das Anderthalbfache des Eingabepreises, Lesen ein
+ * Zehntel.
+ *
+ * Das muss hier stehen, weil input_tokens in der Antwort die
+ * zwischengespeicherten Tokens NICHT enthaelt. Wer sie nicht getrennt
+ * bucht, sieht nach dem Einschalten des Speichers halbierte Kosten und
+ * glaubt an eine Ersparnis, die es so nicht gibt.
+ */
+const CACHE_SCHREIBEN = 1.25;
+const CACHE_LESEN = 0.10;
+
+export function llmCostMicros(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  cacheSchreiben = 0,
+  cacheLesen = 0,
+): number {
   const p = LLM_PRICES_USD_PER_MTOK[model];
   if (!p) return 0;
-  const usd = (inputTokens / 1_000_000) * p.input + (outputTokens / 1_000_000) * p.output;
+  const usd = (inputTokens / 1_000_000) * p.input
+    + (cacheSchreiben / 1_000_000) * p.input * CACHE_SCHREIBEN
+    + (cacheLesen / 1_000_000) * p.input * CACHE_LESEN
+    + (outputTokens / 1_000_000) * p.output;
   return Math.round(usd * USD_TO_EUR * UST_FAKTOR * MICROS);
 }
 
@@ -231,7 +253,12 @@ export async function logLlmCost(args: {
   draftId?: string | null;
   operation: string;
   model: string;
-  usage?: { input_tokens?: number; output_tokens?: number } | null;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_creation_input_tokens?: number | null;
+    cache_read_input_tokens?: number | null;
+  } | null;
   /*
    * Was der Aufruf herausgefunden hat, nicht nur was er gekostet hat.
    *
@@ -245,16 +272,24 @@ export async function logLlmCost(args: {
 }): Promise<void> {
   const inTok  = args.usage?.input_tokens  ?? 0;
   const outTok = args.usage?.output_tokens ?? 0;
+  const cacheNeu = args.usage?.cache_creation_input_tokens ?? 0;
+  const cacheAlt = args.usage?.cache_read_input_tokens ?? 0;
   await logApiCost({
     userId:     args.userId,
     vehicleId:  args.vehicleId,
     draftId:    args.draftId,
     service:    'anthropic',
     operation:  args.operation,
-    unitsIn:    inTok,
+    /* unitsIn ist alles, was eingegangen ist — sonst stimmt die Statistik
+       nach dem Einschalten des Zwischenspeichers nicht mehr. */
+    unitsIn:    inTok + cacheNeu + cacheAlt,
     unitsOut:   outTok,
-    costMicros: llmCostMicros(args.model, inTok, outTok),
-    meta:       { model: args.model, ...(args.meta ?? {}) },
+    costMicros: llmCostMicros(args.model, inTok, outTok, cacheNeu, cacheAlt),
+    meta: {
+      model: args.model,
+      ...(cacheNeu || cacheAlt ? { cacheNeu, cacheAlt } : {}),
+      ...(args.meta ?? {}),
+    },
   });
 }
 
