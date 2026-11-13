@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   FileText, Tag, Image, Plus, ChevronLeft, ChevronRight,
-  Layers, Settings, LogOut, Download, Globe, SlidersHorizontal,
+  Layers, Settings, LogOut, Download, Globe,
   HelpCircle, Zap, Home, Crown, Receipt, Building2, Menu, X, Wallet
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -48,7 +48,6 @@ const navSections = [
     label: 'Studio & Export',
     items: [
       { href: '/dashboard/backgrounds', label: 'Hintergründe', icon: Layers   },
-      { href: '/dashboard/studio',      label: 'Studio',        icon: SlidersHorizontal },
       { href: '/dashboard/export',      label: 'Export',        icon: Download },
     ],
   },
