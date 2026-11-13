@@ -127,12 +127,44 @@ function Step3Inner() {
             dealerNotes:  (step1Data.dealerNotes as string)  || '',
             seats:        step1Data.seats        || '',
             displacement: step1Data.displacementCcm || '',
+            /*
+             * Diese vier MUESSEN mit.
+             *
+             * Die Route haelt einen Text zurueck, der "unfallfrei",
+             * "1. Hand", "TUEV neu" oder "Garantie" behauptet, ohne dass
+             * es in den Angaben steht. Fehlen die Felder hier, gilt
+             * alles als unbelegt — dann wuerde auch die WAHRE Aussage
+             * blockiert, und der Haendler verliert ein Argument, das ihm
+             * zusteht. Eine Pruefung, die Wahres wegnimmt, wird
+             * abgeschaltet.
+             */
+            damaged:        step1Data.damaged,
+            warranty:       step1Data.warranty,
+            previousOwners: step1Data.previousOwners || '',
+            huUntil:        step1Data.huUntil        || '',
             draftId:      entwurfId(),
           }),
         });
         if (res.status === 401) {
           router.push('/auth/login?redirect=/dashboard/listing/step1');
           return;
+        }
+        /*
+         * 422 ist kein Fehler, sondern die Pruefung: Der Text behauptete
+         * etwas, das die Angaben nicht decken, und wurde deshalb
+         * zurueckgehalten. Der Grund gehoert benannt — "Fehler 422" sagt
+         * dem Haendler nicht, dass er einen Haken setzen muss.
+         */
+        if (res.status === 422) {
+          const d = await res.json().catch(() => ({}));
+          const namen: string[] = Array.isArray(d.verstoesse)
+            ? d.verstoesse.map((v: { name: string }) => v.name)
+            : [];
+          throw new Error(
+            'Der Text behauptete etwas, das in den Angaben nicht steht'
+            + (namen.length ? ` (${namen.join(', ')})` : '')
+            + '. Setz die Angabe in Schritt 1, oder schreib den Satz selbst.',
+          );
         }
         if (!res.ok) throw new Error(`API-Fehler ${res.status}`);
         const data = await res.json();
@@ -151,7 +183,11 @@ function Step3Inner() {
           brand, km, price, year, fuel, gearbox, color, power, desc: '',
           textFehler: abgebrochen
             ? 'Die Texterzeugung hat zu lange gebraucht und wurde abgebrochen. Du kannst sie hier neu erzeugen lassen oder selbst schreiben.'
-            : 'Die Beschreibung konnte nicht erzeugt werden. In Schritt 4 kannst du sie neu erzeugen lassen oder selbst schreiben.',
+            /* Der Grund der Pruefung wird durchgereicht, statt von einer
+               Sammelmeldung ueberschrieben zu werden. */
+            : (err instanceof Error && err.message.includes('behauptete'))
+              ? err.message
+              : 'Die Beschreibung konnte nicht erzeugt werden. In Schritt 4 kannst du sie neu erzeugen lassen oder selbst schreiben.',
         });
         setTimeout(() => router.push(`/dashboard/listing/step4?${params.toString()}`), 800);
       } finally {
