@@ -2,6 +2,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 import { aufbauZuordnen } from '../../../lib/aufbauZuordnen';
+import { finPruefen } from '../../../lib/finPruefen';
 import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
@@ -288,6 +289,23 @@ export async function POST(req: Request) {
      * darueber ist ein Lesefehler und wird verworfen — ein leeres Feld ist
      * besser als eine falsche Zahl, die der Haendler ungeprueft uebernimmt.
      */
+    /*
+     * FIN pruefen und berichtigen — siehe lib/finPruefen.ts.
+     *
+     * Die ISO 3779 kennt in einer FIN kein I, O und Q, weil sie den
+     * Ziffern zu aehnlich sehen. Ein O an einer Stelle ist deshalb eine
+     * Null, kein Ratespiel. Was nicht genau 17 Zeichen hat, wird
+     * verworfen statt geraten.
+     */
+    const fin = finPruefen(result.vin);
+    if (fin.fin) {
+      result.vin = fin.fin;
+      for (const b of fin.berichtigt) console.log('[scan-doc FIN]', b);
+    } else {
+      delete result.vin;
+      if (fin.grund !== 'leer') console.log('[scan-doc FIN] verworfen:', fin.grund);
+    }
+
     /* Karosserieform aus Feld 4 — siehe lib/aufbauZuordnen.ts. */
     const aufbau = typeof result.aufbau === 'string' ? result.aufbau.trim() : '';
     delete result.aufbau;
