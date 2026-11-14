@@ -593,6 +593,22 @@ export default function Showroom() {
               </span>
             )}
             {/*
+              Felder, bei denen die zwei Lesungen des Scheins
+              auseinandergingen.
+
+              Sie sind absichtlich leer — siehe lib/scanVergleichen.ts.
+              Ohne diesen Hinweis sieht das aus wie ein Fehler der
+              Software, und der Händler sucht an der falschen Stelle.
+              Mit Hinweis ist es eine Aufgabe mit klarer Ansage: Diese
+              Zahl bitte selbst vom Papier abschreiben.
+            */}
+            {e.scanZustand === 'fertig' && e.scanUnsicher.length > 0 && (
+              <span style={{ fontSize: 11.5, color: F.rahmenLuecke, fontWeight: 600 }}>
+                ● Zweimal gelesen, verschiedene Werte: {e.scanUnsicher.join(', ')} —
+                bitte vom Schein abschreiben
+              </span>
+            )}
+            {/*
               Der eingelesene Schein, klein.
 
               Das Bild lag schon vor — es wurde nur nirgends gezeigt.

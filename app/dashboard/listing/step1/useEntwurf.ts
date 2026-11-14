@@ -269,6 +269,14 @@ export function useEntwurf() {
   const [scanBild, setScanBild]       = useState<string | null>(null);
   /** Warum der Scan scheiterte — im Klartext, statt einer Sammelmeldung. */
   const [scanFehler, setScanFehler]   = useState<string | null>(null);
+  /*
+   * Felder, bei denen die zwei Lesungen des Scheins verschiedene Werte
+   * ergaben. Sie bleiben leer — siehe lib/scanVergleichen.ts. Der
+   * Haendler muss WISSEN, welche das sind: Ein leeres Feld ohne
+   * Begruendung sieht aus wie ein Fehler der Software, ein leeres Feld
+   * mit Begruendung ist eine Aufgabe.
+   */
+  const [scanUnsicher, setScanUnsicher] = useState<string[]>([]);
 
   /*
    * Ausstattung aus Unterlagen — Zustand.
@@ -578,6 +586,7 @@ export function useEntwurf() {
   const einlesen = async (datei: File) => {
     setScanZustand('laeuft');
     setScanFehler(null);
+    setScanUnsicher([]);
     {
       try {
         /*
@@ -671,6 +680,7 @@ export function useEntwurf() {
           for (const feld of neu) n.set(feld, 'schein');
           return n;
         });
+        setScanUnsicher(Array.isArray(d.unsicher) ? d.unsicher.map(String) : []);
         setScanZustand('fertig');
         setBlattOffen(true);
       } catch (err) {
@@ -818,7 +828,7 @@ export function useEntwurf() {
     data, setData, setzen,
     fehler, setFehler, erkannt, herkunft, setHerkunft,
     blattOffen, setBlattOffen,
-    scanZustand, scanBild, scanFehler, einlesen, dateiRef,
+    scanZustand, scanBild, scanFehler, scanUnsicher, einlesen, dateiRef,
     ausstattungAusUnterlagen, dokumentFeld, dokumentLaeuft, dokumentMeldung,
     nahaufnahmeMerken, nahaufnahmeVerwerfen, nahaufnahmenAuswerten,
     nahFeld, nahBilder, nahLaeuft, nahMeldung, nahBelege, nahCodes,

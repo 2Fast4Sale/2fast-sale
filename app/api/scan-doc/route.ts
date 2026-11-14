@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 import { aufbauZuordnen } from '../../../lib/aufbauZuordnen';
 import { finPruefen } from '../../../lib/finPruefen';
+import { scanVergleichen } from '../../../lib/scanVergleichen';
 import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
@@ -66,6 +67,12 @@ PFLICHTFELDER (immer ausfüllen):
   einem Feld lehnen mobile.de und AutoScout24 ab.
 • E: FIN / VIN (17 Zeichen, exakt wie abgedruckt)
 • B: Datum der Erstzulassung → Format MM/JJJJ
+  NICHT Feld I verwenden. Feld I ist das Datum der Zulassung auf den
+  AKTUELLEN Halter und liegt immer später. Die beiden stehen auf dem
+  Papier dicht beieinander und sehen gleich aus. Wenn du beide siehst,
+  nimm das FRÜHERE und nur aus Feld B. Siehst du B nicht eindeutig,
+  lass das Feld leer — ein falsches Erstzulassungsdatum verschiebt den
+  Fahrzeugwert um Hunderte Euro.
 • P.1: Hubraum in cm³ (nur Zahl)
 • P.2: Nennleistung in kW — EXAKT so ablesen wie abgedruckt, NICHT umrechnen
 • P.3: Kraftstoffart → "Benzin" | "Diesel" | "Elektro" | "Hybrid" | "Plug-in Hybrid" | "LPG" | "CNG"
@@ -226,67 +233,112 @@ const DB_LABELS = [
   'Elektroantrieb (BEV)','Scheckheftgepflegt','Neuwertig / 1. Hand','Herstellergarantie',
 ];
 
+/**
+ * Eine Lesung des Scheins. Liefert das rohe JSON und den Verbrauch.
+ *
+ * Steht als eigene Funktion da, weil sie zweimal aufgerufen wird —
+ * siehe lib/scanVergleichen.ts.
+ */
+async function einmalLesen(image: string): Promise<{
+  result: Record<string, unknown> | null;
+  usage: Anthropic.Usage | null;
+  rohtext: string;
+}> {
+  const response = await getAnthropic().messages.create({
+    model:      'claude-opus-4-8',
+    max_tokens: 2000,
+    /*
+     * Zwischenspeicher auf dem konstanten Teil.
+     *
+     * SYSTEM_PROMPT und USER_PROMPT sind zusammen rund 2.800 Tokens und
+     * aendern sich nie — nur das Bild dahinter wechselt. Der Haken sitzt
+     * auf dem letzten konstanten Block, damit alles davor mitgespeichert
+     * wird.
+     *
+     * Ein Treffer kostet ein Zehntel, ein Fehlschlag das Anderthalbfache
+     * des normalen Preises. Seit beide Lesungen gleichzeitig starten,
+     * verfehlen sie bei kaltem Speicher beide — dafuer wartet der
+     * Haendler zehn statt zwanzig Sekunden. Bei einem Haendler, der
+     * mehrere Autos hintereinander einstellt, ist der Speicher warm und
+     * die zweite Lesung billig.
+     */
+    system: [{
+      type: 'text' as const,
+      text: SYSTEM_PROMPT,
+    }],
+    messages:   [{
+      role:    'user',
+      content: [
+        {
+          type: 'text' as const,
+          text: USER_PROMPT,
+          cache_control: { type: 'ephemeral' as const },
+        },
+        toImageBlock(image),
+      ],
+    }],
+  });
+
+  const rohtext = (response.content[0] as Anthropic.TextBlock).text;
+  try {
+    return { result: JSON.parse(extractJson(rohtext)), usage: response.usage, rohtext };
+  } catch {
+    return { result: null, usage: response.usage, rohtext };
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { image, draftId } = await req.json();
     if (!image) return NextResponse.json({ error: 'Kein Bild' }, { status: 400 });
 
-    const response = await getAnthropic().messages.create({
-      model:      'claude-opus-4-8',
-      max_tokens: 2000,
-      /*
-       * Zwischenspeicher auf dem konstanten Teil.
-       *
-       * SYSTEM_PROMPT und USER_PROMPT sind zusammen rund 2.800 Tokens und
-       * aendern sich nie — nur das Bild dahinter wechselt. Der Haken sitzt
-       * auf dem letzten konstanten Block, damit alles davor mitgespeichert
-       * wird.
-       *
-       * Was es bringt und was es kostet: Ein Treffer kostet ein Zehntel,
-       * ein Fehlschlag das Anderthalbfache des normalen Preises. Bei einem
-       * Durchlauf mit zehn Scheinen hintereinander ist der erste Aufruf
-       * teurer und die neun danach billig — rund ein Viertel weniger fuer
-       * den ganzen Lauf. Bei einem Haendler, der einmal am Tag ein Auto
-       * einstellt, ist der Speicher laengst abgelaufen (fuenf Minuten) und
-       * jeder Aufruf zahlt den Aufschlag. Das sind drei Zehntel Cent auf
-       * ein Inserat, das 2,39 EUR einkauft — und es macht den Testlauf
-       * bezahlbar, auf den es gerade ankommt.
-       */
-      system: [{
-        type: 'text' as const,
-        text: SYSTEM_PROMPT,
-      }],
-      messages:   [{
-        role:    'user',
-        content: [
-          {
-            type: 'text' as const,
-            text: USER_PROMPT,
-            cache_control: { type: 'ephemeral' as const },
-          },
-          toImageBlock(image),
-        ],
-      }],
-    });
+    /*
+     * Zweimal lesen und vergleichen.
+     *
+     * Gemessen: Derselbe Golf, dasselbe Foto, zwei Laeufe — einmal
+     * 77 kW, einmal 71 kW. Die Leistung steht im Inserat und ist
+     * preisrelevant. temperature: 0 gibt es bei Opus 4.8 nicht mehr,
+     * die Schwankung laesst sich also nicht wegstellen, nur sichtbar
+     * machen.
+     *
+     * SCAN_DOPPELT=aus schaltet es ab. Das ist eine Kostenentscheidung
+     * und gehoert deshalb nicht in den Code, sondern in die Umgebung.
+     */
+    const doppelt = process.env.SCAN_DOPPELT !== 'aus';
+    const [erste, zweite] = await Promise.all([
+      einmalLesen(image),
+      doppelt ? einmalLesen(image) : Promise.resolve(null),
+    ]);
 
-    await logLlmCost({
-      userId: await currentUserId(),
-      draftId: draftId ?? null,
-      operation: 'scan-doc',
-      model: 'claude-opus-4-8',
-      usage: response.usage,
-    });
+    const userId = await currentUserId();
+    for (const lauf of [erste, zweite]) {
+      if (!lauf?.usage) continue;
+      await logLlmCost({
+        userId,
+        draftId: draftId ?? null,
+        operation: 'scan-doc',
+        model: 'claude-opus-4-8',
+        usage: lauf.usage,
+        meta: { doppelt },
+      });
+    }
 
-    const text = (response.content[0] as Anthropic.TextBlock).text;
-    console.log('[scan-doc raw]', text.substring(0, 300));
+    console.log('[scan-doc raw]', erste.rohtext.substring(0, 300));
 
-    let result: Record<string, unknown>;
-    try {
-      result = JSON.parse(extractJson(text));
-    } catch (e) {
-      console.error('[scan-doc] JSON parse error:', text.substring(0, 500));
+    if (!erste.result) {
+      console.error('[scan-doc] JSON parse error:', erste.rohtext.substring(0, 500));
       return NextResponse.json({ error: 'Dokument konnte nicht gelesen werden' }, { status: 422 });
     }
+
+    /*
+     * Scheitert die ZWEITE Lesung am JSON, wird nicht verglichen,
+     * sondern die erste genommen. Ein Formatfehler ist kein
+     * Widerspruch — sonst waere jedes kaputte JSON ein Grund, dem
+     * Haendler alle Felder zu leeren.
+     */
+    const { ergebnis, unsicher } = scanVergleichen(erste.result, zweite?.result ?? null);
+    if (unsicher.length) console.log('[scan-doc] uneinig:', unsicher.join(', '));
+    const result: Record<string, unknown> = ergebnis;
 
     /*
      * Leistung: Der Fahrzeugschein nennt in Feld P.2 immer kW. Die Umrechnung
@@ -406,7 +458,13 @@ export async function POST(req: Request) {
       result.equipment = [...new Set(normalized)];
     }
 
-    return NextResponse.json(result);
+    /*
+     * unsicher geht mit zurueck, damit der Haendler sieht, WELCHE Felder
+     * leer sind, weil die zwei Lesungen sich nicht einig waren. Ein
+     * leeres Feld ohne Begruendung sieht aus wie ein Fehler der
+     * Software; ein leeres Feld mit Begruendung ist eine Aufgabe.
+     */
+    return NextResponse.json({ ...result, unsicher });
 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unbekannter Fehler';
