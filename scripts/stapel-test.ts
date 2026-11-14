@@ -203,8 +203,46 @@ async function main() {
       if (z.radAbstand < 0.25) hinweise.push('Raeder zu dicht beieinander');
       if (e.messwerte.fahrzeugHoehe > e.hoehe * 0.85) hinweise.push('Fahrzeug fuellt das Bild');
       if (e.messwerte.helligkeitFahrzeug < 25) hinweise.push('Fahrzeug fast schwarz');
+
+      /*
+       * Steht das Auto hochkant?
+       *
+       * Diese Pruefung fehlte, und sie ist die wichtigste von allen.
+       * Am 14. November 2026 lief das erste echte iPhone-Foto durch:
+       * Das Auto stand im fertigen Studiobild um 90 Grad gekippt auf
+       * der Nase -- und der Bericht meldete "ohne Auffaelligkeit".
+       * Jede einzelne Zahl oben war im gruenen Bereich, weil keine von
+       * ihnen die Lage misst.
+       *
+       * Ursache war die fehlende EXIF-Drehung (siehe
+       * app/api/studio-eigen/verarbeiten/route.ts). Die ist behoben.
+       * Diese Pruefung bleibt trotzdem: Ein Auto ist von der Seite
+       * immer deutlich breiter als hoch. Ist es das nicht, stimmt
+       * etwas Grundsaetzliches nicht, und niemand soll das erst
+       * bemerken, wenn es im Inserat steht.
+       */
+      const seitenverhaeltnis = e.messwerte.fahrzeugHoehe > 0
+        ? e.messwerte.fahrzeugBreite / e.messwerte.fahrzeugHoehe : 0;
+      if (seitenverhaeltnis < 1.1) {
+        hinweise.push(`Fahrzeug steht hochkant (breit/hoch ${seitenverhaeltnis.toFixed(2)}) — EXIF-Drehung?`);
+      }
+
+      /*
+       * Kennzeichen NICHT ersetzt ist eine Auffaelligkeit, kein
+       * Nebensatz in einer Spalte.
+       *
+       * Ein Kennzeichen ist ein personenbezogenes Datum des Halters.
+       * Steht es im veroeffentlichten Inserat, hat der Haendler es
+       * veroeffentlicht -- und zwar durch unsere Software. Dass der
+       * Erkennungsserver gerade nicht laeuft, ist dafuer keine
+       * Entschuldigung, sondern genau der Fall, der auffallen muss.
+       */
+      if (z.kennzeichen !== 'keins gefunden' && !z.kennzeichen.startsWith('ersetzt')) {
+        hinweise.push(`Kennzeichen nicht ersetzt (${z.kennzeichen})`);
+      }
+
       z.hinweis = hinweise.join('; ');
-      z.ok = true;
+      z.ok = hinweise.length === 0;
 
       kacheln.push(await sharp(e.bild).resize(KACHEL).jpeg({ quality: 78 }).toBuffer());
     } catch (err) {

@@ -144,6 +144,35 @@ export async function POST(req: NextRequest) {
       : Buffer.alloc(0);
 
     /*
+     * ── EXIF-Drehung anwenden, bevor irgendetwas anderes passiert ───
+     *
+     * Ein iPhone speichert die Bildpunkte fast immer liegend und
+     * vermerkt die Drehung nur als Zahl im EXIF. Jeder Betrachter
+     * dreht beim Anzeigen mit. sharp NICHT -- es liest die rohen
+     * Bildpunkte, solange man nicht ausdruecklich .rotate() aufruft.
+     *
+     * In dieser ganzen Bildverarbeitung stand .rotate() an keiner
+     * einzigen Stelle. Gemessen am 14. November 2026 am ersten echten
+     * iPhone-Foto: Das Auto stand im fertigen Studiobild auf der Nase,
+     * um 90 Grad gekippt -- und die Guetepruefung meldete
+     * "ohne Auffaelligkeit".
+     *
+     * Das ist kein Sonderfall. Es haette JEDES Hochkant-Foto getroffen,
+     * also das erste Foto des ersten Haendlers.
+     *
+     * .rotate() ohne Argument wendet genau die EXIF-Drehung an und
+     * entfernt den Vermerk danach, damit kein spaeterer Schritt ein
+     * zweites Mal dreht.
+     */
+    if (roh.length > 0) {
+      try {
+        roh = await sharp(roh).rotate().toBuffer();
+      } catch {
+        /* Unlesbares Bild faellt weiter unten ohnehin auf. */
+      }
+    }
+
+    /*
      * Kennzeichen ersetzen — VOR allem anderen.
      *
      * Ein Kennzeichen ist ein personenbezogenes Datum des Halters. Wer
