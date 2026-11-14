@@ -15,7 +15,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
+import { BRAND_NAMES, getModels, markeModellAusScan } from '../../../../lib/carDatabase';
 import { searchEquipment, ausstattungZusammenfuehren } from '../../../../lib/equipmentDatabase';
 import { getriebeAusText } from '../../../../lib/getriebeAusText';
 import { validateEnvkv, isEnvkvRequired, type EnvkvData } from '../../../../lib/envkv';
@@ -604,11 +604,12 @@ export function useEntwurf() {
         if (!antwort.ok) throw new Error(String(d.error || `Scan fehlgeschlagen (${antwort.status})`));
 
         /*
-         * scan-doc liefert Marke, Modell und Variante in EINEM String
-         * ("Volkswagen Golf 2.0 TDI"). Ohne Zerlegung landet alles im
-         * Markenfeld und das Modell bleibt leer.
+         * Marke und Modell kommen seit dem 14.11.2026 getrennt, weil der
+         * Schein sie getrennt fuehrt: D.1 Marke, D.3 Handelsbezeichnung.
+         * Aeltere Entwuerfe und die VIN-Decoder liefern weiter alles in
+         * einem String — markeModellAusScan kann beides.
          */
-        const zerlegt = d.brand ? splitBrandModel(String(d.brand)) : null;
+        const zerlegt = markeModellAusScan(d.brand, d.model);
         /*
          * Getriebe aus der Handelsbezeichnung.
          *
@@ -622,7 +623,12 @@ export function useEntwurf() {
          * es kein Kuerzel, und aus dem Fehlen eines Kuerzels zu
          * schliessen waere geraten. Siehe lib/getriebeAusText.ts.
          */
-        const getriebe = getriebeAusText(String(d.brand ?? ''));
+        /*
+         * Das Getriebekuerzel steht in D.3, nicht in D.1. Solange beides
+         * in einem Feld stand, reichte d.brand; seit der Trennung muss
+         * das Modellfeld mit hinein, sonst findet es nie wieder ein DSG.
+         */
+        const getriebe = getriebeAusText([d.brand, d.model].filter(Boolean).join(' '));
         const neu = new Set<string>();
 
         setData(p => {

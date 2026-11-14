@@ -52,8 +52,18 @@ const USER_PROMPT = `Analysiere diesen deutschen Fahrzeugschein (Zulassungsbesch
 ═══ FELDER DES FAHRZEUGSCHEINS ═══
 
 PFLICHTFELDER (immer ausfüllen):
-• D.1: Marke (Hersteller)
-• D.3: Handelsbezeichnung / Modell (vollständig inkl. Variante/Trim)
+• D.1: Marke (Hersteller) → Feld "brand"
+  ACHTUNG: In D.1 steht der Hersteller oft ZWEIMAL, getrennt durch ein
+  Komma: "VOLKSWAGEN, VW" oder "MERCEDES-BENZ, DAIMLER AG" oder
+  "BMW, BAYERISCHE MOTOREN WERKE". Gib NUR den Teil VOR dem Komma
+  zurück, ohne das Komma. Aus "VOLKSWAGEN, VW" wird "VOLKSWAGEN".
+  Steht kein Komma da, nimm das Feld unverändert.
+• D.3: Handelsbezeichnung / Modell → Feld "model"
+  Nur das Modell, OHNE die Marke davor. Aus "VW GOLF" wird "GOLF",
+  aus "POLO" bleibt "POLO". Variante und Zusatz mitnehmen, wenn sie in
+  D.3 stehen ("GOLF VARIANT", "A4 AVANT").
+  Marke und Modell gehören in ZWEI getrennte Felder. Beides zusammen in
+  einem Feld lehnen mobile.de und AutoScout24 ab.
 • E: FIN / VIN (17 Zeichen, exakt wie abgedruckt)
 • B: Datum der Erstzulassung → Format MM/JJJJ
 • P.1: Hubraum in cm³ (nur Zahl)
@@ -153,7 +163,8 @@ Händler haftet dafür.
 
 Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
 {
-  "brand": "Marke Modell Variante",
+  "brand": "Marke aus D.1, ohne den Teil hinter dem Komma",
+  "model": "Modell aus D.3, ohne die Marke davor",
   "vin": "XXXXXXXXXXXXXXXXX",
   "firstRegistration": "MM/JJJJ",
   "displacementCcm": 1968,

@@ -41,7 +41,7 @@ import {
   Camera, Loader2, CheckCircle2, X, AlertCircle, ArrowRight,
   ChevronDown, Search, Plus, RotateCcw, Pencil, FileText,
 } from 'lucide-react';
-import { BRAND_NAMES, getModels, splitBrandModel } from '../../../../lib/carDatabase';
+import { BRAND_NAMES, getModels, markeModellAusScan } from '../../../../lib/carDatabase';
 import MarkenZeichen, { hatZeichen } from '../../../components/MarkenZeichen';
 import { EQUIPMENT_DB, ALL_EQUIPMENT, searchEquipment } from '../../../../lib/equipmentDatabase';
 import EnvkvFields from '../../../components/EnvkvFields';
@@ -508,11 +508,12 @@ export default function Formular({ stil = 'werkstatt' }: { stil?: Stil } = {}) {
         if (!antwort.ok) throw new Error(String(d.error || `Scan fehlgeschlagen (${antwort.status})`));
 
         /*
-         * scan-doc liefert Marke, Modell und Variante in EINEM String
-         * ("Volkswagen Golf 2.0 TDI"). Ohne Zerlegung landet alles im
-         * Markenfeld und das Modell bleibt leer.
+         * Marke und Modell kommen seit dem 14.11.2026 getrennt, weil der
+         * Schein sie getrennt fuehrt: D.1 Marke, D.3 Handelsbezeichnung.
+         * Aeltere Entwuerfe und die VIN-Decoder liefern weiter alles in
+         * einem String — markeModellAusScan kann beides.
          */
-        const zerlegt = d.brand ? splitBrandModel(String(d.brand)) : null;
+        const zerlegt = markeModellAusScan(d.brand, d.model);
         const neu = new Set<string>();
 
         setData(p => {

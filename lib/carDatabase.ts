@@ -181,6 +181,19 @@ export function mobileModellWertOderNull(marke: string, modell: string): string 
  * Die Hochladewerte von mobile.de ("VW", "SKODA") stehen hier nicht
  * mehr drin — die findet `markeFinden` von sich aus, weil es beide
  * Felder prüft.
+ *
+ * Der zweite Block sind die ausgeschriebenen Firmennamen. Feld D.1
+ * nennt den Hersteller zweimal: Kurzname, Komma, vollständige Firma —
+ * "VOLKSWAGEN, VW", "MERCEDES-BENZ, DAIMLER AG". Ohne diese Einträge
+ * landet der Firmenname im Modellfeld, und das Inserat wird abgelehnt.
+ *
+ * Belegt ist dieses Muster an zwei echten Scheinen (beide Volkswagen,
+ * 14. November 2026). Die übrigen Firmennamen stehen hier, weil sie die
+ * eingetragenen Firmen dieser Hersteller sind — welche Schreibweise auf
+ * dem jeweiligen Papier wirklich steht, ist noch nicht nachgemessen.
+ * Ein Alias kann nur helfen: Taucht er nie auf, ist er wirkungslos;
+ * taucht er auf, rettet er das Inserat. Er trägt nie einen Wert ein,
+ * der nicht abgelesen wurde.
  */
 const MARKEN_ALIASE: Record<string, string> = {
   'vw nutzfahrzeuge': 'Volkswagen',
@@ -192,6 +205,21 @@ const MARKEN_ALIASE: Record<string, string> = {
   'alfa':             'Alfa Romeo',
   'citroen':          'Citroën',
   'škoda':            'Skoda',
+
+  /* Ausgeschriebene Firmennamen aus Feld D.1 — siehe Kommentar oben. */
+  'volkswagen ag':             'Volkswagen',
+  'bayerische motoren werke':  'BMW',
+  'daimler ag':                'Mercedes-Benz',
+  'mercedes benz ag':          'Mercedes-Benz',
+  'audi ag':                   'Audi',
+  'skoda auto':                'Skoda',
+  'adam opel':                 'Opel',
+  'opel automobile':           'Opel',
+  'ford werke':                'Ford',
+  'automobiles peugeot':       'Peugeot',
+  'automobiles citroen':       'Citroën',
+  'renault s a s':             'Renault',
+  'seat s a':                  'Seat',
 };
 
 /**
@@ -208,7 +236,18 @@ const MARKEN_ALIASE: Record<string, string> = {
  * "Mercedes-Benz".
  */
 export function splitBrandModel(bezeichnung: string): { brand: string; model: string } {
-  const roh = (bezeichnung || '').trim().replace(/\s+/g, ' ');
+  /*
+   * Satzzeichen zu Abstaenden, BEVOR verglichen wird.
+   *
+   * Feld D.1 des Fahrzeugscheins nennt den Hersteller zweimal, getrennt
+   * durch ein Komma: "VOLKSWAGEN, VW". Diese Funktion verglich vorher
+   * mit dem Rohtext — das Komma verhinderte den Treffer, heraus kam
+   * brand="VOLKSWAGEN," und model="VW POLO". Beide Werte lehnen
+   * mobile.de und AutoScout24 ab. Gemessen an zwei echten Scheinen am
+   * 14. November 2026; markeFinden hatte diesen Schutz laengst,
+   * splitBrandModel nicht.
+   */
+  const roh = (bezeichnung || '').replace(/[.,;:!?]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!roh) return { brand: '', model: '' };
   const klein = roh.toLowerCase();
 
@@ -227,6 +266,59 @@ export function splitBrandModel(bezeichnung: string): { brand: string; model: st
     // oder "A 45" das zweite mitnehmen — "C" allein wäre wertlos.
     const worte = rest.split(' ');
     return worte[0].length <= 2 && worte[1] ? `${worte[0]} ${worte[1]}` : worte[0];
+  };
+  /** Alle Schreibweisen dieser Marke, laengste zuerst. */
+  const schreibweisenVon = (marke: MobileMarke): string[] =>
+    [marke.name, marke.wert]
+      .concat(Object.entries(MARKEN_ALIASE)
+        .filter(([, ziel]) => vergleichsform(ziel) === vergleichsform(marke.name))
+        .map(([alias]) => alias))
+      .map(w => w.toLowerCase())
+      .sort((a, b) => b.length - a.length);
+
+  /**
+   * Beginnt der Rest mit einem Modell dieser Marke — und zwar mit einem
+   * echten?
+   *
+   * Der Zusatz ist noetig wegen "OPEL, ADAM OPEL CORSA". "Adam" ist ein
+   * Opel-Modell, hier aber der Vorname des Herstellers (Adam Opel AG).
+   * Das verraet, was dahinter steht: Folgt auf den Modelltreffer wieder
+   * die Marke, war es keiner.
+   */
+  const beginntMitModell = (marke: MobileMarke, rest: string): boolean => {
+    const kleinRest = rest.toLowerCase();
+    const treffer = marke.modelle
+      .map(modellName)
+      .sort((a, b) => b.length - a.length)
+      .find(m => kleinRest === m.toLowerCase() || kleinRest.startsWith(m.toLowerCase() + ' '));
+    if (!treffer) return false;
+    const danach = kleinRest.slice(treffer.length).trim();
+    if (!danach) return true;
+    return !schreibweisenVon(marke).some(w => danach === w || danach.startsWith(w + ' '));
+  };
+
+  /**
+   * Entfernt eine Wiederholung der Marke am Anfang des Restes.
+   *
+   * Aus "VOLKSWAGEN VW POLO" bleibt nach der Marke "VW POLO" stehen —
+   * "VW" ist derselbe Hersteller, nur anders geschrieben, und gehoert
+   * nicht ins Modellfeld.
+   *
+   * Die Bedingung davor ist wichtig: Beginnt der Rest mit einem echten
+   * Modell dieser Marke, wird nichts entfernt. Sonst wuerde aus
+   * "Land Rover Range Rover Sport" ein "Sport", weil "Range Rover"
+   * zugleich Alias der Marke und Name eines Modells ist.
+   */
+  const ohneMarkenwiederholung = (marke: MobileMarke, rest: string): string => {
+    let aktuell = rest;
+    for (let runde = 0; runde < 3 && aktuell; runde++) {
+      if (beginntMitModell(marke, aktuell)) return aktuell;
+      const kleinRest = aktuell.toLowerCase();
+      const treffer = schreibweisenVon(marke).find(w => kleinRest.startsWith(w + ' '));
+      if (!treffer) return aktuell;
+      aktuell = aktuell.slice(treffer.length).trim();
+    }
+    return aktuell;
   };
 
   /*
@@ -257,10 +349,44 @@ export function splitBrandModel(bezeichnung: string): { brand: string; model: st
     // "Land Rover" schlägt "Land".
     kandidaten.sort((a, b) => b.praefix.length - a.praefix.length);
     const { praefix, marke } = kandidaten[0];
-    return { brand: marke.name, model: modellAus(marke, roh.slice(praefix.length).trim()) };
+    const rest = ohneMarkenwiederholung(marke, roh.slice(praefix.length).trim());
+    return { brand: marke.name, model: modellAus(marke, rest) };
   }
 
   // Unbekannte Marke — erstes Wort als Marke, Rest als Modell.
   const teile = roh.split(' ');
   return { brand: teile[0], model: teile.slice(1).join(' ') };
+}
+
+/**
+ * Marke und Modell aus einem Scan-Ergebnis.
+ *
+ * scan-doc liefert seit dem 14. November 2026 zwei getrennte Felder,
+ * weil der Fahrzeugschein sie auch getrennt führt: D.1 die Marke, D.3
+ * die Handelsbezeichnung. Vorher kam alles in `brand`, und das Komma
+ * aus "VOLKSWAGEN, VW" machte daraus einen Markennamen, den weder
+ * mobile.de noch AutoScout24 kennen.
+ *
+ * Ältere Entwürfe und die VIN-Decoder liefern weiterhin alles in einem
+ * String. Dafür bleibt splitBrandModel der Rückfall — deshalb hier
+ * beide Wege statt eines Umbaus, der alte Entwürfe unlesbar macht.
+ *
+ * Auch wenn beide Felder da sind, läuft es durch splitBrandModel: Das
+ * normalisiert "VOLKSWAGEN" zu "Volkswagen" und findet "GOLF" in der
+ * Modellliste als "Golf" — die Schreibweisen, die die Auswahlfelder und
+ * die Portale erwarten. Findet es nichts, bleiben die Rohwerte stehen,
+ * damit der Händler sieht, was gelesen wurde.
+ */
+export function markeModellAusScan(
+  brand: unknown,
+  model: unknown,
+): { brand: string; model: string } {
+  const b = String(brand ?? '').trim();
+  const m = String(model ?? '').trim();
+  if (!b && !m) return { brand: '', model: '' };
+  if (!b) return { brand: '', model: m };
+  if (!m) return splitBrandModel(b);
+
+  const zerlegt = splitBrandModel(`${b} ${m}`);
+  return zerlegt.brand && zerlegt.model ? zerlegt : { brand: b, model: m };
 }
