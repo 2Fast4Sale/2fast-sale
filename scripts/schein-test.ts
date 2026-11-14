@@ -74,8 +74,28 @@ const auchKleine = process.argv.includes('--auch-kleine');
  */
 const MINDESTKANTE = 1200;
 const GUTEKANTE = 1568;
+/*
+ * Helligkeit.
+ *
+ * Beobachtet an den ersten drei echten Scheinen, und es ist bisher nur
+ * ein Verdacht mit plausibler Ursache, keine belegte Grenze:
+ *
+ *   IMG_golf7   Helligkeit 154   acht von acht Feldern richtig
+ *   IMG_4132    Helligkeit  94   Anhaengelast uneinig
+ *   IMG_4133    Helligkeit  87   Leistung in vier Laeufen vier Werte
+ *
+ * Ein Fahrzeugschein ist hellgruenes Papier mit duennem Druck. Ist das
+ * Foto unterbelichtet, verschwimmt der Druck im Grau, und dann raet das
+ * Modell -- jedes Mal ein bisschen anders. Die Aufloesung war bei allen
+ * dreien gleich gut; der Unterschied lag nur im Licht.
+ *
+ * Deshalb eine WARNUNG, keine Ablehnung. Drei Fotos sind keine Grenze,
+ * sondern ein Hinweis. Wird es oefter gemessen, gehoert hier eine Zahl
+ * hin, die aus mehr als drei Bildern stammt.
+ */
+const HELL_GENUG = 120;
 
-type Vorpruefung = { datei: string; kante: number; geraet: string | null; grund: string | null };
+type Vorpruefung = { datei: string; kante: number; helligkeit: number; geraet: string | null; grund: string | null };
 
 async function vorpruefen(ordner: string, dateien: string[]): Promise<Vorpruefung[]> {
   const gesehen = new Map<string, string>();
@@ -84,17 +104,19 @@ async function vorpruefen(ordner: string, dateien: string[]): Promise<Vorpruefun
     const roh = fs.readFileSync(path.join(ordner, datei));
     const hash = crypto.createHash('md5').update(roh).digest('hex');
     let kante = 0;
+    let helligkeit = 0;
     let geraet: string | null = null;
     try {
       const m = await sharp(roh).metadata();
       kante = Math.max(m.width ?? 0, m.height ?? 0);
+      helligkeit = (await sharp(roh).greyscale().stats()).channels[0].mean;
       if (m.exif) {
         const treffer = m.exif.toString('latin1')
           .match(/Apple|iPhone|Samsung|Google|Pixel|Xiaomi|HUAWEI|OnePlus|Canon|NIKON|SONY/i);
         geraet = treffer ? treffer[0] : null;
       }
     } catch {
-      ergebnis.push({ datei, kante: 0, geraet: null, grund: 'nicht lesbar' });
+      ergebnis.push({ datei, kante: 0, helligkeit: 0, geraet: null, grund: 'nicht lesbar' });
       continue;
     }
     const doppelt = gesehen.get(hash);
@@ -102,7 +124,7 @@ async function vorpruefen(ordner: string, dateien: string[]): Promise<Vorpruefun
     const grund = doppelt ? `byteidentisch mit ${doppelt}`
       : kante < MINDESTKANTE ? `nur ${kante} px lange Kante, mindestens ${MINDESTKANTE}`
       : null;
-    ergebnis.push({ datei, kante, geraet, grund });
+    ergebnis.push({ datei, kante, helligkeit, geraet, grund });
   }
   return ergebnis;
 }
@@ -184,6 +206,14 @@ async function main() {
     console.log(`Knapp: ${knapp.map((v) => `${v.datei} (${v.kante} px)`).join(', ')}`);
     console.log(`Unter ${GUTEKANTE} px lange Kante wird die Schrift im Schein grenzwertig.\n`);
   }
+  const dunkel = geprueft.filter((v) => !v.grund && v.helligkeit < HELL_GENUG);
+  if (dunkel.length) {
+    console.log('Zu dunkel fotografiert:');
+    for (const v of dunkel) console.log(`  ${v.datei.padEnd(22)} Helligkeit ${v.helligkeit.toFixed(0)} von 255`);
+    console.log('Duenner Druck auf hellem Papier braucht Licht. Bei den bisherigen');
+    console.log('Messungen schwankten genau diese Bilder in den Zahlenfeldern.\n');
+  }
+
   if (ohneGeraet.length) {
     console.log('Kein Geraet im EXIF — aufgenommen wurde mit einer Kamera keines davon:');
     for (const v of ohneGeraet) console.log('  ' + v.datei);
