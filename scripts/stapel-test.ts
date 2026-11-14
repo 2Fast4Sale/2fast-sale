@@ -55,7 +55,9 @@ async function freistellen(fotoPfad: string): Promise<Buffer> {
   if (MIT_BIREFNET) return freistellenBiRefNet(fotoPfad);
   const { pipeline, RawImage } = await import('@huggingface/transformers');
   if (!ormbg) ormbg = await pipeline('background-removal', 'onnx-community/ormbg-ONNX', { dtype: 'q8' });
-  const jpg = await sharp(fotoPfad).resize(2000, 2000, { fit: 'inside', withoutEnlargement: true })
+  /* .rotate() wendet die EXIF-Drehung an — ohne sie steht das Auto
+     im Studiobild auf der Nase. Siehe scripts/exif-drehung-probe.ts. */
+  const jpg = await sharp(fotoPfad).rotate().resize(2000, 2000, { fit: 'inside', withoutEnlargement: true })
     .jpeg({ quality: 88 }).toBuffer();
   const bild = await RawImage.fromBlob(new Blob([new Uint8Array(jpg)], { type: 'image/jpeg' }));
   const aus = await ormbg(bild);

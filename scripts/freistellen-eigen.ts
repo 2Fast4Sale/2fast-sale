@@ -54,7 +54,21 @@ export async function freistellen(fotoPfad: string): Promise<Buffer> {
     throw new Error(`Modell fehlt: ${MODELL}\nHolen mit: siehe Kopf dieser Datei`);
   }
 
-  const roh = fs.readFileSync(fotoPfad);
+  /*
+   * EXIF-Drehung anwenden, bevor irgendetwas gemessen wird.
+   *
+   * Ein Handy speichert die Bildpunkte fast immer liegend und vermerkt
+   * die Drehung nur im EXIF. sharp liest die rohen Bildpunkte, solange
+   * man nicht ausdruecklich .rotate() aufruft -- und dann steht das
+   * Auto im fertigen Studiobild auf der Nase.
+   *
+   * Es steht hier UND am Eingang der Route, weil es zwei Wege ins
+   * Programm gibt: den Browser ueber die Route und diese Datei ueber
+   * scripts/stapel-test.ts. Der erste Anlauf reparierte nur die Route,
+   * und die Messung lief weiter ueber den kaputten Weg. Zweimal
+   * .rotate() schadet nicht: Der erste Aufruf entfernt den Vermerk.
+   */
+  const roh = await sharp(fs.readFileSync(fotoPfad)).rotate().toBuffer();
   const meta = await sharp(roh).metadata();
   const oBreite = meta.width!, oHoehe = meta.height!;
 
