@@ -110,6 +110,10 @@ async function vorpruefen(ordner: string, dateien: string[]): Promise<Vorpruefun
 /** Feldnamen in der CSV → Feldnamen in der Antwort der Route. */
 const FELDER: Record<string, string[]> = {
   marke:          ['brand'],
+  /* Seit scan-doc D.1 und D.3 getrennt liefert, gehoert das Modell in
+     eine eigene Spalte. Ohne sie wurde die Haelfte der Bezeichnung
+     ueberhaupt nicht geprueft. */
+  modell:         ['model'],
   fin:            ['vin'],
   erstzulassung:  ['firstRegistration'],
   hubraum:        ['displacementCcm'],
