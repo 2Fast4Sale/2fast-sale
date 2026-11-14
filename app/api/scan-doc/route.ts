@@ -4,6 +4,7 @@ import { normalizeEquipmentList } from '../../../lib/equipmentDatabase';
 import { aufbauZuordnen } from '../../../lib/aufbauZuordnen';
 import { finPruefen } from '../../../lib/finPruefen';
 import { scanVergleichen } from '../../../lib/scanVergleichen';
+import { anhaengelastEntscheiden, anhaengelastAusBemerkung } from '../../../lib/anhaengelast';
 import { logLlmCost, currentUserId } from '../../../lib/apiCosts';
 
 export const dynamic = 'force-dynamic';
@@ -94,8 +95,17 @@ PFLICHTFELDER (immer ausfüllen):
 ZUSATZFELDER (wenn sichtbar):
 • T: Höchstgeschwindigkeit km/h
 • V.7: CO2-Emission g/km
-• O.1: Zul. Anhängelast GEBREMST in kg
-• O.2: Zul. Anhängelast UNGEBREMST in kg
+• O.1: Zul. Anhängelast GEBREMST in kg — NUR aus dem Feld O.1 selbst
+• O.2: Zul. Anhängelast UNGEBREMST in kg — NUR aus dem Feld O.2 selbst
+
+  In den Bemerkungen (Feld 22) steht oft eine ABWEICHENDE Anhängelast,
+  etwa "B.ANHÄNGEBETRIEB*O.1:1800". Schreibe in O.1 und O.2 trotzdem
+  NUR, was in den Feldern O.1 und O.2 selbst steht.
+
+  Den Bemerkungstext schreibst du zusätzlich Zeichen für Zeichen in das
+  Feld "bemerkungenText" ab — alle Zeilen des Bemerkungsblocks, so wie
+  sie dastehen, ohne Umformulierung und ohne Auswahl. Was damit
+  geschieht, entscheidet die Anwendung, nicht du.
 
 ═══ FELD 22 — BEMERKUNGEN UND AUSNAHMEN ═══
 
@@ -182,6 +192,7 @@ Gib exakt dieses JSON zurück (keine anderen Felder, keine Kommentare):
   "leermasseKg": 1910,
   "anhaengelastGebremstKg": 2000,
   "anhaengelastUngebremstKg": 750,
+  "bemerkungenText": "der Bemerkungsblock, Zeichen für Zeichen abgeschrieben",
   "doors": 5,
   "emissionClass": "Euro 6d",
   "driveType": "Frontantrieb",
@@ -281,7 +292,19 @@ async function einmalLesen(image: string): Promise<{
 
   const rohtext = (response.content[0] as Anthropic.TextBlock).text;
   try {
-    return { result: JSON.parse(extractJson(rohtext)), usage: response.usage, rohtext };
+    const result = JSON.parse(extractJson(rohtext)) as Record<string, unknown>;
+    /*
+     * Die Anhaengelast aus den Bemerkungen holt eine Suche im Text,
+     * nicht das Modell — siehe lib/anhaengelast.ts. Der Text selbst
+     * geht nicht weiter: Er unterscheidet sich zwischen zwei Lesungen
+     * fast immer in einer Kleinigkeit und wuerde jeden Vergleich
+     * ausloesen.
+     */
+    const ausText = anhaengelastAusBemerkung(result.bemerkungenText);
+    delete result.bemerkungenText;
+    result.anhaengelastGebremstBemerkungKg = ausText.gebremst;
+    result.anhaengelastUngebremstBemerkungKg = ausText.ungebremst;
+    return { result, usage: response.usage, rohtext };
   } catch {
     return { result: null, usage: response.usage, rohtext };
   }
@@ -337,6 +360,7 @@ export async function POST(req: Request) {
      * Haendler alle Felder zu leeren.
      */
     const { ergebnis, unsicher } = scanVergleichen(erste.result, zweite?.result ?? null);
+    /* unsicher waechst weiter: Die Anhaengelast-Entscheidung kommt dazu. */
     if (unsicher.length) console.log('[scan-doc] uneinig:', unsicher.join(', '));
     const result: Record<string, unknown> = ergebnis;
 
@@ -402,6 +426,27 @@ export async function POST(req: Request) {
       return v;
     };
     zahlOderWeg('leermasseKg', 400, 5000);
+
+    /*
+     * Feld O.1/O.2 gegen die Bemerkungen — siehe lib/anhaengelast.ts.
+     * Widersprechen sie sich, bleibt das Feld leer: Ob die Bedingung
+     * der Bemerkung am konkreten Fahrzeug erfuellt ist, steht in keinem
+     * Feld. Der Haendler sieht das Auto, die Software nicht.
+     */
+    for (const [feld, bemerkung, name] of [
+      ['anhaengelastGebremstKg', 'anhaengelastGebremstBemerkungKg', 'Anhängelast gebremst'],
+      ['anhaengelastUngebremstKg', 'anhaengelastUngebremstBemerkungKg', 'Anhängelast ungebremst'],
+    ] as const) {
+      const e = anhaengelastEntscheiden(result[feld], result[bemerkung], name);
+      delete result[bemerkung];
+      if (e.wert === null) delete result[feld];
+      else result[feld] = e.wert;
+      if (e.widerspruch) {
+        console.log('[scan-doc]', e.widerspruch);
+        unsicher.push(name);
+      }
+    }
+
     const gebremst = zahlOderWeg('anhaengelastGebremstKg', 0, 3500);
     const ungebremst = zahlOderWeg('anhaengelastUngebremstKg', 0, 1500);
     if (gebremst !== null && ungebremst !== null && ungebremst > gebremst) {

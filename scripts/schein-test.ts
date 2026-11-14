@@ -154,6 +154,30 @@ const FELDER: Record<string, string[]> = {
   anhaengelast_ungebremst: ['anhaengelastUngebremstKg'],
 };
 
+/**
+ * Spaltenname der wahrheit.csv -> Anzeigename, den die Route in
+ * `unsicher` zurueckmeldet (lib/scanVergleichen.ts). Wird gebraucht,
+ * um ein bewusst leeres Feld von einem uebersehenen zu unterscheiden.
+ */
+const BEZEICHNUNG: Record<string, string> = {
+  marke:                   'Marke',
+  modell:                  'Modell',
+  fin:                     'FIN',
+  erstzulassung:           'Erstzulassung',
+  ps:                      'Leistung (kW)',
+  hubraum:                 'Hubraum',
+  kraftstoff:              'Kraftstoff',
+  farbe:                   'Farbe',
+  sitze:                   'Sitzplätze',
+  tueren:                  'Türen',
+  leermasse:               'Leermasse',
+  schadstoffklasse:        'Schadstoffklasse',
+  antrieb:                 'Antriebsart',
+  aufbau:                  'Aufbau',
+  anhaengelast_gebremst:   'Anhängelast gebremst',
+  anhaengelast_ungebremst: 'Anhängelast ungebremst',
+};
+
 /** Vergleich ohne Rücksicht auf Gross- und Kleinschreibung, Leerzeichen, Punkte. */
 function gleich(a: unknown, b: unknown): boolean {
   const norm = (x: unknown) => String(x ?? '')
@@ -237,8 +261,9 @@ async function main() {
   console.log(`${fotos.length} von ${alle.length} Bildern werden geschickt.\n`);
 
 
-  const treffer: Record<string, { richtig: number; falsch: number; leer: number }> = {};
+  const treffer: Record<string, { richtig: number; falsch: number; leer: number; zurueck: number }> = {};
   const abweichungen: string[] = [];
+  const zurueckgehalten: string[] = [];
 
   for (const [i, datei] of fotos.entries()) {
     const roh = fs.readFileSync(path.join(ordner, datei));
@@ -264,6 +289,27 @@ async function main() {
     }
 
     const soll = wahrheit.get(datei);
+    /*
+     * Die Felder, die die Route selbst als unsicher gemeldet hat.
+     *
+     * Ohne diese Unterscheidung zaehlt ein ABSICHTLICH leeres Feld wie
+     * ein Fehler. Das ist nicht nur ungenau, es ist gefaehrlich: Wer
+     * diese Quote verbessern will, muss der Software das Raten wieder
+     * beibringen. Genau davon lebt dieses Projekt nicht.
+     *
+     * Also drei Spalten statt zwei: richtig, falsch, und "zurueck-
+     * gehalten". Die letzte ist kein Fehler, sondern eine Aufgabe fuer
+     * den Haendler -- aber sie wird gezaehlt, denn eine Software, die
+     * jedes zweite Feld zurueckhaelt, nimmt ihm keine Arbeit ab.
+     */
+    const zurueck = new Set(
+      (Array.isArray(antwort.unsicher) ? antwort.unsicher : []).map((s) => String(s).toLowerCase()),
+    );
+    const wurdeZurueckgehalten = (feld: string) => {
+      const name = (BEZEICHNUNG[feld] ?? feld).toLowerCase();
+      for (const u of zurueck) if (u === name || u.startsWith(name)) return true;
+      return false;
+    };
     const zeile: string[] = [];
     for (const [feld, namen] of Object.entries(FELDER)) {
       const ist = wert(antwort, namen);
@@ -271,8 +317,11 @@ async function main() {
         if (ist !== null) zeile.push(`${feld}=${ist}`);
         continue;
       }
-      treffer[feld] ??= { richtig: 0, falsch: 0, leer: 0 };
-      if (ist === null) {
+      treffer[feld] ??= { richtig: 0, falsch: 0, leer: 0, zurueck: 0 };
+      if (ist === null && wurdeZurueckgehalten(feld)) {
+        treffer[feld].zurueck++;
+        zurueckgehalten.push(`${datei}  ${feld}: bewusst leer gelassen, auf dem Papier steht "${soll[feld]}"`);
+      } else if (ist === null) {
         treffer[feld].leer++;
         abweichungen.push(`${datei}  ${feld}: nichts gelesen, erwartet "${soll[feld]}"`);
       } else if (gleich(ist, soll[feld])) {
@@ -288,10 +337,19 @@ async function main() {
   if (Object.keys(treffer).length) {
     console.log('\n── Ergebnis je Feld ──');
     for (const [feld, t] of Object.entries(treffer)) {
-      const gesamt = t.richtig + t.falsch + t.leer;
-      const quote = gesamt ? Math.round((t.richtig / gesamt) * 100) : 0;
-      console.log(`${feld.padEnd(16)} ${String(quote).padStart(3)} %   richtig ${t.richtig}, falsch ${t.falsch}, leer ${t.leer}`);
+      /* Zurueckgehaltene Felder zaehlen NICHT gegen die Quote — sie sind
+         kein Fehler, sondern eine bewusste Entscheidung. */
+      const gewertet = t.richtig + t.falsch + t.leer;
+      const quote = gewertet ? Math.round((t.richtig / gewertet) * 100) : 100;
+      console.log(`${feld.padEnd(24)} ${String(quote).padStart(3)} %   richtig ${t.richtig}, falsch ${t.falsch},`
+        + ` nicht gelesen ${t.leer}, zurueckgehalten ${t.zurueck}`);
     }
+  }
+  if (zurueckgehalten.length) {
+    console.log('\n-- Bewusst leer gelassen --');
+    for (const z of zurueckgehalten) console.log('  ' + z);
+    console.log('Kein Fehler: Die zwei Lesungen waren sich uneinig, oder Feld und');
+    console.log('Bemerkung widersprachen sich. Der Haendler traegt es selbst ein.');
   }
   if (abweichungen.length) {
     console.log('\n── Abweichungen ──');

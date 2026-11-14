@@ -1,4 +1,4 @@
-datei;marke;modell;fin;erstzulassung;ps;hubraum;kraftstoff;farbe
-IMG_golf7.jpeg;VOLKSWAGEN;GOLF;WVWZZZAUZHW110663;11/2016;110;1598;Diesel;grau
-IMG_4132.jpeg;;;;;;;;
-IMG_4133.jpeg;;;;;;;;
+datei;marke;modell;fin;erstzulassung;ps;hubraum;kraftstoff;farbe;sitze;leermasse;anhaengelast_gebremst;anhaengelast_ungebremst;schadstoffklasse
+IMG_golf7.jpeg;VOLKSWAGEN;GOLF;WVWZZZAUZHW110663;11/2016;110;1598;Diesel;grau;5;1321;1500;660;Euro 6
+IMG_4132.jpeg;;;;;;;;;;;;;
+IMG_4133.jpeg;;;;;;;;;;;;;

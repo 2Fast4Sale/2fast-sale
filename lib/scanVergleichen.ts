@@ -58,6 +58,15 @@ export const VERGLICHENE_FELDER: Record<string, string> = {
   aufbau:                   'Aufbau',
   anhaengelastGebremstKg:   'Anhängelast gebremst',
   anhaengelastUngebremstKg: 'Anhängelast ungebremst',
+  /*
+   * Auch die Werte aus den Bemerkungen werden verglichen. Sie gehen
+   * nicht ins Inserat, aber sie entscheiden darueber, ob das Feld
+   * daneben leer bleibt (lib/anhaengelast.ts). Ein Wert, der nur einer
+   * der beiden Lesungen aufgefallen ist, darf diese Entscheidung nicht
+   * treffen.
+   */
+  anhaengelastGebremstBemerkungKg:   'Anhängelast gebremst (Bemerkung)',
+  anhaengelastUngebremstBemerkungKg: 'Anhängelast ungebremst (Bemerkung)',
 };
 
 const leer = (w: unknown): boolean =>
