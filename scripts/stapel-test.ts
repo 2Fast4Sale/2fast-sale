@@ -40,6 +40,26 @@ if (!ordner) {
 }
 
 /*
+ * ── Sperre ─────────────────────────────────────────────────────────
+ *
+ * Dieses Skript misst den EIGENEN Weg (ormbg/BiRefNet + eigener
+ * Kompositor). Der ist seit dem 18.10.2026 nur noch Rueckfall, wenn
+ * Google kein Bild liefert. Schritt 2 macht Gemini allein.
+ *
+ * Trotzdem ist der Lauf hier zweimal versehentlich wieder gestartet
+ * und sein Ergebnis berichtet worden (19.11.2026, Kuehlergrill
+ * durchsichtig). Darum die Sperre: wer den Rueckfall messen will, muss
+ * es ausdruecklich sagen. Qualitaet von Schritt 2 wird NICHT hier
+ * gemessen, sondern am Gemini-Weg ueber die Route.
+ */
+if (process.env.STAPEL_EIGEN !== 'ja') {
+  console.error('Gestoppt. stapel-test.ts misst den eigenen Freistellweg -- der ist nur Rueckfall.');
+  console.error('Schritt 2 macht Gemini allein; Bildqualitaet wird am Gemini-Weg gemessen.');
+  console.error('Wirklich den Rueckfall pruefen? Dann STAPEL_EIGEN=ja setzen.');
+  process.exit(1);
+}
+
+/*
  * Zwei Freistellverfahren zur Wahl:
  *
  *   ormbg    dasselbe Modell wie im Browser des Haendlers (Standard).
