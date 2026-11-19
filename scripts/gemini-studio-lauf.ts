@@ -24,6 +24,10 @@
  *   4. Schild noch einmal selbst darueber, weil Gemini Buchstaben malt
  *      statt sie zu setzen
  *
+ * Nach dem Bild laeuft die Maengelpruefung: ein zweites, lesendes
+ * Modell bekommt Original und Ergebnis nebeneinander und sagt, was am
+ * Fahrzeug zu sehen war und was davon im Studiobild fehlt.
+ *
  * Kostet echtes Geld (Gemini rechnet je Bild ab) -- deshalb immer nur
  * ein Foto, nie ein Ordner.
  */
@@ -35,6 +39,7 @@ import { studioBildMitGemini, letzterGrund, ECHTE_BREITE } from '../lib/studio/g
 import { raum, raumBild } from '../lib/studio/raeume';
 import { kennzeichenAufServerFinden } from '../lib/studio/kennzeichenModell';
 import { ersetzeKennzeichenImKasten } from '../lib/studio/kennzeichen';
+import { maengelVergleichen } from '../lib/studio/maengelPruefen';
 
 /* Schluessel aus .env.local -- dasselbe, was Next.js im Betrieb liest.
    tsx laedt sie nicht von selbst, und ohne GEMINI_API_KEY bricht der
@@ -134,6 +139,15 @@ async function main() {
   console.log('Kennzeichen danach: ' + schildNachher);
   console.log('Bilder bei Google:  ' + bilder);
   console.log('Dauer:              ' + dauer.toFixed(1) + ' s');
+  console.log('');
+  const bericht = await maengelVergleichen(roh, fertig);
+  if (!bericht) {
+    console.log('Maengelpruefung: keine Antwort -- das Bild ist ungeprueft.');
+  } else {
+    console.log('Maengelpruefung (' + bericht.modell + '):');
+    console.log('  im Originalfoto gesehen: ' + (bericht.gefunden.join('; ') || 'keine'));
+    console.log('  im Studiobild VERSCHWUNDEN: ' + (bericht.verschwunden.join('; ') || 'keine'));
+  }
   console.log('Datei:              ' + ziel);
 }
 

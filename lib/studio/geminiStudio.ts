@@ -201,7 +201,10 @@ const kurzeAnweisung = (firma?: string | null, schild: SchildModus = 'name') =>
     ? 'Leave the number plate exactly as it is.'
     : schild === 'name' && firma
       ? `Cover the number plate with a plain dark sign, same place and angle, reading "${firma}" in white letters, spelled exactly: ${[...firma].map((z) => (z === ' ' ? 'SPACE' : z)).join('-')}.`
-      : 'Cover the number plate with a plain dark sign in the same place and at the same angle, with no text on it.');
+      : 'Cover the number plate with a plain dark sign in the same place and at the same angle, with no text on it.')
+
+  + '\n\nAfter the image, write one line "BEFUNDE:" listing in German every flaw you saw on this car in image 1 — scratches, dents, stone chips, kerbed rims, dirt, water spots, stickers, worn tyres — each named with the part it is on, separated by semicolons, or "keine". '
+  + 'Then a line "ERHALTEN:" saying for each one, in the same order, whether it is still visible in the image you return: ja or nein. Do not invent damage.';
 
 const anweisung = (firma?: string | null, schild: SchildModus = 'name') =>
   'You are a retoucher at a professional car dealership. You prepare the photographs that go into the dealer’s online listings on mobile.de and AutoScout24. '
@@ -350,7 +353,34 @@ const anweisung = (firma?: string | null, schild: SchildModus = 'name') =>
   + '6. Does the car have a clearly visible dark contact shadow under the tyres and a soft shadow around it, lying only on the floor?\n'
   + '6b. Does the picture look photographed rather than rendered — grain present, paint colour as strong as in image 1, no clay-grey car, no mirror-smooth floor, no surface without texture?\n'
   + '7. Is the number plate completely covered, and is the dealer name spelled exactly as given?\n'
-  + 'Correct whatever fails this check, then return exactly one photorealistic image with the same dimensions as image 2.';
+  + 'Correct whatever fails this check, then return exactly one photorealistic image with the same dimensions as image 2.\n\n'
+
+  /*
+   * ── Warum Gemini zusaetzlich SCHREIBEN muss ────────────────────────
+   *
+   * "Lass jeden Kratzer stehen" steht in dieser Anweisung dreimal:
+   * Schritt 2, Schritt 2b und Punkt 1 der Schlusspruefung. Im Lauf vom
+   * 19.11.2026 waren die Wasserflecken auf der Motorhaube trotzdem weg,
+   * bei 74 Prozent neu gemalter Flaeche. Ein vierter Satz derselben Art
+   * aendert daran nichts.
+   *
+   * Der Unterschied: Hier muss das Modell AUFSCHREIBEN, was es am
+   * Fahrzeug gefunden hat. Das macht aus einem Versprechen, das niemand
+   * nachpruefen kann, eine Liste, die der Haendler gegen sein eigenes
+   * Auto haelt — er kennt den Kratzer, wir nicht. Steht er in der
+   * Liste und ist im Bild nicht zu sehen, ist das Bild unbrauchbar,
+   * und das sieht man dann auch.
+   *
+   * Zweiter Nutzen: Findet das Modell gar nichts ("keine"), obwohl das
+   * Auto sichtbar dreckig war, hat es nicht hingeschaut. Auch das ist
+   * eine Information, die es vorher nicht gab.
+   */
+  + 'FINALLY, IN WRITING — this part is not optional and it is not a summary of your work.\n'
+  + 'After the image, write one short line beginning with "BEFUNDE:" and then list, separated by semicolons, every flaw, mark and trace of use you could see on this car in image 1: scratches, scuffs, dents, stone chips, rust, kerbed rims, cracked or chipped glass, faded or cloudy headlights, dirt, dust, water spots, bird droppings, stickers, badges and adverts, worn tyres, missing caps.\n'
+  + 'Name each one with the part it is on, in German, as briefly as a mechanic would write it on a job card — for example: "Wasserflecken Motorhaube; Kratzer Stossstange vorne links; Felge vorne rechts Bordsteinschaden; Aufkleber Heckscheibe".\n'
+  + 'List only what you actually saw in image 1. Do not invent damage, and do not list a flaw you removed. If you genuinely saw none, write "BEFUNDE: keine".\n'
+  + 'Then write a second line beginning with "ERHALTEN:" and answer, for the same list in the same order, whether each one is still visible in the image you are returning: "ja" or "nein".\n'
+  + 'The dealer knows this car and is liable for it. He reads these two lines against the vehicle standing in his yard, so an honest "nein" is worth more to him than a flattering picture.';
 
 /**
  * Die Anweisung im Wortlaut — fuer scripts/anweisung-zeigen.ts.
@@ -440,6 +470,10 @@ export interface StudioErgebnis {
    * bei einer blossen Rueckgabe nahe null.
    */
   geaendert: number;
+  /** Was Gemini am Fahrzeug gesehen hat -- null, wenn es nichts geschrieben hat. */
+  befunde: string | null;
+  /** Ob dieselben Punkte im Ergebnis noch zu sehen sind, laut Gemini. */
+  erhalten: string | null;
 }
 
 /**
@@ -490,7 +524,11 @@ export async function studioBildMitGemini(
             ],
           }],
           generationConfig: {
-            responseModalities: ['IMAGE'],
+            /* TEXT dazu, weil die Anweisung am Ende zwei Zeilen
+               verlangt: was an Maengeln da war und ob es noch zu sehen
+               ist. Ohne TEXT verwirft Google diesen Teil stillschweigend
+               und das Bild sieht genauso aus wie vorher. */
+            responseModalities: ['IMAGE', 'TEXT'],
             imageConfig: { aspectRatio: '3:2', imageSize: BILD_GROESSE },
           },
         }),
@@ -527,9 +565,35 @@ export async function studioBildMitGemini(
        das wird abgerechnet, auch wenn die Pruefung es gleich verwirft. */
     await gezaehlt?.(1);
     const daten = await antwort.json();
-    const teile: Array<{ inlineData?: { data?: string } }> = daten?.candidates?.[0]?.content?.parts ?? [];
+    const teile: Array<{ inlineData?: { data?: string }; text?: string }> = daten?.candidates?.[0]?.content?.parts ?? [];
     const bildTeil = teile.find((t) => t.inlineData?.data);
     if (!bildTeil?.inlineData?.data) { console.error('[gemini-studio] Kein Bild in der Antwort'); return null; }
+
+    /*
+     * Die zwei Zeilen am Ende der Anweisung: was an Maengeln da war,
+     * und ob es im Ergebnis noch zu sehen ist.
+     *
+     * Sie sind Aussagen des Modells ueber die eigene Arbeit, also kein
+     * Beweis — aber sie sind nachpruefbar, und das war die Liste vorher
+     * nicht. Der Haendler kennt sein Auto und haelt sie dagegen.
+     * Fehlen sie ganz, bleiben die Felder leer; das Bild wird deshalb
+     * nicht verworfen.
+     */
+    const gesagt = teile.map((t) => t.text ?? '').join('\n');
+    const zeile = (wort: string): string | null => {
+      const m = gesagt.match(new RegExp('^\\s*' + wort + '\\s*:?\\s*(.+)$', 'im'));
+      return m ? m[1].trim() : null;
+    };
+    const befunde = zeile('BEFUNDE');
+    const erhalten = zeile('ERHALTEN');
+    if (befunde) console.info('[gemini-studio] Befunde:', befunde);
+    if (erhalten) console.info('[gemini-studio] erhalten:', erhalten);
+    if (!befunde) {
+      console.warn('[gemini-studio] Keine Befundzeile in der Antwort -- Maengel sind damit ungeprueft');
+      /* Damit man unterscheiden kann: hat Gemini gar nichts geschrieben,
+         oder etwas anderes als die verlangten zwei Zeilen? */
+      console.warn('[gemini-studio] Text der Antwort (' + gesagt.length + ' Zeichen):', gesagt.slice(0, 400) || '(leer)');
+    }
 
     const bild = await sharp(Buffer.from(bildTeil.inlineData.data, 'base64'))
       .resize(zielBreite, zielHoehe, { fit: 'fill' })
@@ -582,7 +646,7 @@ export async function studioBildMitGemini(
       console.warn('[gemini-studio]', letzterGrund);
       return null;
     }
-    return { bild, aehnlich, geaendert: await anteilGeaendert(foto, bild) };
+    return { bild, aehnlich, geaendert: await anteilGeaendert(foto, bild), befunde, erhalten };
   } catch (err) {
     letzterGrund = 'Fehler: ' + (err instanceof Error ? err.message : String(err));
     console.error('[gemini-studio] fehlgeschlagen:', err);
@@ -773,7 +837,9 @@ export async function studioVerfeinernMitGemini(
       console.warn('[gemini-verfeinern] verworfen: Bild weicht zu stark ab');
       return null;
     }
-    return { bild, aehnlich, geaendert };
+    /* Der Verfeinern-Weg fragt keine Befunde ab -- er bekommt ein
+       fertig komponiertes Bild und putzt nur nach. */
+    return { bild, aehnlich, geaendert, befunde: null, erhalten: null };
   } catch (err) {
     letzterGrund = 'Fehler: ' + (err instanceof Error ? err.message : String(err));
     console.error('[gemini-verfeinern] fehlgeschlagen:', err);
